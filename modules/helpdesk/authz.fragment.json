@@ -1,0 +1,51 @@
+{
+  "moduleKey": "helpdesk",
+  "roles": [
+    {
+      "roleKey": "helpdesk_admin",
+      "label": "Helpdesk Admin",
+      "scopeType": "company",
+      "grantsShellAccess": true,
+      "seedCompanyCreatorRole": true,
+      "sortOrder": 10
+    }
+  ],
+  "objects": [],
+  "features": [
+    {
+      "featureKey": "helpdesk.manage",
+      "label": "Manage the helpdesk module (assign tickets, make/remove agents)",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 10,
+      "isSidebarEntry": true
+    },
+    {
+      "featureKey": "helpdesk.tickets.work",
+      "label": "Work all tickets (the agent tier)",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "editor" },
+      "sortOrder": 20,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "helpdesk.tickets.create",
+      "label": "Raise a ticket",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": {},
+      "sortOrder": 30,
+      "isSidebarEntry": true
+    }
+  ],
+  "fieldCatalog": [],
+  "fieldSets": [],
+  "rowScopes": [],
+  "bootstrapPolicy": { "seedCompanyCreatorObjectRelations": [] },
+  "_comment": "helpdesk deliberately uses the other authz idiom from docs' per-document tuples: no new object type and no top-level `relations` key (same shape as timesheet's fragment). Every access tier this module needs already exists on the platform base model's `company_module` type (internal/authz/engine/model.json) and is referenced only, never redeclared. helpdesk.manage anchors on company_module#admin (module admin: assign, make/remove agents). helpdesk.tickets.work anchors on company_module#editor, the agent tier: a member holding it sees and works ALL tickets. It is granted per member through this module's own 'make agent' admin action (S2S grant through /internal/authz/grants, as timesheet does for approvers) or automatically on assignment. helpdesk.tickets.create has an empty accessRulePayload on purpose: it is company-membership-gated only (any active member may raise a ticket), the same no-relation-leg shape docs.create and timesheet.entries.manage-own use, because company_module has no 'member' relation. Per-ticket visibility (a reporter sees their own tickets; agents and admins see all) is NEVER an engine relation check: the service compares the caller against the ticket row's reporter/assignee columns."
+}

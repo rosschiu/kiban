@@ -1,0 +1,2 @@
+companyId:string
+memberId:string

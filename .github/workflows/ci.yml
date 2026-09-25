@@ -1,0 +1,122 @@
+# CI on GitHub Actions.
+#
+# Two tiers, both calling the exact same `make` targets a developer runs locally — no CI-only
+# logic. See `.github/workflows/full-tier.yml` for what the full tier actually does; this file
+# wires the two tiers to their triggers.
+#
+# FAST tier (this file's `fast` job) — every push and pull request:
+#   make setup && make test-stack-up && make check
+#   `make check` is the Makefile's own "fast gate" (`check: ## fast gate: ... (CI runs this)`)
+#   and already bundles: gofmt check, go vet, `go test ./...`, web-check (sdk+shell typecheck/
+#   test/build), validate-modules, ratchet-guard, coverage-gate, license-check, license-scan,
+#   docs-freshness-check, secret-scan (gitleaks, full history — hence fetch-depth 0 below).
+#
+#   The fast tier is NOT stack-free. Several packages' default (non-`live`-tagged) tests — e.g.
+#   internal/registry/dbtest_test.go, internal/gateway/dbtest_env_test.go,
+#   internal/identity/dbtest_test.go, internal/org/dbtest_test.go, internal/audit/dbtest_test.go,
+#   internal/bootstrap/dbtest_env_test.go, internal/authz/engine/dbtest_test.go,
+#   modules/*/service/dbtest_env_test.go — open a real Postgres connection and `t.Fatal` (not
+#   `t.Skip`) if one isn't reachable; there is no build tag gating them out of a bare
+#   `go test ./...`. On top of that, `make check` itself calls `coverage-gate`, which runs Go
+#   tests `-tags live` (needs the full compose stack, Keycloak included — see
+#   scripts/coverage-gate.sh's own header). So a bare `go test ./...` with no stack was never
+#   going to pass `make check` here — the fast tier brings the isolated `kiban-test` compose
+#   stack up (`make test-stack-up`) BEFORE `make check`, same as any developer following the
+#   Makefile's own error messages would.
+#
+# FULL tier (`.github/workflows/full-tier.yml`, called below + from nightly.yml) — push to main,
+# nightly cron, and workflow_dispatch: the same `make check` above, PLUS `make test` (full suite:
+# `-race`, and the OpenFGA differential harness — internal/authz/harness, which `docker run`s its
+# own throwaway openfga/openfga container; needs docker on the runner, which ubuntu-latest has).
+# Playwright e2e (web/sdk + web/shell) is nightly/dispatch only — see full-tier.yml's `e2e` job
+# and its own `run_e2e` input.
+#
+# What this workflow does NOT run, and why (a gate that can't run in CI is recorded here with
+# the reason and the local command, never silently skipped):
+#   - `make dev` / `make public-up` and the scripts that target them (infra/e2e-smoke.sh,
+#     infra/e2e-login.sh, modules/*/curl-proof.sh) — these are manual end-to-end proofs
+#     against the LIVE/public stack, not part of `make check`/`make test`; CI only ever brings up
+#     the isolated `kiban-test` stack, matching internal/livestack's own public-mode
+#     guard. Run locally: `make dev && bash infra/e2e-login.sh`.
+#   - `make images` / GHCR publish — handled by release.yml on `v*` tags. Run locally:
+#     `make images`.
+#   - `make bench-authz` — a 1M-tuple, `-timeout 20m` benchmark, not a
+#     correctness gate; too slow and too noise-sensitive on a shared hosted runner to be a
+#     trustworthy signal. Run locally: `make bench-authz`.
+#
+# Go/Node versions come from go.mod / web/package.json — never hardcoded here twice.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  # GitHub only lets `gh workflow run <file>` target a workflow that exists on the DEFAULT
+  # branch — nightly.yml/full-tier.yml can't be dispatched by name from a feature branch before it
+  # merges. The run_full input lets any branch exercise the SAME full-tier.yml reusable workflow
+  # ci.yml's own push-to-main job calls (a local `uses: ./...` call resolves off the calling ref,
+  # unlike a top-level dispatch) without waiting for main. It defaults to false, so a normal
+  # `workflow_dispatch` here still only runs the fast tier.
+  workflow_dispatch:
+    inputs:
+      run_full:
+        description: "Also run the full tier (full-tier.yml) after the fast tier"
+        type: boolean
+        default: false
+      run_e2e:
+        description: "If run_full is set, also run Playwright e2e"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast:
+    name: fast (make check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout (full history — secret-scan + ratchet-guard need it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node (npm workspaces, cache keyed on web/package-lock.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: make setup (toolchain preflight + scaffold .env)
+        run: make setup
+
+      - name: make test-stack-up (isolated kiban-test compose stack)
+        run: make test-stack-up
+
+      - name: make check (fast gate — see this file's header for exactly what it runs)
+        run: make check
+
+      - name: docker compose logs (debug aid, only on failure)
+        if: failure()
+        run: docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra logs --tail 200
+
+      - name: make test-stack-down
+        if: always()
+        run: make test-stack-down
+
+  full-on-main:
+    name: full tier (push to main, or manual dispatch with run_full)
+    needs: fast
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.run_full)
+    uses: ./.github/workflows/full-tier.yml
+    with:
+      run_e2e: ${{ github.event_name == 'workflow_dispatch' && inputs.run_e2e }}

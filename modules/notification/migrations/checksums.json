@@ -1,0 +1,10 @@
+{
+  "checksums": {
+    "0001_schema.sql": "35f4b94b43115891a06ad0b752e7bf4db794433d1e39d55c1f8c89784c7c2cde",
+    "0002_notification_tables.sql": "8ce02a90dbea56106c0c287ed8fa746d2357acead8e47957d9eba1e00e47ce41",
+    "0003_audit.sql": "d6f7ea747260278ff115ac1d7597de8ef80bbccd3f40c7d6fb8cd9f48c883207",
+    "0004_delivery_job_claim_group.sql": "3836b33f0805f9046584965dec5bc949f8beb0222d82d40fa0bd7db9b14bd27f",
+    "0005_delivery_job_lease_token.sql": "f5d4055e4865c210a6d4572ec47716fb15b2a924f21a3f329a2e7c6f12f58b04",
+    "0006_message_idempotency_hash.sql": "23748ebed7d11f48467a296b951f0475352f2c4b809c7923e831f6949605f652"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "checksums": {
+    "0001_schema.sql": "5fe25e1afdc27d554162b54b439abd94439b7af2e98f7c0e81676b97d604bd1d",
+    "0002_authz_tables.sql": "7db28a09672fd1e9440a15ea659872b687f52efa727c53c6cc9dc1a3911bfc53",
+    "0003_audit.sql": "fac645e9fb66764a463c67aeb1eb1a4e0b3cc2dc5381867cede34239efd3e9a5",
+    "0004_registry_fragment_grant.sql": "d5899cddaba3493fb74263071dc3bc34d60723a1ae90125f96b41e4b801d311b",
+    "0005_default_grant.sql": "4d04ea490aff234699d67c78b1cb9e40a83396389e4ebc01289a7792a8c00db2",
+    "0006_position_holder_revoke.sql": "ab07e68f380e25c6a4e5d5b0a9e3d3f6556b6850b3ec8ccda1c3639569466ac6",
+    "0007_group_member_revoke.sql": "5b71d60fac475b98467a88b0cf21ebd87ad7d57b414e9421d5d88c04affb91f9",
+    "0008_company_member_revoke.sql": "4bcc2c300e2a76b47034e5bf3a633c6fb7cb4c4e535f978d7f29fc9a80da8cbd",
+    "0009_org_object_company_revoke.sql": "e05b2d7132b6d190bbcdcacb9fe7578f9e5e438aa60c3852ac3191938049e5c6",
+    "0010_platform_role_backfill.sql": "7fc28eb1d3badbd9b0ed678472389e64181cdc3be5b30e00427e52b322191a3b",
+    "0011_audit_reject_truncate.sql": "f9ad5f3b6835d73138eafcbc78d5df89262ebba901e47561d95256df01ba375f"
+  }
+}

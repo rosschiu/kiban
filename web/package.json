@@ -1,0 +1,21 @@
+{
+  "name": "kiban-web",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "sdk",
+    "shell"
+  ],
+  "scripts": {
+    "test": "npm run -w sdk test && npm run -w shell test",
+    "build": "npm run -w sdk build && npm run -w shell build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@redocly/cli": "^2.46.2",
+    "redoc": "2.5.3"
+  }
+}

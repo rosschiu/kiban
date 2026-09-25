@@ -1,0 +1,742 @@
+# Kiban local deployment. Every service runs on the compose-internal network with no
+# host-published port of its own; the gateway is the single edge published to the host, in both
+# its TLS (:8443) and dev-HTTP (:8090) forms.
+# `name: kiban` keeps container names kiban-* regardless of the directory this is run from.
+name: kiban
+
+# Merged into the nine app services (registry … gateway) below. Their images run as uid 65532
+# (infra/Dockerfile.service's runtime-base) and write nothing to disk, so the root filesystem is
+# read-only, every capability is dropped and setuid escalation is refused; /tmp is a tmpfs so
+# anything that consults os.TempDir still has a writable path. postgres/keycloak/migrate/
+# bootstrap/gateway-devcert are deliberately not hardened this way: they write to their volumes
+# (and migrate/bootstrap run the toolchain image as root).
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+
+services:
+  postgres:
+    image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Read by ./postgres-init/*.sh at initdb only: the two non-superuser roles every other
+      # service connects as (keycloak owns the keycloak DB; kiban owns the app DB).
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KIBAN_DB_PASSWORD: ${KIBAN_DB_PASSWORD}
+    volumes:
+      # postgres:18+ images store data under a pg_ctlcluster-style layout; mount the volume at
+      # /var/lib/postgresql (not .../data) so the image manages the versioned subdirectory itself.
+      - kiban-pgdata:/var/lib/postgresql
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    build: ./keycloak-build
+    # Tagged so `make images-quickstart` can build a `kiban-keycloak` image: the quickstart needs
+    # a Keycloak image that already bears the MFA-setup authenticator and the imported realm, not
+    # stock Keycloak. With KIBAN_IMAGE_TAG unset (the normal `make dev`/`make public-up` case) the
+    # tag resolves to `:latest`, which `--build` always (re)creates.
+    image: kiban-keycloak:${KIBAN_IMAGE_TAG:-latest}
+    environment:
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      # Trust the gateway's X-Forwarded-Host/-Proto/-For headers (internal/gateway/
+      # auth_proxy.go's NewAuthProxy sets them via SetXForwarded) so pages Keycloak renders
+      # through the /auth/* proxy — crucially the login form's own POST `action` URL — carry the
+      # externally-reachable host the browser actually used, not this container's internal
+      # compose hostname (which broke every interactive browser login's password-submit step).
+      KC_PROXY_HEADERS: "xforwarded"
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      # Keycloak itself reads its bootstrap-admin password from env only (no _FILE variant), and
+      # the realm import runs before bootstrap's secrets volume exists — so THIS container is the
+      # one place both secrets stay as plain env vars (`docker inspect keycloak` shows them);
+      # every Kiban consumer (identity, bootstrap) reads them from files instead.
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      # Rendered into the imported realm JSON by keycloak-build/start.sh (the
+      # kiban-identity-service client's secret — never committed, never baked into the image).
+      KEYCLOAK_IDENTITY_CLIENT_SECRET: ${KEYCLOAK_IDENTITY_CLIENT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${KEYCLOAK_HOST_PORT}:8080"
+    healthcheck:
+      # No curl/wget in the stock Keycloak image; use bash's /dev/tcp against the management
+      # port (9000 — split from the app port on this Keycloak version).
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '\"status\": \"UP\"' <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # The kiban-bootstrap one-shot. Runs AFTER `migrate` (not instead of it): main.go opens its
+  # per-service runtime-role pools (identity/registry/authz) eagerly, before its own step runner starts — those roles
+  # only exist once `migrate`'s tern run has created them (migrations/registry/0001_roles.sql).
+  # bootstrap's own MigrationsStep then re-applies the same migrations idempotently (a no-op
+  # convergence check, not wasted work) and does the grant-matrix spot-check `migrate` doesn't.
+  bootstrap:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: bootstrap
+      args:
+        # Same stamp as the app services: `make images-quickstart` passes the short git SHA.
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    # Tagged for the same reason as `keycloak` above: the quickstart runs entirely from published
+    # images, including this one-shot job.
+    image: kiban-bootstrap:${KIBAN_IMAGE_TAG:-latest}
+    environment:
+      KIBAN_DB_HOST: postgres
+      KIBAN_DB_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      KIBAN_DB_PASSWORD: ${KIBAN_DB_PASSWORD}
+      KIBAN_REGISTRY_DB_PASSWORD: ${KIBAN_REGISTRY_DB_PASSWORD}
+      KIBAN_IDENTITY_DB_PASSWORD: ${KIBAN_IDENTITY_DB_PASSWORD}
+      KIBAN_ORG_DB_PASSWORD: ${KIBAN_ORG_DB_PASSWORD}
+      KIBAN_AUTHZ_DB_PASSWORD: ${KIBAN_AUTHZ_DB_PASSWORD}
+
+      KEYCLOAK_MANAGEMENT_URL: http://keycloak:9000
+      KEYCLOAK_REALM_DISCOVERY_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
+      KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      # Never a plain env var: read from the compose secret below (a file, not `docker inspect`
+      # output). KEYCLOAK_IDENTITY_CLIENT_SECRET is deliberately NOT given to bootstrap — it reads
+      # the current value from Keycloak's admin API and writes it to KIBAN_SECRETS_DIR for
+      # identity (internal/bootstrap/realm.go's writeServiceSecrets).
+      KC_BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/kc-bootstrap-admin-password
+      # KIBAN_DOMAIN deliberately unset in dev: RealmStep falls back to the realm import's own
+      # dev-loopback redirect URIs/web origins (localhost:3000/5173/80) when empty.
+      KIBAN_SECRETS_DIR: /run/kiban-secrets
+
+      KIBAN_SUPERADMIN_USERNAME: ${KIBAN_SUPERADMIN_USERNAME}
+      KIBAN_SUPERADMIN_EMAIL: ${KIBAN_SUPERADMIN_EMAIL}
+      # Never a plain env var (secrets are never stored in env-visible places) — read from
+      # the file `make dev` generates onto ./secrets-in (see Makefile), bind-mounted below.
+      KIBAN_SUPERADMIN_PASSWORD_FILE: /run/kiban-secrets-in/superadmin-password
+      # KIBAN_INSTALLED_MODULES deliberately unset: KnownModules (internal/bootstrap/seed.go) is
+      # empty, so any value here would fail startup loudly (unknown modules are never ignored).
+
+      KIBAN_REGISTRY_DB_HOST: postgres
+      KIBAN_REGISTRY_DB_PORT: "5432"
+      KIBAN_REGISTRY_DB_NAME: ${POSTGRES_DB}
+      KIBAN_AUTHZ_DB_HOST: postgres
+      KIBAN_AUTHZ_DB_PORT: "5432"
+      KIBAN_AUTHZ_DB_NAME: ${POSTGRES_DB}
+      # MemberMappedUserBackfill needs an org pool; optionalServicePool skips
+      # silently ("OrgPool not set") when the port/name are absent.
+      KIBAN_ORG_DB_HOST: postgres
+      KIBAN_ORG_DB_PORT: "5432"
+      KIBAN_ORG_DB_NAME: ${POSTGRES_DB}
+    volumes:
+      # Input: the one-time superadmin's initial password, generated onto the host by `make dev`
+      # (never committed, never an env var — see KIBAN_SUPERADMIN_PASSWORD_FILE above).
+      - ./secrets-in:/run/kiban-secrets-in:ro
+      # Output: per-service Keycloak client secrets RealmStep writes as 0600 files — a named
+      # volume, not a bind mount, so no host directory needs to pre-exist. `identity` mounts it
+      # read-only and reads its client secret from there.
+      - kiban-bootstrap-secrets:/run/kiban-secrets
+    secrets:
+      - kc-bootstrap-admin-password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # --- one-shot jobs (restart: "no"), gate every app service below via depends_on ---
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: migrate
+    # Tagged for the same reason as `bootstrap`/`keycloak` above.
+    image: kiban-migrate:${KIBAN_IMAGE_TAG:-latest}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      KIBAN_DB_PASSWORD: ${KIBAN_DB_PASSWORD}
+      KIBAN_REGISTRY_DB_PASSWORD: ${KIBAN_REGISTRY_DB_PASSWORD}
+      KIBAN_IDENTITY_DB_PASSWORD: ${KIBAN_IDENTITY_DB_PASSWORD}
+      KIBAN_ORG_DB_PASSWORD: ${KIBAN_ORG_DB_PASSWORD}
+      KIBAN_AUTHZ_DB_PASSWORD: ${KIBAN_AUTHZ_DB_PASSWORD}
+      KIBAN_NOTIFICATION_DB_PASSWORD: ${KIBAN_NOTIFICATION_DB_PASSWORD}
+      KIBAN_TIMESHEET_DB_PASSWORD: ${KIBAN_TIMESHEET_DB_PASSWORD}
+      KIBAN_DOCS_DB_PASSWORD: ${KIBAN_DOCS_DB_PASSWORD}
+      KIBAN_HELPDESK_DB_PASSWORD: ${KIBAN_HELPDESK_DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  gateway-devcert:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: gateway-devcert
+    # Tagged like the other one-shots so a `KIBAN_IMAGE_TAG=vX make dev` (`up --no-build`) never
+    # builds this from whatever checkout happens to be present: `make images-all` builds it and
+    # release.yml pushes it with the other 12. The quickstart drops it by name
+    # (scripts/gen-quickstart-compose.sh: its gateway runs in plain-HTTP mode, no cert needed).
+    image: kiban-gateway-devcert:${KIBAN_IMAGE_TAG:-latest}
+    volumes:
+      - kiban-gateway-tls:/certs
+    restart: "no"
+
+  # --- the four foundation services + the gateway edge ---
+
+  registry:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: registry
+      args:
+        # Unset by `make dev`/`make public-up` (defaults to "unknown"); `make images` sets a real
+        # `git rev-parse --short HEAD` so kiban_build_info{commit} carries it.
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    # `image:` gives the built image a stable, addressable tag: `make dev`/`make public-up` (no
+    # KIBAN_IMAGE_TAG set) build from source, while `KIBAN_IMAGE_TAG=vX.Y.Z make public-up` (no
+    # `--build`) runs FROM the image `make images VERSION=vX.Y.Z` already built and tagged.
+    image: kiban-registry:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_REGISTRY_DB_HOST: postgres
+      KIBAN_REGISTRY_DB_PORT: "5432"
+      KIBAN_REGISTRY_DB_NAME: ${POSTGRES_DB}
+      KIBAN_REGISTRY_DB_PASSWORD: ${KIBAN_REGISTRY_DB_PASSWORD}
+      # Registry's own (defense-in-depth) confirmation of a platform-admin mutation
+      # caller, independent of the gateway's own guard — internal/registry/adminauthz.go.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+      # The product modules installed+enabled at boot. Their manifest metadata is the
+      # cmd/registry/main.go builtinModules literal (see that file's comment for why).
+      KIBAN_INSTALLED_MODULES: notification,timesheet,docs,helpdesk
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      # See identity's own depends_on comment: bootstrap (not keycloak directly) closes the
+      # Keycloak-app-port startup race — registry doesn't talk to Keycloak itself, but it now
+      # calls authz's effective-access endpoint on every admin mutation (KIBAN_AUTHZ_BASE_URL
+      # above), and authz's own JWT verification needs the realm import fully settled the same
+      # way identity/gateway do.
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8110/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  identity:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: identity
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-identity:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_IDENTITY_DB_HOST: postgres
+      KIBAN_IDENTITY_DB_PORT: "5432"
+      KIBAN_IDENTITY_DB_NAME: ${POSTGRES_DB}
+      KIBAN_IDENTITY_DB_PASSWORD: ${KIBAN_IDENTITY_DB_PASSWORD}
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      # ISSUER_URL deliberately does NOT match JWKS_URL's host.
+      # KC_HOSTNAME_STRICT=false means Keycloak's own `iss` claim reflects whichever address the
+      # CLIENT used to reach the token endpoint. A real interactive browser login always goes
+      # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
+      # directly), so its token's `iss` is the gateway's own public origin
+      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
+      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # separately-published host port, which exists for admin-API/tooling convenience only) so
+      # their tokens carry the identical issuer a real browser session would. This value is
+      # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
+      # fine that it isn't reachable from inside this container the way JWKS_URL needs to be.
+      # The port is env-var-driven (default 8443, matching the gateway's own published port
+      # default below) so the isolated test stack's KIBAN_GATEWAY_TLS_HOST_PORT remap
+      # (kiban-test's real browser-issued tokens carry THAT origin as `iss`) doesn't leave this
+      # value pointing at the wrong stack's port.
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      # Never a plain env var (`docker inspect` shows no secret): the file bootstrap's RealmStep
+      # writes onto the shared secrets volume (mounted read-only below), read via config.Load's
+      # <NAME>_FILE rule. It always holds Keycloak's CURRENT value, so `bootstrap --rotate-secrets`
+      # + an identity restart rotates the secret with no env edit.
+      KEYCLOAK_IDENTITY_CLIENT_SECRET_FILE: /run/kiban-secrets/keycloak-identity-client-secret
+      # The real AdminAuthorizer's target. No depends_on edge to `authz` — authz
+      # itself depends_on identity/org (below), so the reverse edge would be a compose dependency
+      # cycle; the client call is lazy (per-request), and fails closed (503) if authz isn't up
+      # yet, which is correct behavior, not a startup-ordering bug.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      # `keycloak`'s own healthcheck only proves its MANAGEMENT port (9000) is up — the realm
+      # import can still finish a few seconds later, during which the APP port (8080, what
+      # identity's JWKS fetch actually hits) briefly answers 503. `bootstrap`'s preflight already
+      # retries the real realm discovery
+      # endpoint on the app port before it exits 0 — depending on it instead (rather than
+      # `keycloak` directly) is what actually closes this race for every service that talks to
+      # Keycloak at startup (identity, authz, gateway).
+      bootstrap:
+        condition: service_completed_successfully
+    volumes:
+      # Read-only view of bootstrap's secrets volume — see KEYCLOAK_IDENTITY_CLIENT_SECRET_FILE.
+      - kiban-bootstrap-secrets:/run/kiban-secrets:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8120/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  org:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: org
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-org:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_ORG_DB_HOST: postgres
+      KIBAN_ORG_DB_PORT: "5432"
+      KIBAN_ORG_DB_NAME: ${POSTGRES_DB}
+      KIBAN_ORG_DB_PASSWORD: ${KIBAN_ORG_DB_PASSWORD}
+      KIBAN_IDENTITY_BASE_URL: http://identity:8120
+      # The real AdminAuthorizer's target — same no-depends_on-cycle note as
+      # identity's own KIBAN_AUTHZ_BASE_URL above.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      identity:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8130/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  authz:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: authz
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-authz:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_AUTHZ_DB_HOST: postgres
+      KIBAN_AUTHZ_DB_PORT: "5432"
+      KIBAN_AUTHZ_DB_NAME: ${POSTGRES_DB}
+      KIBAN_AUTHZ_DB_PASSWORD: ${KIBAN_AUTHZ_DB_PASSWORD}
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      # ISSUER_URL deliberately does NOT match JWKS_URL's host.
+      # KC_HOSTNAME_STRICT=false means Keycloak's own `iss` claim reflects whichever address the
+      # CLIENT used to reach the token endpoint. A real interactive browser login always goes
+      # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
+      # directly), so its token's `iss` is the gateway's own public origin
+      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
+      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # separately-published host port, which exists for admin-API/tooling convenience only) so
+      # their tokens carry the identical issuer a real browser session would. This value is
+      # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
+      # fine that it isn't reachable from inside this container the way JWKS_URL needs to be.
+      # The port is env-var-driven — see identity's own KEYCLOAK_ISSUER_URL comment above.
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_IDENTITY_BASE_URL: http://identity:8120
+      KIBAN_REGISTRY_BASE_URL: http://registry:8110
+      # Company-scope decision dependencies (org's company-facts endpoints).
+      KIBAN_ORG_BASE_URL: http://org:8130
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      # See identity's own depends_on comment: bootstrap (not keycloak directly) closes the
+      # startup race on Keycloak's app port.
+      bootstrap:
+        condition: service_completed_successfully
+      identity:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+      org:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8140/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # --- the notification module — built solely against the module contract (module.
+  # manifest.json's service.port=8150/healthPath=/health match exactly). Registered into the
+  # catalog via `registry`'s KIBAN_INSTALLED_MODULES=notification (above); routed by the gateway
+  # with ZERO gateway code changes (catalog.go/proxy.go are registry-driven, module-key-generic).
+  notification:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: notification
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-notification:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_NOTIFICATION_DB_HOST: postgres
+      KIBAN_NOTIFICATION_DB_PORT: "5432"
+      KIBAN_NOTIFICATION_DB_NAME: ${POSTGRES_DB}
+      KIBAN_NOTIFICATION_DB_PASSWORD: ${KIBAN_NOTIFICATION_DB_PASSWORD}
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      # See authz/gateway's own KEYCLOAK_ISSUER_URL comment for why this doesn't match JWKS_URL's
+      # host; the port is env-var-driven for the same reason.
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_ORG_BASE_URL: http://org:8130
+      # Per-operation authorization goes through authz's real effective-access
+      # decision, not a blanket org-membership check alone. No depends_on edge to `authz`
+      # needed — the call is lazy (per-request) and fails closed (503) if authz isn't up yet.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+      # net/smtp to mailpit only (no vendor SDK) — the compose `test` profile's
+      # mailpit container; SMTP_HOST/PORT deliberately point at a service that only exists in
+      # that profile, so a plain `make dev` (no profile) still starts cleanly: the delivery
+      # worker logs and retries (never crashes) when the SMTP dial fails, same as any other
+      # transient delivery failure: exponential backoff (min(2^attempts s, 15 min) between
+      # attempts), dead-lettered after 8 attempts.
+      KIBAN_NOTIFICATION_SMTP_HOST: mailpit
+      KIBAN_NOTIFICATION_SMTP_PORT: "1025"
+      KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET: ${KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      bootstrap:
+        condition: service_completed_successfully
+      org:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8150/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # --- the timesheet module. Registered into the catalog via `registry`'s
+  # KIBAN_INSTALLED_MODULES=notification,timesheet (above); routed by the gateway with ZERO
+  # gateway code changes, same as notification.
+  timesheet:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: timesheet
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-timesheet:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_TIMESHEET_DB_HOST: postgres
+      KIBAN_TIMESHEET_DB_PORT: "5432"
+      KIBAN_TIMESHEET_DB_NAME: ${POSTGRES_DB}
+      KIBAN_TIMESHEET_DB_PASSWORD: ${KIBAN_TIMESHEET_DB_PASSWORD}
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_ORG_BASE_URL: http://org:8130
+      # Per-operation authorization goes through authz's real effective-access decision (same
+      # pattern as notification). No depends_on edge to `authz` needed — the call is
+      # lazy (per-request) and fails closed (503) if authz isn't up yet.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      bootstrap:
+        condition: service_completed_successfully
+      org:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8160/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # --- the docs module — the fine-grained-sharing showcase. Registered into the catalog via `registry`'s
+  # KIBAN_INSTALLED_MODULES=notification,timesheet,docs (above); routed by the gateway with ZERO
+  # gateway code changes, same as notification/timesheet. Needs both `org` (member directory) and
+  # `notification` (targeted-events S2S endpoint) reachable, in addition to `authz`.
+  docs:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: docs
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-docs:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_DOCS_DB_HOST: postgres
+      KIBAN_DOCS_DB_PORT: "5432"
+      KIBAN_DOCS_DB_NAME: ${POSTGRES_DB}
+      KIBAN_DOCS_DB_PASSWORD: ${KIBAN_DOCS_DB_PASSWORD}
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_ORG_BASE_URL: http://org:8130
+      # Per-operation authorization (including the object-mode viewer/editor checks)
+      # and grant/revoke tuple writes both go through authz's own S2S surface — no depends_on
+      # edge needed, the call is lazy (per-request) and fails closed (503) if authz isn't up yet.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+      # Share/revoke fire a targeted notification event through notification's own
+      # S2S endpoint (`/internal/notification/v1/companies/{companyId}/events`) — non-fatal if
+      # unreachable (sharing must not depend on notification availability), so no
+      # depends_on edge here either.
+      KIBAN_NOTIFICATION_BASE_URL: http://notification:8150
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      bootstrap:
+        condition: service_completed_successfully
+      org:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8170/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # --- the helpdesk module — the workflow showcase. Registered into the catalog via `registry`'s
+  # KIBAN_INSTALLED_MODULES=notification,timesheet,docs,helpdesk (above); routed by the gateway
+  # with ZERO gateway code changes, same as notification/timesheet/docs. Needs `org` (member
+  # directory) and `notification` (targeted-events S2S endpoint) reachable, in addition to
+  # `authz`.
+  helpdesk:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: helpdesk
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-helpdesk:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KIBAN_HELPDESK_DB_HOST: postgres
+      KIBAN_HELPDESK_DB_PORT: "5432"
+      KIBAN_HELPDESK_DB_NAME: ${POSTGRES_DB}
+      KIBAN_HELPDESK_DB_PASSWORD: ${KIBAN_HELPDESK_DB_PASSWORD}
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_ORG_BASE_URL: http://org:8130
+      # Per-operation authorization (company_module tier checks) and grant/revoke tuple writes
+      # (the agent tier) both go through authz's own S2S surface — no depends_on edge needed, the
+      # call is lazy (per-request) and fails closed (503) if authz isn't up yet.
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+      # Assignment/status-change/comment fire a targeted notification event through
+      # notification's own S2S endpoint — non-fatal if unreachable, so no depends_on edge here
+      # either.
+      KIBAN_NOTIFICATION_BASE_URL: http://notification:8150
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      bootstrap:
+        condition: service_completed_successfully
+      org:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8180/ready"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # Mail and webhook sinks for the compose `test` profile. Neither
+  # container is needed for `make dev`'s own module-disabled/capability proofs; both are needed
+  # for the delivery-worker tests and the curl proof's actual email/webhook fan-out, so they're
+  # gated behind `--profile test` (`docker compose --project-directory infra --profile test up`)
+  # rather than always-on.
+  mailpit:
+    image: axllent/mailpit:v1.20@sha256:7eef0f38dbc85e4e264f2edf5d70fbb694826791e05cb2cae4fc9e3282f968f5
+    profiles: ["test"]
+    ports:
+      - "127.0.0.1:8025:8025" # web UI + API (GET /api/v1/messages) — used by the curl proof
+      - "127.0.0.1:1025:1025" # SMTP
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8025/api/v1/info"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  webhook-target:
+    image: mendhak/http-https-echo:31@sha256:0fefe04350131d7bb28355e3bf037062643e45f4a8a32f23679529e1b09d8ce4
+    profiles: ["test"]
+    environment:
+      HTTP_PORT: "8080"
+    ports:
+      - "127.0.0.1:8888:8080" # inspect delivered webhook bodies via GET /api/v1/... (echo server logs the request back)
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      target: gateway
+      args:
+        KIBAN_COMMIT: ${KIBAN_COMMIT:-unknown}
+    image: kiban-gateway:${KIBAN_IMAGE_TAG:-latest}
+    <<: *hardened
+    environment:
+      KIBAN_LISTEN_ADDR: "0.0.0.0"
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+      # ISSUER_URL deliberately does NOT match JWKS_URL's host.
+      # KC_HOSTNAME_STRICT=false means Keycloak's own `iss` claim reflects whichever address the
+      # CLIENT used to reach the token endpoint. A real interactive browser login always goes
+      # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
+      # directly), so its token's `iss` is the gateway's own public origin
+      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
+      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # separately-published host port, which exists for admin-API/tooling convenience only) so
+      # their tokens carry the identical issuer a real browser session would. This value is
+      # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
+      # fine that it isn't reachable from inside this container the way JWKS_URL needs to be.
+      # The port is env-var-driven — see identity's own KEYCLOAK_ISSUER_URL comment above.
+      KEYCLOAK_ISSUER_URL: https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}
+      KIBAN_REGISTRY_BASE_URL: http://registry:8110
+      KIBAN_AUTHZ_BASE_URL: http://authz:8140
+      # The foundation routes' org target (`/api/org/me/companies`).
+      KIBAN_ORG_BASE_URL: http://org:8130
+      # First-request identity provisioning (internal/gateway/provision.go).
+      KIBAN_IDENTITY_BASE_URL: http://identity:8120
+      # internal/gateway/proxy.go's moduleHost() default (127.0.0.1) only works for a
+      # host-run process; inside compose every module lives on its own service hostname —
+      # KIBAN_MODULE_HOST_<MODULEKEY> (uppercased) is proxy.go's documented per-module override
+      # for exactly this case (no gateway code change, config only).
+      KIBAN_MODULE_HOST_NOTIFICATION: notification
+      KIBAN_MODULE_HOST_TIMESHEET: timesheet
+      KIBAN_MODULE_HOST_DOCS: docs
+      KIBAN_MODULE_HOST_HELPDESK: helpdesk
+      # Operator-certs TLS mode, fed a locally-generated self-signed dev
+      # cert (gateway-devcert) rather than a real operator-supplied one.
+      KIBAN_TLS_CERT_FILE: /certs/dev.crt
+      KIBAN_TLS_KEY_FILE: /certs/dev.key
+      # Serves web/shell's built bundle at `/` (internal/gateway/static.go) — baked
+      # into the `gateway` image by infra/Dockerfile.service's `shell-build` stage.
+      KIBAN_STATIC_DIR: /var/www/kiban-shell
+    volumes:
+      - kiban-gateway-tls:/certs:ro
+    ports:
+      # Env-var-driven (with the original literals as defaults) so .env.test
+      # can point `make test-stack-up`'s isolated stack at different host ports without a
+      # compose-file port-list override (docker compose merges `ports:` lists by concatenation,
+      # not replacement, so an override file's own `ports:` entry would ADD a second published
+      # port rather than remap the existing one — see infra/compose.test.yaml's own comment).
+      - "127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}:8443"
+      - "127.0.0.1:${KIBAN_GATEWAY_HTTP_HOST_PORT:-8090}:8090"
+    depends_on:
+      # See identity's own depends_on comment: bootstrap (not keycloak directly) closes the
+      # startup race on Keycloak's app port.
+      bootstrap:
+        condition: service_completed_successfully
+      registry:
+        condition: service_healthy
+      authz:
+        condition: service_healthy
+      org:
+        condition: service_healthy
+      notification:
+        condition: service_healthy
+      timesheet:
+        condition: service_healthy
+      docs:
+        condition: service_healthy
+      helpdesk:
+        condition: service_healthy
+      gateway-devcert:
+        condition: service_completed_successfully
+    healthcheck:
+      # KIBAN_STATIC_DIR is configured (above), so `/` serves web/shell's index.html (200)
+      # rather than the "no static dir configured" 404 — see
+      # internal/gateway/static.go's NewStaticHandler. The gateway has no DB and no `/ready`
+      # route of its own (`/ready` would just be the SPA fallback), so unlike the eight
+      # services above this stays a `/` check.
+      test:
+        [
+          "CMD-SHELL",
+          "test \"$(curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1:8443/)\" = 200",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+volumes:
+  kiban-pgdata:
+  kiban-gateway-tls:
+  kiban-bootstrap-secrets:
+
+# Compose secrets: values from .env, mounted as files under /run/secrets/ in the services
+# that list them — never in those containers' env (`docker inspect`). The quickstart's generated
+# compose keeps the plain env vars instead (scripts/gen-quickstart-compose.sh: a zero-clone user
+# has no secrets volume story beyond .env), which is its documented weaker posture.
+secrets:
+  kc-bootstrap-admin-password:
+    environment: KC_BOOTSTRAP_ADMIN_PASSWORD

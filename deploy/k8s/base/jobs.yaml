@@ -1,0 +1,156 @@
+# The two one-shot jobs (infra/compose.yaml's `migrate`/`bootstrap`, `restart: "no"`)
+# as plain K8s Jobs rather than initContainers on every Deployment (see README.md "Apply order"
+# for the reasoning): everything
+# is applied together (`deploy/k8s/apply.sh` does one `kubectl apply -k`, then GATES on
+# `kubectl wait`), so these Jobs start racing their dependencies (postgres/keycloak) immediately.
+#
+# `restartPolicy: OnFailure` with a generous `backoffLimit`, not `Never` + a small limit:
+# `bootstrap`'s own preflight correctly refuses to proceed until Keycloak's health endpoint
+# answers (60-90s cold start, JVM-heavy — see keycloak.yaml's own resource comment) and postgres
+# is reachable. `restartPolicy: Never` makes the Job controller recreate a WHOLE NEW POD on every
+# failure (its own exponential inter-pod backoff, plus a fresh scheduling + image-check +
+# DNS-cold-lookup cost each time), so a small `backoffLimit` exhausts itself well before Keycloak
+# is ready and the Job goes permanently `Failed` (Jobs do not retry forever, unlike a
+# Deployment's self-healing). `OnFailure` (kubelet restarts the SAME pod's container in place —
+# cheap, no re-scheduling) gives the same "wait for the dependency, then succeed" behavior the
+# app Deployments already tolerate for their own lazy per-request dependencies.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  labels:
+    app.kubernetes.io/name: migrate
+    app.kubernetes.io/part-of: kiban
+spec:
+  backoffLimit: 20
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: migrate
+        app.kubernetes.io/part-of: kiban
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: kiban-migrate:latest # overlays patch the real tag — see keycloak.yaml's comment
+          envFrom:
+            - configMapRef: { name: kiban-config }
+            - secretRef: { name: kiban-secrets }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap
+  labels:
+    app.kubernetes.io/name: bootstrap
+    app.kubernetes.io/part-of: kiban
+spec:
+  backoffLimit: 20
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bootstrap
+        app.kubernetes.io/part-of: kiban
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: kiban-bootstrap:latest
+          # NOT a blanket `envFrom: [configMapRef: kiban-config]` — `kiban-config`'s
+          # `KIBAN_INSTALLED_MODULES` key is registry-only (infra/compose.yaml's own `bootstrap`
+          # service comment: KnownModules is empty, so any value fails bootstrap startup loudly
+          # with `seed: parse KIBAN_INSTALLED_MODULES: registry: KIBAN_INSTALLED_MODULES names
+          # unknown module key(s): ...`). Pull only the specific keys
+          # bootstrap actually needs (below), matching infra/compose.yaml's own `bootstrap`
+          # service env block exactly. No blanket `secretRef` either: the DB passwords are
+          # listed one by one, KC_BOOTSTRAP_ADMIN_PASSWORD arrives as a mounted file (never env —
+          # `kubectl describe pod` shows no secret), and KEYCLOAK_IDENTITY_CLIENT_SECRET is not
+          # given at all (bootstrap reads Keycloak's current value over the admin API).
+          env:
+            - name: KIBAN_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_DB_PASSWORD } }
+            - name: KIBAN_REGISTRY_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_REGISTRY_DB_PASSWORD } }
+            - name: KIBAN_IDENTITY_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_IDENTITY_DB_PASSWORD } }
+            - name: KIBAN_ORG_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_ORG_DB_PASSWORD } }
+            - name: KIBAN_AUTHZ_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_AUTHZ_DB_PASSWORD } }
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD_FILE
+              value: "/run/kiban-secrets-in/kc-bootstrap-admin-password"
+            - name: POSTGRES_DB
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } }
+            - name: KEYCLOAK_REALM
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KEYCLOAK_REALM } }
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KC_BOOTSTRAP_ADMIN_USERNAME } }
+            - name: KIBAN_SUPERADMIN_USERNAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_SUPERADMIN_USERNAME } }
+            - name: KIBAN_SUPERADMIN_EMAIL
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_SUPERADMIN_EMAIL } }
+            # Deliberately left able to be empty (kiban-config's own default) — RealmStep falls
+            # back to its dev-loopback redirect allowlist exactly as infra/compose.yaml's own
+            # `bootstrap` service comment on this same var describes; overlays/production
+            # patches kiban-config's KIBAN_DOMAIN to a real value.
+            - name: KIBAN_DOMAIN
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_DOMAIN } }
+            - name: KIBAN_DB_HOST
+              value: "postgres"
+            - name: KIBAN_DB_PORT
+              value: "5432"
+            - name: KEYCLOAK_MANAGEMENT_URL
+              value: "http://keycloak:9000"
+            - name: KEYCLOAK_REALM_DISCOVERY_URL
+              value: "http://keycloak:8080/realms/kiban/.well-known/openid-configuration"
+            - name: KEYCLOAK_ADMIN_BASE_URL
+              value: "http://keycloak:8080"
+            # Never a plain env var — read from the Secret mounted as a file below (same
+            # "never store secrets in env-visible places" rule infra/compose.yaml's own
+            # `bootstrap` service comment states; base/secret.example.yaml's header explains why
+            # this one key is mounted, not envFrom'd).
+            - name: KIBAN_SUPERADMIN_PASSWORD_FILE
+              value: "/run/kiban-secrets-in/superadmin-password"
+            - name: KIBAN_SECRETS_DIR
+              value: "/run/kiban-secrets"
+            - name: KIBAN_REGISTRY_DB_HOST
+              value: "postgres"
+            - name: KIBAN_REGISTRY_DB_PORT
+              value: "5432"
+            - name: KIBAN_REGISTRY_DB_NAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } }
+            - name: KIBAN_AUTHZ_DB_HOST
+              value: "postgres"
+            - name: KIBAN_AUTHZ_DB_PORT
+              value: "5432"
+            - name: KIBAN_AUTHZ_DB_NAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } }
+            - name: KIBAN_ORG_DB_HOST
+              value: "postgres"
+            - name: KIBAN_ORG_DB_PORT
+              value: "5432"
+            - name: KIBAN_ORG_DB_NAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } }
+          volumeMounts:
+            - name: superadmin-password
+              mountPath: /run/kiban-secrets-in
+              readOnly: true
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+      volumes:
+        - name: superadmin-password
+          secret:
+            secretName: kiban-secrets
+            items:
+              - key: superadmin-password
+                path: superadmin-password
+                mode: 0400
+              - key: KC_BOOTSTRAP_ADMIN_PASSWORD
+                path: kc-bootstrap-admin-password
+                mode: 0400

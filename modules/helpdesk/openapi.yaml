@@ -1,0 +1,610 @@
+openapi: 3.0.3
+info:
+  title: Helpdesk module API
+  version: "1.0.0"
+  description: >
+    Module-owned API fragment and source of truth for the helpdesk module's HTTP boundary:
+    role tiers, assignment, status transitions, cross-module notification, and the
+    at-least-one-admin-per-module invariant. It uses a different authz idiom from DocShare:
+    tiers on the base company_module relations (member/editor/admin), no per-ticket tuples.
+    All paths live under service.basePath (/api/helpdesk), with the major version inside the
+    module's own path space (/v1).
+servers:
+  - url: /api/helpdesk
+  # The registry catalog (internal/registry/seed.go
+  # HealthPath) and the running mux (mountRoutes: "GET /health"/"GET /ready", no /api/helpdesk
+  # prefix) both confirm liveness/readiness probes are hit directly against the module's own
+  # host:port, OUTSIDE service.basePath. A second global server entry (not a per-path override
+  # — see modules/docs/openapi.yaml's own comment for why: kin-openapi's gorillamux router has
+  # an order-dependent bug where a per-path `servers` override leaks into every path processed
+  # afterward) documents that reality.
+  - url: /
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe. Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200":
+          description: OK
+
+  /ready:
+    # Served by handleReady (mountRoutes: "GET /ready").
+    get:
+      operationId: getReady
+      summary: Readiness probe (database ping). Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { status: { type: string } } }
+        "503":
+          description: Database unreachable (errenv code INTERNAL_ERROR, verbatim from the running handler — not a dedicated unavailable code).
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /v1/companies/{companyId}/me:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: getMyTier
+      summary: >
+        The caller's own helpdesk tier in this company (member/agent/admin) — membership-gated.
+        Exists so the frontend can render tier-specific UI (agent/admin-only nav) without
+        guessing from 403s.
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/TierEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /v1/companies/{companyId}/tickets:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listTickets
+      summary: >
+        Tickets the caller may see. view=mine (default): the tickets the caller reported.
+        view=all: every ticket in the company; requires the agent or admin tier.
+      x-required-modules: [helpdesk]
+      parameters:
+        - name: view
+          in: query
+          schema: { type: string, enum: [mine, all], default: mine }
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, in_progress, resolved, closed] }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketListEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: createTicket
+      summary: Raise a ticket (helpdesk.tickets.create — membership-gated)
+      x-required-modules: [helpdesk]
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTicketRequest" }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketEnvelope" } } }
+        "200":
+          description: Idempotent replay — same Idempotency-Key + same payload as a prior create returns the original ticket unchanged.
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /v1/companies/{companyId}/tickets/{ticketId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/ticketId"
+    get:
+      operationId: getTicket
+      summary: Read a ticket (reporter, agent, or admin — visibility enforced in service logic)
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/tickets/{ticketId}/audit:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/ticketId"
+    get:
+      operationId: getTicketAudit
+      summary: >
+        This ticket's audit trail (create, assign, status transitions) — the ticket detail page's
+        status timeline. Same visibility rule as getTicket (reporter, agent, or admin).
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/AuditEventListEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/tickets/{ticketId}/assign:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/ticketId"
+    post:
+      operationId: assignTicket
+      summary: >
+        Assign a ticket to a member (helpdesk.manage — admin only). Assigning a non-agent
+        auto-grants the agent tier (audited both).
+      x-required-modules: [helpdesk]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssignTicketRequest" }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/tickets/{ticketId}/status:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/ticketId"
+    post:
+      operationId: transitionTicketStatus
+      summary: >
+        Move a ticket's status (open->in_progress->resolved->closed, plus resolved->open reopen).
+        assignee/admin progress+resolve; reporter/admin reopen a resolved ticket or close their
+        own resolved ticket. Audited with from->to.
+      x-required-modules: [helpdesk]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransitionStatusRequest" }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/TicketEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/tickets/{ticketId}/comments:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/ticketId"
+    get:
+      operationId: listComments
+      summary: A ticket's comment thread (reporter, agent, or admin on that ticket)
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/CommentListEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createComment
+      summary: >
+        Append a comment (reporter, agent, or admin on that ticket). Fires a notification
+        event to the ticket's assignee (if the commenter is the reporter) or reporter (otherwise).
+      x-required-modules: [helpdesk]
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateCommentRequest" }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/CommentEnvelope" } } }
+        "200":
+          description: Idempotent replay — same Idempotency-Key + same payload as a prior create returns the original comment unchanged (no second notification fan-out).
+          content: { application/json: { schema: { $ref: "#/components/schemas/CommentEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+
+  /v1/companies/{companyId}/assignable-positions:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listAssignablePositions
+      summary: >
+        Positions bound as helpdesk agents in this company, each with its current holder.
+        Requires helpdesk.manage.
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/AssignablePositionListEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+
+  /v1/companies/{companyId}/assignable-groups:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listAssignableGroups
+      summary: >
+        Groups bound as helpdesk agents in this company, each with its current member count.
+        Requires helpdesk.manage.
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/AssignableGroupListEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+
+  /v1/companies/{companyId}/agents:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listAgents
+      summary: List current agents (helpdesk.manage — admin only)
+      x-required-modules: [helpdesk]
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: "#/components/schemas/AgentListEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: makeAgent
+      summary: Grant a member the agent tier (helpdesk.manage — admin only)
+      x-required-modules: [helpdesk]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MakeAgentRequest" }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/AgentEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/agents/positions/{positionId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: positionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: removeAgentForPosition
+      summary: >
+        Revoke a position's agent-tier binding (helpdesk.manage — admin only). Refuses (422)
+        while any open ticket is assigned directly to that position, mirroring removeAgent's
+        member-path rule.
+      x-required-modules: [helpdesk]
+      responses:
+        "204": { description: Removed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/agents/groups/{groupId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: groupId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: removeAgentForGroup
+      summary: >
+        Revoke a group's agent-tier binding (helpdesk.manage — admin only). Refuses
+        (422) while any open ticket is assigned directly to that group — the group sibling of
+        removeAgentForPosition.
+      x-required-modules: [helpdesk]
+      responses:
+        "204": { description: Removed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/agents/{memberId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: memberId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: removeAgent
+      summary: >
+        Revoke a member's agent tier (helpdesk.manage — admin only). Refuses (422) to remove the
+        tier from a member currently assigned any non-closed ticket (reassign first) — the
+        protection rule; admin-tier revocation itself is out of scope for this module.
+      x-required-modules: [helpdesk]
+      responses:
+        "204": { description: Removed }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+components:
+  parameters:
+    companyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ticketId:
+      name: ticketId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 200 }
+
+  schemas:
+    Ticket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [open, in_progress, resolved, closed] }
+        reporterMemberId: { type: string, format: uuid }
+        assigneeMemberId: { type: string, format: uuid, nullable: true }
+        assigneeKind:
+          type: string
+          enum: [member, position, group, ""]
+          description: Which of the three assignee shapes this ticket carries ("" = unassigned).
+        assigneePositionId: { type: string, format: uuid, nullable: true }
+        assigneePositionTitle:
+          type: string
+          nullable: true
+          description: Display-only snapshot of the assigned position's title — never used for any authorization decision.
+        assigneeGroupId: { type: string, format: uuid, nullable: true }
+        assigneeGroupTitle:
+          type: string
+          nullable: true
+          description: Display-only snapshot of the assigned group's name — never used for any authorization decision.
+        assigneeDisplayName:
+          type: string
+          nullable: true
+          description: >
+            Server-resolved: the member's displayName for a member-assigned ticket,
+            "<title> — held by <holder>" (or "<title>" if currently unheld) for a
+            position-assigned ticket, or "<name> (N member(s))" for a group-assigned ticket.
+        myTier: { type: string, enum: [member, agent, admin] }
+        isReporter: { type: boolean }
+        isAssignee:
+          type: boolean
+          description: >
+            For a position- or group-assigned ticket, resolved at read time through
+            authz's object-mode `can` (does the caller currently hold the assigned position, or
+            belong to the assigned group?), never snapshotted.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateTicketRequest:
+      type: object
+      required: [title, description]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+    AssignTicketRequest:
+      type: object
+      description: >
+        Exactly one of assigneeMemberId/assigneePositionId/assigneeGroupId is
+        required (422 for zero or more than one). A positionId/groupId must already be bound as a
+        helpdesk agent (422 otherwise); assigning a ticket never binds it as a side effect.
+      properties:
+        assigneeMemberId: { type: string, format: uuid }
+        assigneePositionId: { type: string, format: uuid }
+        assigneeGroupId: { type: string, format: uuid }
+    TransitionStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [open, in_progress, resolved, closed] }
+    TicketEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Ticket" }
+    TicketListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Ticket" }
+    AuditEvent:
+      type: object
+      properties:
+        occurredAt: { type: string, format: date-time }
+        actor: { type: string }
+        action: { type: string }
+        subject: { type: string }
+        payload: {}
+    AuditEventListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AuditEvent" }
+    Comment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
+        authorKcSub: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 10000 }
+    CommentEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Comment" }
+    CommentListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Comment" }
+    Agent:
+      type: object
+      description: >
+        An agent binding has one of three shapes (member, position, group). bindingKind names
+        which one this row is; exactly one of memberId/positionId/groupId is set.
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        bindingKind: { type: string, enum: [member, position, group] }
+        memberId: { type: string, format: uuid, nullable: true }
+        positionId: { type: string, format: uuid, nullable: true }
+        positionTitle: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+        groupTitle: { type: string, nullable: true }
+        grantedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+    MakeAgentRequest:
+      type: object
+      description: Exactly one of memberId/positionId/groupId is required (422 for zero or more than one).
+      properties:
+        memberId: { type: string, format: uuid }
+        positionId: { type: string, format: uuid }
+        groupId: { type: string, format: uuid }
+    AgentEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Agent" }
+    AgentListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Agent" }
+    AssignablePosition:
+      type: object
+      properties:
+        positionId: { type: string, format: uuid }
+        title: { type: string }
+        holderMemberId: { type: string, format: uuid, nullable: true }
+        holderDisplayName: { type: string, nullable: true }
+    AssignablePositionListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AssignablePosition" }
+    AssignableGroup:
+      type: object
+      description: >
+        A group has many members rather than one holder, so this row carries a member count
+        instead of a holder name.
+      properties:
+        groupId: { type: string, format: uuid }
+        title: { type: string }
+        memberCount: { type: integer }
+    AssignableGroupListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AssignableGroup" }
+    Tier:
+      type: object
+      properties:
+        tier: { type: string, enum: [member, agent, admin] }
+    TierEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Tier" }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+
+  responses:
+    BadRequest:
+      description: BAD_REQUEST / VALIDATION_ERROR
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: AUTH_TOKEN_MISSING / AUTH_TOKEN_INVALID
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: NOT_FOUND
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ValidationFailed:
+      description: >
+        VALIDATION_FAILED — a domain-policy rejection distinct from ordinary field-shape
+        validation: an invalid status transition, an assignment or agent designation that does
+        not name exactly one of member, position or group, a member with no linked user account,
+        a position or group that does not exist or is not usable here, or the agent-removal
+        protection rule firing.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    IdempotencyConflict:
+      description: >
+        IDEMPOTENCY_CONFLICT — the same Idempotency-Key was already used with a different
+        request payload.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    CapabilityOrAuthzError:
+      description: >
+        One of the three capability codes (MODULE_NOT_INSTALLED, MODULE_DISABLED,
+        MODULE_DEPENDENCY_MISSING — checked in that order by the gateway, before this service is
+        ever reached) or this service's own AUTHORIZATION_DENIED (caller lacks the required tier
+        or company membership).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    AuthorizationUnavailable:
+      description: >
+        AUTHORIZATION_UNAVAILABLE — authz (or another required dependency) could not be reached;
+        fail-closed, never a stale allow.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

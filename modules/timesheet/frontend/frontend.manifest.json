@@ -1,0 +1,14 @@
+{
+  "_comment": "Contract artifact documenting routes/nav for the module validator. Same as notification's own frontend.manifest.json: the actual TypeScript/React source lives under web/shell/src/modules/timesheet/.",
+  "_featureKeyComment": "Routes gate on 'timesheet.access' (the generic <moduleKey>.access key internal/authz/summary.go synthesizes for any enabled module at company scope), same as notification's own frontend.manifest.json: company_module has no member relation to anchor a fine-grained membership-only feature key on.",
+  "moduleKey": "timesheet",
+  "routeBase": "/app/timesheet",
+  "routes": [
+    { "id": "entries", "path": "", "featureKey": "timesheet.access" },
+    { "id": "submissions", "path": "submissions", "featureKey": "timesheet.access" },
+    { "id": "approvals", "path": "approvals", "featureKey": "timesheet.access" }
+  ],
+  "navFromFeatures": true,
+  "sdkVersionRange": ">=0.1.0 <1.0.0",
+  "remoteEntryUrl": null
+}

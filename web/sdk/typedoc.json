@@ -1,0 +1,32 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "src/index.ts"
+  ],
+  "tsconfig": "tsconfig.json",
+  "out": "../../docs/sdk",
+  "name": "@rosschiu/kiban-sdk",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "requiredToBeDocumented": [
+    "Function",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Variable",
+    "Enum"
+  ],
+  "treatWarningsAsErrors": true,
+  "treatValidationWarningsAsErrors": true,
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "gitRevision": "main",
+  "sourceLinkTemplate": "https://github.com/rosschiu/kiban/blob/{gitRevision}/{path}#L{line}"
+}

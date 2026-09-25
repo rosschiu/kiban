@@ -1,0 +1,54 @@
+# kind overlay — the local cluster shape. `images:` retags every workload from the base's
+# `:latest` placeholder to the released version (`make images-all VERSION=v0.1.0` builds it locally; README
+# "kind quickstart"); the imagePullPolicy patch stops kubelet from ever trying a registry pull for
+# these 12 images — `kind load docker-image` puts them straight into every node's containerd
+# image store, so no registry pull is needed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: kiban-registry
+    newTag: v0.1.0
+  - name: kiban-identity
+    newTag: v0.1.0
+  - name: kiban-org
+    newTag: v0.1.0
+  - name: kiban-authz
+    newTag: v0.1.0
+  - name: kiban-notification
+    newTag: v0.1.0
+  - name: kiban-timesheet
+    newTag: v0.1.0
+  - name: kiban-docs
+    newTag: v0.1.0
+  - name: kiban-helpdesk
+    newTag: v0.1.0
+  - name: kiban-gateway
+    newTag: v0.1.0
+  - name: kiban-migrate
+    newTag: v0.1.0
+  - name: kiban-bootstrap
+    newTag: v0.1.0
+  - name: kiban-keycloak
+    newTag: v0.1.0
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Job
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: StatefulSet
+      name: postgres
+    patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent

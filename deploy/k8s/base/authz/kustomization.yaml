@@ -1,0 +1,33 @@
+# authz (cmd/authz) — port 8140, health /health.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: authz }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: authz }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8140 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8140 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: authz }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-authz:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8140 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8140 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8140 }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_DB_HOST, value: "postgres" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_DB_PORT, value: "5432" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_DB_NAME, valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_DB_PASSWORD, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_AUTHZ_DB_PASSWORD } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_JWKS_URL, value: "http://keycloak:8080/realms/kiban/protocol/openid-connect/certs" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_ISSUER_URL, valueFrom: { configMapKeyRef: { name: kiban-config, key: KEYCLOAK_ISSUER_URL } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_BASE_URL, value: "http://identity:8120" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_BASE_URL, value: "http://registry:8110" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_BASE_URL, value: "http://org:8130" } }

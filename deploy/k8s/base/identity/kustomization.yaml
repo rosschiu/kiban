@@ -1,0 +1,44 @@
+# identity (cmd/identity) — port 8120, health /health. KEYCLOAK_ISSUER_URL/
+# KIBAN_GATEWAY_ORIGIN come from the shared `kiban-config` ConfigMap (base/configmap.yaml) so
+# every service that verifies bearer tokens (identity/authz/notification/timesheet/docs/helpdesk/
+# gateway) agrees on the same issuer string — one place to change for a real domain
+# (overlays/production), matching infra/compose.public.yaml's own single-source-of-truth pattern
+# for this exact value.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: identity }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: identity }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8120 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8120 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: identity }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-identity:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8120 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8120 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8120 }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_DB_HOST, value: "postgres" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_DB_PORT, value: "5432" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_DB_NAME, valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_DB_PASSWORD, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_IDENTITY_DB_PASSWORD } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_BASE_URL, value: "http://keycloak:8080" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_JWKS_URL, value: "http://keycloak:8080/realms/kiban/protocol/openid-connect/certs" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_ISSUER_URL, valueFrom: { configMapKeyRef: { name: kiban-config, key: KEYCLOAK_ISSUER_URL } } } }
+      # Never a plain env var (`kubectl describe pod` shows no secret): the Secret key is mounted
+      # as a file and read via config.Load's <NAME>_FILE rule — the K8s port of infra/compose.yaml's
+      # secrets-volume mount. 0444 because the pod runs as uid 65532 and the Secret volume is
+      # root-owned; the tmpfs is visible only to this container.
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_IDENTITY_CLIENT_SECRET_FILE, value: "/run/kiban-secrets/keycloak-identity-client-secret" } }
+      - { op: add, path: /spec/template/spec/containers/0/volumeMounts, value: [ { name: identity-client-secret, mountPath: /run/kiban-secrets, readOnly: true } ] }
+      - { op: add, path: /spec/template/spec/volumes, value: [ { name: identity-client-secret, secret: { secretName: kiban-secrets, items: [ { key: KEYCLOAK_IDENTITY_CLIENT_SECRET, path: keycloak-identity-client-secret, mode: 0444 } ] } } ] }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_BASE_URL, value: "http://authz:8140" } }

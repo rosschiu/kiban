@@ -1,0 +1,19 @@
+{
+  "checksums": {
+    "0001_roles.sql": "be86450e9d43cf82c2acc15d6f960f7c49551e8c928950c4a28effb93aea84e5",
+    "0002_schemas.sql": "da745069965012cfaed583419f5a820a25926bcad376416a5f2f78132de38c13",
+    "0003_platform_tables.sql": "dc2c3ddc1b97a9182571f03113f8c7a411a266a27821c4831394038139334b86",
+    "0004_audit.sql": "e22f58a4e77f10042cd61c70eeed20b6b8c945612e80c1bb4796c8834f43d3ee",
+    "0005_notification_role.sql": "8df95410a18fd4ab788d19996140c70af699555af82b95f52c2391284272bbed",
+    "0006_notification_audit_usage.sql": "f70da0570e19c976a7f9495eb656272359df000f9aa11c585f55f1787f6630ce",
+    "0007_grant_org_read_module_installation.sql": "7d3a2dec9da3267b9adb530d9f2a5b89a6f8284cf7f8bd62dcdb43403c857135",
+    "0008_timesheet_role.sql": "4aed8f0ef45a5afff94c9ad539b027f6e69442bb0303f94f5b7dea69139c5f5c",
+    "0009_timesheet_audit_usage.sql": "eac14eb8e2fbfb95f4de5fcc09cc72011d000f7f004aa8d5cdde6bd043dbca30",
+    "0010_docs_role.sql": "9c326e231072f9391d2d072388d6aec51c90a83bec4529f210db6bb012164fde",
+    "0011_docs_audit_usage.sql": "7d81f076a4ac297a9f39e86ed55f1ec5e7c6a6671cd581a2ee07a15ff4c5b473",
+    "0012_helpdesk_role.sql": "07069c58ce2352a73a5f7db01fbac78a6944584e72b8776cb30f583553a4e6ae",
+    "0013_helpdesk_audit_usage.sql": "dd7bcee75eb83d730c061872e471710dad3927784b7070ccb7067b621e10da97",
+    "0014_audit_reject_truncate.sql": "ebe0302978c1b6b14002aabb2164a375acdf459409302d30053ae0cb9f1aaef2",
+    "0015_grant_org_read_tenant_defaults.sql": "894d661bf19c55a93d349872f6cfa79ebf6f3344b545e28b3e793eb027d39d40"
+  }
+}

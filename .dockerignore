@@ -1,0 +1,13 @@
+# Build-context hygiene. Docker has no default exclusions: the builder stage in
+# infra/Dockerfile.service runs `COPY . .` over the whole repository, so anything not excluded
+# here ends up in every image layer. Keep secrets and local state out. Verify with:
+#   docker run --rm --entrypoint sh <image> -c 'ls -a /src/infra'   # must not list .env or secrets-in
+.env*
+infra/secrets-in/
+coverage/
+web/*/node_modules
+.git
+docs/
+deploy/k8s/**/secret.yaml
+.venv-docs/
+docs-site-build/

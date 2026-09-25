@@ -1,0 +1,14 @@
+{
+  "_comment": "Contract artifact documenting the module's routes/nav for the module validator. The actual TypeScript/React source lives under web/shell/src/modules/docs/: the shell has no remote module loading, so its local module registry (web/shell/src/modules/registry.ts) is the only way a module ships frontend code. Same as notification's and timesheet's own frontend.manifest.json.",
+  "_featureKeyComment": "Routes gate on 'docs.access' (the generic <moduleKey>.access key internal/authz/summary.go synthesizes for any enabled module at company scope) rather than authz.fragment.json's fine-grained 'docs.manage'/'docs.create', because the fragment-declared feature keys are not granted to users through the route resolver. Per-document viewer/editor access is enforced server-side by the authz object-mode check, not by this frontend gate.",
+  "moduleKey": "docs",
+  "routeBase": "/app/docs",
+  "routes": [
+    { "id": "documents", "path": "", "featureKey": "docs.access" },
+    { "id": "document", "path": "documents/:docId", "featureKey": "docs.access" },
+    { "id": "admin", "path": "admin", "featureKey": "docs.access" }
+  ],
+  "navFromFeatures": true,
+  "sdkVersionRange": ">=0.1.0 <1.0.0",
+  "remoteEntryUrl": null
+}

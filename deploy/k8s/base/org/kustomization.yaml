@@ -1,0 +1,30 @@
+# org (cmd/org) — port 8130, health /health.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: org }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: org }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8130 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8130 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: org }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-org:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8130 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8130 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8130 }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_DB_HOST, value: "postgres" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_DB_PORT, value: "5432" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_DB_NAME, valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_DB_PASSWORD, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_ORG_DB_PASSWORD } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_BASE_URL, value: "http://identity:8120" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_BASE_URL, value: "http://authz:8140" } }

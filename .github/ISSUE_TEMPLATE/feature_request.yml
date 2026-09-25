@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose something Kiban doesn't do yet.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Leading with the use case, not the implementation, gets you a faster answer. Substantial
+        features are discussed in an issue before any code is written (see CONTRIBUTING.md).
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What are you trying to do?
+      description: >
+        Describe the real problem or workflow first, in terms of what you (or your users) are
+        trying to accomplish — not the feature you think solves it. Include enough context that
+        someone unfamiliar with your setup understands why this matters.
+      placeholder: |
+        As a [role], I need to [do X] because [Y] — today I have to [workaround], which
+        [breaks down / doesn't scale / is unsafe] because [Z].
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution (optional)
+      description: >
+        If you have a specific approach in mind, describe it. The use case above is what gets
+        evaluated first. The documentation's Concepts and Known limitations pages describe
+        constraints that may already rule an approach in or out.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways you've tried to solve this, including ones that didn't work.
+    validations:
+      required: false

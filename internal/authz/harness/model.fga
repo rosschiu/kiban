@@ -1,0 +1,149 @@
+# version: 1.10.0
+# task: 029
+model
+  schema 1.1
+
+type user
+
+type system
+  relations
+    define superadmin: [user]
+
+type module
+  relations
+    define system: [system]
+    define admin: [user] or superadmin from system
+    define editor: [user] or admin
+
+type company
+  relations
+    define system: [system]
+    define admin: [user] or superadmin from system
+    define viewer: [user] or admin
+    define member: [member#mapped_user]
+
+type position
+  relations
+    define company: [company]
+    define holder: [member#mapped_user]
+
+type group
+  relations
+    define company: [company]
+    define member: [member#mapped_user]
+
+type company_module
+  relations
+    define system: [system]
+    define company: [company]
+    define member: [user] or member from company or admin
+    define admin: [user] or admin from company or superadmin from system
+    define editor: [user, position#holder, group#member] or admin
+    define submitter: [user, position#holder, group#member]
+    define approver: [user, position#holder, group#member]
+    define viewer: [user] or editor or submitter or approver or admin
+
+type module_role_binding
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define member: [user]
+    define admin: admin from company_module or superadmin from system
+
+type access_bundle
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define manager: [user]
+    define member: [user]
+    define admin: admin from company_module or superadmin from system
+
+type access_segment
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define bundle: [access_bundle]
+    define viewer: [user]
+    define editor: [user]
+    define owner: [user]
+    define admin: [user] or admin from company_module or superadmin from system
+
+type member_directory
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define admin: admin from company_module or superadmin from system
+    define owner: [user] or admin
+    define editor: [user] or owner or admin or editor from company_module
+    define viewer: [user] or editor or owner or admin
+    define create: [user] or admin
+    define import: [user] or admin
+    define export: [user] or admin
+
+type member
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define directory: [member_directory]
+    define mapped_user: [user]
+    define admin: admin from company_module or superadmin from system
+    define owner: [user] or owner from directory or admin
+    define editor: [user] or owner or editor from directory or admin or editor from company_module
+    define viewer: [user] or editor or owner or viewer from directory or admin
+
+type project_directory
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define admin: admin from company_module or superadmin from system
+    define owner: [user] or admin
+    define editor: [user] or owner or admin or editor from company_module
+    define viewer: [user] or editor or owner or admin
+    define create: [user] or admin
+    define import: [user] or admin
+    define export: [user] or admin
+
+type project
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define directory: [project_directory]
+    define admin: admin from company_module or superadmin from system
+    define owner: owner from directory or admin
+    define editor: editor from directory or owner or admin or editor from company_module
+    define viewer: editor or viewer from directory or admin
+    define can_assign: owner or admin
+
+type timesheet_entry
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define member: [member]
+    define project: [project]
+    define admin: [user] or admin from company_module or superadmin from system
+    define owner: [user] or mapped_user from member or admin
+    define viewer: [user] or mapped_user from member or viewer from project or admin
+    define editor: [user] or mapped_user from member or admin or editor from company_module
+    define can_edit: editor or owner
+
+type submission
+  relations
+    define system: [system]
+    define company_module: [company_module]
+    define member: [member]
+    define admin: [user] or admin from company_module or superadmin from system
+    define owner: [user] or mapped_user from member or admin
+    define viewer: [user] or mapped_user from member or admin or editor from company_module
+
+type document
+  relations
+    define system: [system]
+    define member: [member]
+    define project: [project]
+    define timesheet_entry: [timesheet_entry]
+    define submission: [submission]
+    define admin: [user] or admin from member or admin from project or admin from timesheet_entry or admin from submission or superadmin from system
+    define owner: [user] or owner from member or owner from project or owner from timesheet_entry or owner from submission or admin
+    define editor: [user] or editor from member or editor from project or editor from timesheet_entry or owner or admin
+    define viewer: [user] or viewer from member or viewer from project or viewer from timesheet_entry or viewer from submission or editor or owner or admin
+    define shared_viewer: [user]

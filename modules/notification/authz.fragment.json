@@ -1,0 +1,77 @@
+{
+  "moduleKey": "notification",
+  "roles": [
+    {
+      "roleKey": "notification_admin",
+      "label": "Notification Admin",
+      "scopeType": "company",
+      "grantsShellAccess": true,
+      "seedCompanyCreatorRole": true,
+      "sortOrder": 10
+    }
+  ],
+  "objects": [
+    {
+      "objectType": "notification_channel",
+      "label": "Notification Channel",
+      "scopeKind": "object",
+      "parentKind": "company_module",
+      "managerRelation": "owner",
+      "grantableRelations": ["owner", "editor", "viewer"],
+      "showInPermissionUi": true,
+      "sortOrder": 10
+    }
+  ],
+  "relations": {
+    "notification_channel": {
+      "company_module": { "this": true },
+      "owner": { "this": true },
+      "editor": { "union": [{ "this": true }, { "computedUserset": "owner" }] },
+      "viewer": {
+        "union": [
+          { "this": true },
+          { "computedUserset": "editor" },
+          { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "member" } }
+        ]
+      }
+    }
+  },
+  "features": [
+    {
+      "featureKey": "notification.channels.manage",
+      "label": "Manage notification channels",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 10,
+      "isSidebarEntry": true
+    },
+    {
+      "featureKey": "notification.messages.send",
+      "label": "Send notification messages",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 20,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "notification.inbox.view",
+      "label": "View notification inbox",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "member" },
+      "sortOrder": 30,
+      "isSidebarEntry": true
+    }
+  ],
+  "fieldCatalog": [],
+  "fieldSets": [],
+  "rowScopes": [
+    { "entityType": "notification_channel", "rules": ["all", "org_unit_subtree"] }
+  ],
+  "bootstrapPolicy": { "seedCompanyCreatorObjectRelations": [] }
+}

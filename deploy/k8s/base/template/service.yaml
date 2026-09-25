@@ -1,0 +1,76 @@
+# One app-service shape, instantiated nine times (registry, identity, org, authz, notification,
+# timesheet, docs, helpdesk, gateway) by the sibling `<service>/kustomization.yaml` files: each
+# one patches in its name, image, port and env on top of this file. `SERVICE` is the placeholder
+# every instance replaces. Env parity with infra/compose.yaml (same var names, Service-DNS
+# addresses instead of container hostnames — the two coincide since compose service names and
+# K8s Service names are the same).
+#
+# Resources: the Go app services idle at ~6–12MiB RSS / ~0% CPU under `docker stats` (kiban-test)
+# — the request is a round floor common to all of them, the limit gives ~10x headroom for a real
+# request burst without letting one runaway service starve the node (README.md has the table).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: SERVICE
+  labels:
+    app.kubernetes.io/part-of: kiban
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: kiban
+    spec:
+      # The images run as uid 65532 (infra/Dockerfile.service runtime-base) and write nothing to
+      # disk, so the root filesystem is read-only and every capability is dropped; no /tmp
+      # volume because nothing writes there (add an emptyDir at /tmp if a service ever does).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: SERVICE
+          image: kiban-SERVICE:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          envFrom:
+            - configMapRef: { name: kiban-config }
+          env:
+            - name: KIBAN_LISTEN_ADDR
+              value: "0.0.0.0"
+          ports:
+            - containerPort: 0
+              name: http
+          # Readiness pings the DB (503 while Postgres is unreachable, so traffic and rollouts
+          # gate on it); liveness stays the constant `/health` so a DB outage never restarts pods.
+          readinessProbe:
+            httpGet: { path: /ready, port: 0 }
+            periodSeconds: 3
+            timeoutSeconds: 3
+            failureThreshold: 20
+          livenessProbe:
+            httpGet: { path: /health, port: 0 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: SERVICE
+  labels:
+    app.kubernetes.io/part-of: kiban
+spec:
+  selector: {}
+  ports:
+    - port: 0
+      targetPort: 0
+      name: http

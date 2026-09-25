@@ -1,0 +1,37 @@
+# sqlc configuration: one entry per service that uses generated queries.
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/registry/queries.sql"
+    schema: "migrations/registry"
+    gen:
+      go:
+        package: "registry"
+        out: "internal/registry"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+  - engine: "postgresql"
+    queries: "internal/identity/queries.sql"
+    schema: "migrations/identity"
+    gen:
+      go:
+        package: "identity"
+        out: "internal/identity"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+  - engine: "postgresql"
+    queries: "internal/org/queries.sql"
+    # org's directory-read queries JOIN identity.user_read_v (identity's published read view), so sqlc's
+    # schema parser needs identity's migrations too, not just org's own.
+    schema:
+      - "migrations/org"
+      - "migrations/identity"
+    gen:
+      go:
+        package: "org"
+        out: "internal/org"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true

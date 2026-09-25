@@ -1,0 +1,973 @@
+openapi: 3.0.3
+info:
+  title: Kiban platform API
+  version: "1.0.0"
+  description: >
+    The gateway-owned "platform" surface: every `/api/*` route mounted directly by
+    `internal/gateway` itself (foundation_routes.go, platform_routes.go, admin_position_routes.go,
+    admin_group_routes.go), as opposed to a module's own `/api/<moduleKey>/*` fragment.
+    This is not a module: there is no module.manifest.json/
+    authz.fragment.json for the platform; it is documented here because the module contract's
+    binding rule ("the running service must enforce this contract at the HTTP boundary") applies
+    equally to the platform's own consumer-facing surface, so a developer can use Kiban from
+    docs alone.
+
+    Every route here is a fixed reverse proxy (never the dynamic, opaque module-key proxy in
+    proxy.go): the gateway rewrites the outbound path to an internal `/internal/...` route on
+    one of the four foundation services (authz, org, registry) and, for the self-scoped reads,
+    forces the outbound `kcSub` to the validated bearer's own subject (never a client-supplied
+    value: see foundation_routes.go's own doc comment). All routes require a valid bearer
+    (`RequireAuth`); routes under `.../admin/...` additionally require the superadmin guard
+    (`RequireSuperadmin`): a fail-closed check: if authz itself is unreachable, the admin
+    guard returns 503 `AUTHORIZATION_UNAVAILABLE`, never a silent allow.
+
+    Validated the same way a module's own fragment is (the `internal/testopenapi` helper,
+    `github.com/getkin/kin-openapi`): `internal/gateway/platform_openapi_live_test.go` drives real
+    requests through a live kiban-test gateway and validates the recorded response against this
+    fragment's declared schema: at least the happy path and one error per route, so this
+    document is trustworthy, not aspirational.
+servers:
+  - url: /
+paths:
+  # ---- foundation_routes.go -------------------------------------------------------------------
+  /api/auth/effective-access/can:
+    post:
+      operationId: effectiveAccessCan
+      summary: Ask whether the caller (never an arbitrary actor) can do one thing
+      description: >
+        Bearer-gated fixed proxy to authz's own `/internal/authz/effective-access/can`
+        (internal/authz/http.go). authz itself rejects a body naming a subject other than the
+        bearer (400), and a `global`-scope request without `requiredPlatformRole` (400
+        `VALIDATION_ERROR`), the gateway adds nothing beyond bearer validation at the edge.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EffectiveAccessRequest" }
+      responses:
+        "200":
+          description: Decision (allow or deny, a denial is a normal 200, never an error status)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EffectiveAccessDecisionEnvelope" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/auth/effective-access/batch-can:
+    post:
+      operationId: effectiveAccessBatchCan
+      summary: Ask whether the caller can do several things in one round trip
+      description: >
+        Same subject and scope rules as `can`, bearer-gated fixed proxy to authz's own
+        `/internal/authz/effective-access/batch-can`. At most 100 `items` per request (400
+        `VALIDATION_ERROR` above); a request with denied items writes one audit event listing
+        them (the first 50, with a `truncated` flag).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EffectiveAccessBatchRequest" }
+      responses:
+        "200":
+          description: One decision per requested (object, relation) pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EffectiveAccessBatchEnvelope" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/auth/effective-access/summary:
+    get:
+      operationId: effectiveAccessSummary
+      summary: The caller's own display-composed access summary (a display aid, never an enforcement surface)
+      description: >
+        Self-scoped, internal-network-unauthenticated downstream (authz's own
+        `/internal/authz/effective-access/summary`, kcSub as a plain query param), the gateway is
+        the bearer-validating boundary and forces `kcSub` to the validated bearer's own subject,
+        overwriting any client-supplied value. `objectAccess` is direct-tuples-only (never a
+        userset-closure expansion);
+        a position/group-held tier never appears here even when it is real and enforced elsewhere.
+      parameters:
+        - name: companyId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The caller's summary (apiVersion 1)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EffectiveAccessSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/org/me/companies:
+    get:
+      operationId: orgMeCompanies
+      summary: Companies where the caller has an active membership in an active company (the company switcher's source)
+      description: Self-scoped fixed proxy to org's own `/internal/org/me/companies` (internal/org/http.go's handleMeCompanies), kcSub forced to the bearer's own subject.
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/OrgMeCompany" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/org/companies/{companyId}/members:
+    get:
+      operationId: orgCompanyMemberDirectory
+      summary: The company's member directory (the least-disclosure share-with/assign-to picker source)
+      description: >
+        Bearer-gated fixed proxy to org's own `/internal/org/companies/{companyId}/members`,
+        kcSub forced to the bearer's own subject. org's own handler enforces
+        active-membership-or-superadmin (`requireMemberOrAdmin`), a non-member caller gets
+        403, not a 404 (never leaks whether the company exists to an outsider vs. a non-member).
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Page of member-directory entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/MemberDirectoryEntry" }
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      totalPages: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/auth/grants:
+    post:
+      operationId: authzGrants
+      summary: Write authz tuples (superadmin only)
+      description: >
+        Superadmin-gated fixed proxy to authz's own `/internal/authz/grants`
+        (internal/authz/http.go), the one write path exposed through the gateway for raw tuple
+        grants. Only a caller holding `auth.platform_administration.access` may call this.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthzGrantsRequest" }
+      responses:
+        "200":
+          description: Grant result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string }
+                      count: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: A tuple names a base or unknown object type, or its object is not anchored to companyId (VALIDATION_FAILED)
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/platform-roles:
+    post:
+      operationId: superadminGrantPlatformRole
+      summary: Grant the platform role (superadmin only)
+      description: >
+        Superadmin-gated fixed proxy to authz's own `POST /internal/authz/platform-roles`. The
+        platform role's one record is the authz tuple `system:platform#superadmin @ user:<subjectId>`;
+        authz writes it with its grant-ledger and audit rows in one transaction. The subject must
+        already exist in identity (404 otherwise); `kiban-superadmin` is the only role (422 otherwise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlatformRoleRequest" }
+      responses:
+        "200":
+          description: Granted (idempotent for an existing holder)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PlatformRoleRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/platform-roles/{role}/{subjectId}:
+    delete:
+      operationId: superadminRevokePlatformRole
+      summary: Revoke the platform role (superadmin only; the last superadmin cannot be revoked)
+      description: >
+        Superadmin-gated fixed proxy to authz's own `DELETE /internal/authz/platform-roles/{role}/{subjectId}`.
+        404 when the subject does not hold the role; 409 CONFLICT when it is the platform's last
+        superadmin (the caller revoking themselves included).
+      parameters:
+        - name: role
+          in: path
+          required: true
+          schema: { type: string, enum: [kiban-superadmin] }
+        - name: subjectId
+          in: path
+          required: true
+          description: The subject's Keycloak subject id (kcSub).
+          schema: { type: string }
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PlatformRoleRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  # ---- platform_routes.go ----------------------------------------------------------------------
+  /api/platform/capabilities:
+    get:
+      operationId: platformCapabilities
+      summary: Capability state for every module (installed/enabled/dependencies)
+      description: >
+        Bearer-gated only (deliberately outside the superadmin gate, avoids a
+        gateway<->authz cycle, platform_routes.go's own header comment). Fixed proxy to the
+        registry service, path forwarded unchanged.
+      responses:
+        "200":
+          description: One capability entry per known module
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Capability" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/platform/capabilities/{module}:
+    get:
+      operationId: platformCapabilityByModule
+      summary: Capability state for one module
+      parameters:
+        - name: module
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The module's capability entry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Capability" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/platform/catalog:
+    get:
+      operationId: platformCatalog
+      summary: The full module catalog (metadata for every known module, not just capability state)
+      responses:
+        "200":
+          description: Catalog entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CatalogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/platform/admin/modules/{key}/enable:
+    post:
+      operationId: superadminEnableModule
+      summary: Enable a module (superadmin only)
+      description: Superadmin-gated fixed proxy, rewritten to the registry's own `/internal/platform/modules/{key}/enable`.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      enabled: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/ModuleNotInstalled" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/modules/{key}/disable:
+    post:
+      operationId: superadminDisableModule
+      summary: Disable a module (superadmin only; mandatory modules refuse)
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      enabled: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/metrics:
+    get:
+      operationId: platformMetrics
+      summary: The platform's aggregated Prometheus exposition (operator-only, one scrape target)
+      description: >
+        The only metrics surface exposed through the gateway, behind the superadmin guard, and
+        the single scrape target for the whole platform: the gateway's own registry merged with
+        the `/metrics` of registry, identity, org, authz and every installed+enabled module,
+        fetched concurrently on the internal network (2 s per target). Every series carries a
+        `service="<name>"` label; metric families of the same name from several services share
+        one `# HELP`/`# TYPE`. A target that fails or times out contributes only
+        `kiban_metrics_scrape_up{service="<name>"} 0` (1 on success) — the response is always
+        200, never a failed scrape. Plain-text Prometheus exposition format
+        (`text/plain; version=0.0.4`), not JSON, documented here with no schema.
+      responses:
+        "200":
+          description: Prometheus text exposition
+          content:
+            text/plain: {}
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  # ---- admin_position_routes.go ----------------------------------------------------------------
+  /api/org/admin/companies/{companyId}/positions:
+    get:
+      operationId: adminListPositions
+      summary: List a company's positions, each with its current holder (superadmin only)
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: "Page of positions with holder (the paginated envelope, not a bare array; same shape as adminListGroups)"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/OrgPositionWithHolder" }
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      totalPages: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    post:
+      operationId: adminCreatePosition
+      summary: Create a position (superadmin only)
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, title, orgUnitId]
+              properties:
+                code: { type: string }
+                title: { type: string }
+                orgUnitId: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgPosition" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/admin/positions/{id}/assignments:
+    post:
+      operationId: adminAssignPositionNow
+      summary: Assign a member to a position, effective now (superadmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgAssignment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/admin/assignments/{id}/end:
+    post:
+      operationId: adminEndAssignmentNow
+      summary: End a position assignment, effective now (superadmin only, no body, server-dated)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Assignment ended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgAssignment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: ASSIGNMENT_ALREADY_ENDED, the assignment's validTo is already set; nothing is written
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  # ---- admin_group_routes.go --------------------------------------------------------------------
+  /api/org/admin/companies/{companyId}/groups:
+    get:
+      operationId: adminListGroups
+      summary: List a company's groups, each with its current member count (superadmin only)
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: "Page of groups with member count (the paginated envelope, not a bare array; same shape as adminListPositions)"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/OrgGroupWithMemberCount" }
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      totalPages: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    post:
+      operationId: adminCreateGroup
+      summary: Create a group (superadmin only; source is always "kiban" through this route)
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code: { type: string }
+                name: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgGroup" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/admin/groups/{id}/members:
+    get:
+      operationId: adminListGroupMembers
+      summary: List a group's current members (superadmin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Group members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/OrgGroupMember" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    post:
+      operationId: adminAddGroupMember
+      summary: Add a member to a group (superadmin only; 409 if the group is not source="kiban")
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgGroupMember" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/GroupExternallyManaged" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/admin/groups/{id}/members/{memberId}:
+    delete:
+      operationId: adminRemoveGroupMember
+      summary: Remove a member from a group (superadmin only; 409 if the group is not source="kiban")
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: memberId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Removed (200 with the removed pair, not 204)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      groupId: { type: string, format: uuid }
+                      memberId: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/GroupExternallyManaged" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+
+    PlatformRoleRequest:
+      type: object
+      required: [subjectId, role]
+      properties:
+        subjectId: { type: string, description: The subject's Keycloak subject id (kcSub). }
+        role: { type: string, enum: [kiban-superadmin] }
+
+    EffectiveAccessObjectRef:
+      type: object
+      properties:
+        type: { type: string }
+        id: { type: string }
+
+    EffectiveAccessRequest:
+      type: object
+      required: [featureKey, scope]
+      properties:
+        featureKey: { type: string }
+        moduleKey: { type: string }
+        scope: { type: string, enum: [global, company] }
+        companyId: { type: string, format: uuid }
+        requiredPlatformRole: { type: string }
+        allowPlatformOperatorCompanyScope: { type: boolean }
+        requiredCompanyRole: { type: string }
+        object: { $ref: "#/components/schemas/EffectiveAccessObjectRef" }
+        relation: { type: string }
+        requiresEligibility: { type: boolean }
+        correlationId: { type: string }
+
+    EffectiveAccessEvidence:
+      type: object
+      properties:
+        key: { type: string }
+        value: { type: string }
+
+    EffectiveAccessDecision:
+      type: object
+      properties:
+        allowed: { type: boolean }
+        reason: { type: string }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/EffectiveAccessEvidence" }
+
+    EffectiveAccessDecisionEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/EffectiveAccessDecision" }
+
+    EffectiveAccessBatchRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [object, relation]
+            properties:
+              object: { $ref: "#/components/schemas/EffectiveAccessObjectRef" }
+              relation: { type: string }
+
+    EffectiveAccessBatchEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              object: { $ref: "#/components/schemas/EffectiveAccessObjectRef" }
+              relation: { type: string }
+              decision: { $ref: "#/components/schemas/EffectiveAccessDecision" }
+
+    EffectiveAccessRoleBinding:
+      type: object
+      properties:
+        scope: { type: string, enum: [global, company] }
+        role: { type: string }
+        companyId: { type: string, format: uuid }
+
+    EffectiveAccessObjectAccessEntry:
+      type: object
+      properties:
+        objectType: { type: string }
+        objectId: { type: string }
+        relations:
+          type: array
+          items: { type: string }
+
+    EffectiveAccessSummary:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            apiVersion: { type: integer }
+            subjectId: { type: string }
+            companyId: { type: string }
+            moduleKey: { type: string }
+            featureKeys:
+              type: array
+              items: { type: string }
+            roleBindings:
+              type: array
+              items: { $ref: "#/components/schemas/EffectiveAccessRoleBinding" }
+            objectAccess:
+              type: array
+              items: { $ref: "#/components/schemas/EffectiveAccessObjectAccessEntry" }
+            rowScopes: { type: array, items: {} }
+            fieldPolicies: { type: array, items: {} }
+
+    AuthzGrantsRequest:
+      type: object
+      required: [op, companyId, tuples]
+      description: >
+        Every tuple is bound to `companyId`: its object must be an object type declared by one
+        enabled module's fragment (anchored to `company_module:<companyId>/<module>`, an anchor
+        tuple in the same grant request counts) or `company_module:<companyId>/<module>` itself;
+        base types (company, system, module, member, position, group) are refused (422). The
+        bearer must pass the effective-access decision's steps 1–6 for that (module, company)
+        (403 otherwise) and, for a `company_module` object, hold its `admin` relation.
+      properties:
+        op: { type: string, enum: [grant, revoke] }
+        companyId: { type: string, format: uuid }
+        correlationId: { type: string }
+        tuples:
+          type: array
+          items:
+            type: object
+            required: [objectType, objectId, relation, subjectType, subjectId]
+            properties:
+              objectType: { type: string }
+              objectId: { type: string }
+              relation: { type: string }
+              subjectType: { type: string }
+              subjectId: { type: string }
+              subjectRelation: { type: string }
+
+    OrgMeCompany:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        isActive: { type: boolean }
+
+    MemberDirectoryEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        email: { type: string }
+        hasLinkedUser: { type: boolean }
+
+    Capability:
+      type: object
+      properties:
+        module: { type: string }
+        installed: { type: boolean }
+        enabled: { type: boolean }
+        dependencies: { type: array, items: { type: string } }
+        missingDependencies: { type: array, items: { type: string } }
+
+    CatalogEntry:
+      type: object
+      properties:
+        moduleKey: { type: string }
+        displayName: { type: string }
+        scopeType: { type: string }
+        mandatory: { type: boolean }
+        basePath: { type: string }
+        healthPath: { type: string }
+        port: { type: integer }
+        licenseClass: { type: string }
+        manifestVersion: { type: string }
+        isActive: { type: boolean }
+
+    OrgPosition:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        code: { type: string }
+        title: { type: string }
+        orgUnitId: { type: string, format: uuid }
+
+    OrgPositionWithHolder:
+      allOf:
+        - $ref: "#/components/schemas/OrgPosition"
+        - type: object
+          properties:
+            assignmentId: { type: string, format: uuid, nullable: true }
+            memberId: { type: string, format: uuid, nullable: true }
+            holderDisplayName: { type: string, nullable: true }
+
+    OrgAssignment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        positionId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        validFrom: { type: string, format: date, description: "Plain date (YYYY-MM-DD), not date-time." }
+        validTo: { type: string, format: date, nullable: true, description: "Plain date (YYYY-MM-DD), not date-time." }
+
+    OrgGroup:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        source: { type: string }
+        externalRef: { type: string, nullable: true }
+        isActive: { type: boolean }
+        isKibanManaged: { type: boolean }
+
+    OrgGroupWithMemberCount:
+      allOf:
+        - $ref: "#/components/schemas/OrgGroup"
+        - type: object
+          properties:
+            memberCount: { type: integer }
+
+    OrgGroupMember:
+      type: object
+      properties:
+        groupId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        addedBy: { type: string }
+        addedAt: { type: string, format: date-time }
+        memberDisplayName: { type: string }
+        memberEmail: { type: string, nullable: true }
+
+  responses:
+    BadRequest:
+      description: BAD_REQUEST / VALIDATION_ERROR
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: AUTH_TOKEN_MISSING / AUTH_TOKEN_INVALID
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Forbidden:
+      description: FORBIDDEN / AUTHORIZATION_DENIED / PLATFORM_ROLE_REQUIRED (RequireSuperadmin denial)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: NOT_FOUND
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Conflict:
+      description: CONFLICT (e.g. disabling a mandatory module, revoking the last superadmin)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ModuleNotInstalled:
+      description: >
+        MODULE_NOT_INSTALLED, the module's installation row has `installed=false`; enable is
+        refused and nothing is written (no fragment activation, no default grants, no audit row).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ValidationFailed:
+      description: VALIDATION_FAILED, a domain-policy rejection distinct from ordinary field-shape validation
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    GroupExternallyManaged:
+      description: >
+        GROUP_EXTERNALLY_MANAGED, the group's `source` is not "kiban"; membership is read-only
+        through every human/API path (the single-writer-by-provenance
+        invariant, enforced in org's STORE layer, not only the HTTP handler).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    AuthorizationUnavailable:
+      description: >
+        AUTHORIZATION_UNAVAILABLE, authz (or another required dependency) could not be reached;
+        fail-closed, never a stale allow.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

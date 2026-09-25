@@ -1,0 +1,3 @@
+companyId:string
+key:string
+kind:string

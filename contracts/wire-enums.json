@@ -1,0 +1,38 @@
+{
+  "_comment": "checked-in golden both a Go test (internal/contracts/wire_enums_test.go, covering internal/errenv's canonical error codes and internal/authz/decision's Reason enum) and a vitest test (web/sdk/test/wireEnums.test.ts, covering web/sdk/src/types.ts's ApiErrorCode and EffectiveAccessReason) compare against. Either side diverging fails its own suite. Update procedure: change this file deliberately when a wire enum is added/removed/renamed, then update BOTH internal/errenv (or internal/authz/decision) and web/sdk/src/types.ts to match in the SAME change set — the golden is the single source both sides converge on, never edited to match only one side.",
+  "apiErrorCodes": {
+    "BadRequest": "BAD_REQUEST",
+    "AuthTokenMissing": "AUTH_TOKEN_MISSING",
+    "AuthTokenInvalid": "AUTH_TOKEN_INVALID",
+    "Forbidden": "FORBIDDEN",
+    "AuthorizationDenied": "AUTHORIZATION_DENIED",
+    "ModuleNotInstalled": "MODULE_NOT_INSTALLED",
+    "ModuleDisabled": "MODULE_DISABLED",
+    "ModuleDependencyMissing": "MODULE_DEPENDENCY_MISSING",
+    "NotFound": "NOT_FOUND",
+    "Conflict": "CONFLICT",
+    "ValidationError": "VALIDATION_ERROR",
+    "InternalError": "INTERNAL_ERROR",
+    "AuthorizationUnavailable": "AUTHORIZATION_UNAVAILABLE",
+    "ModuleUnavailable": "MODULE_UNAVAILABLE",
+    "PayloadTooLarge": "PAYLOAD_TOO_LARGE",
+    "ValidationFailed": "VALIDATION_FAILED",
+    "IdempotencyConflict": "IDEMPOTENCY_CONFLICT",
+    "GroupExternallyManaged": "GROUP_EXTERNALLY_MANAGED"
+  },
+  "effectiveAccessReasons": {
+    "Allowed": "ALLOWED",
+    "AuthUserNotFound": "AUTH_USER_NOT_FOUND",
+    "KeycloakDisabled": "KEYCLOAK_DISABLED",
+    "UserLifecycleDisabled": "USER_LIFECYCLE_DISABLED",
+    "CompanyInactive": "COMPANY_INACTIVE",
+    "CompanyMembershipRequired": "COMPANY_MEMBERSHIP_REQUIRED",
+    "CompanyAccessBlocked": "COMPANY_ACCESS_BLOCKED",
+    "ModuleDisabled": "MODULE_DISABLED",
+    "PlatformRoleRequired": "PLATFORM_ROLE_REQUIRED",
+    "CompanyRoleRequired": "COMPANY_ROLE_REQUIRED",
+    "EngineDenied": "ENGINE_DENIED",
+    "BusinessEligibilityDenied": "BUSINESS_ELIGIBILITY_DENIED",
+    "DependencyUnavailable": "DEPENDENCY_UNAVAILABLE"
+  }
+}

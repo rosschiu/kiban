@@ -1,0 +1,23 @@
+/.env
+/.env.test
+infra/.public-mode
+infra/secrets-in/
+web/node_modules/
+web/**/node_modules/
+web/**/dist/
+web/sdk/e2e-artifacts/
+web/sdk/playwright-report/
+web/sdk/coverage/
+web/sdk/*.tgz
+web/shell/e2e-artifacts/
+web/shell/playwright-report/
+web/shell/coverage/
+web/shell/*.tsbuildinfo
+coverage/go.out
+infra/keycloak-build/authenticator/target/
+# Documentation site build output (make docs-site) and its local virtualenv.
+docs-site-build/
+# Real credentials written by deploy/k8s/gen-secrets.sh. secret.example.yaml (placeholders) is committed.
+deploy/k8s/base/secret.yaml
+.venv-docs/
+internal/authz/bench/bench-report.md

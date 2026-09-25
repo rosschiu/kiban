@@ -1,0 +1,12 @@
+{
+  "checksums": {
+    "0001_schema.sql": "480ceacc517445108f5bc445a3fdc2027b2262a344c02f3de849ead85893f618",
+    "0002_helpdesk_tables.sql": "e26718ab32464ceda964947d66ee85559cbea21bd610499df4f794448f9c637c",
+    "0003_audit.sql": "0aac013ce237b0395cf5680db60af67904a53837a45d37b3cc68a70af169d862",
+    "0004_position_agent_bindings.sql": "3b1e56bff7243c342240550305bf06698f1cd3a2ccf474b031336b4411defcd2",
+    "0005_position_ticket_assignment.sql": "7931292737d442d113007c262baf74c9f9b75d531c277f60ad81e99e72982a5c",
+    "0006_group_agent_bindings.sql": "752c84094eaecd6063beac350760adddbedbe85f00d92ee40f4fda8d724420e5",
+    "0007_group_ticket_assignment.sql": "b173f906f2d7537f42418aecb4cade2edd05d5f253b98fa13f041b3b5d3ac57c",
+    "0008_idempotency_keys.sql": "5ff408597047e6a2133a4c58b5d6a298f8a86f202ac0d88c21d9ab5bc1840b1e"
+  }
+}

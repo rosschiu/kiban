@@ -1,0 +1,406 @@
+openapi: 3.0.3
+info:
+  title: Notification module API
+  version: "1.0.0"
+  description: >
+    The notification module's HTTP API. All paths live under /api/notification with the major
+    version in the path (/v1).
+
+    Outbound delivery (webhook POST, SMTP) is at-least-once, never exactly-once or at-most-once.
+    Every outbound delivery carries a stable per-job idempotency key (X-Kiban-Delivery-Id on
+    webhook POSTs; Message-Id on SMTP) so receivers can dedupe a redelivery of the same job.
+servers:
+  - url: /api/notification
+  # The registry's own catalog (internal/registry/seed.go
+  # HealthPath) and the running mux (mountRoutes: "GET /health"/"GET /ready", no
+  # /api/notification prefix) both confirm liveness/readiness probes are hit directly against
+  # the module's own host:port, OUTSIDE service.basePath. A second global server entry (not a
+  # per-path override — see modules/docs/openapi.yaml's own comment for why: kin-openapi's
+  # gorillamux router has an order-dependent bug where a per-path `servers` override leaks into
+  # every path processed afterward) documents that reality.
+  - url: /
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe. Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200":
+          description: OK
+
+  /ready:
+    # handleReady, mounted by mountRoutes as "GET /ready".
+    get:
+      operationId: getReady
+      summary: Readiness probe (database ping). Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { status: { type: string } } }
+        "503":
+          description: Database unreachable (errenv code INTERNAL_ERROR, verbatim from the running handler — not a dedicated unavailable code).
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /v1/companies/{companyId}/channels:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listChannels
+      summary: List notification channels for a company
+      x-required-modules: [notification]
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Page of channels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelPageEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    post:
+      operationId: createChannel
+      summary: Create a notification channel (notification.channels.manage)
+      x-required-modules: [notification]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelEnvelope"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/channels/{channelId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/channelId"
+    get:
+      operationId: getChannel
+      x-required-modules: [notification]
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelEnvelope"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteChannel
+      x-required-modules: [notification]
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/channels/{channelId}/subscriptions:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/channelId"
+    post:
+      operationId: subscribeSelf
+      summary: Subscribe the caller to a channel
+      x-required-modules: [notification]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeRequest"
+      responses:
+        "201": { description: Subscribed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/channels/{channelId}/subscriptions/me:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - $ref: "#/components/parameters/channelId"
+    delete:
+      operationId: unsubscribeSelf
+      x-required-modules: [notification]
+      responses:
+        "204": { description: Unsubscribed }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/messages:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listInboxMessages
+      summary: Poll the caller's inbox (v1 has no realtime push)
+      x-required-modules: [notification]
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Page of the caller's messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagePageEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: sendMessage
+      summary: Send a message to a channel (fan-out to subscribers + delivery jobs)
+      x-required-modules: [notification]
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageEnvelope"
+        "200":
+          description: Idempotent replay — same Idempotency-Key + same payload as a prior send returns the ORIGINAL message unchanged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageEnvelope"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/messages/{messageId}/read:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: messageId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: markMessageRead
+      x-required-modules: [notification]
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageEnvelope"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /internal/notification/v1/companies/{companyId}/events:
+    # S2S entry point (handleSendEvent). Reachable under the second `servers` entry (url: /)
+    # above, same as /health and /ready: the gateway's own internal-path exposure pins
+    # (internal/gateway/internal_exposure_test.go) prove /internal/* is NEVER externally
+    # routable — this path is module-to-module only (another module forwards the acting end
+    # user's own bearer verbatim), never reached through service.basePath.
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    post:
+      operationId: sendEvent
+      summary: >
+        S2S entry point another module calls to notify a company member of something that
+        happened in ITS domain (docs: "your doc was shared"; helpdesk: "ticket assigned to
+        you"). Requires a valid bearer AND active company membership for the acting caller
+        (company_module inbox.view). Recipients with no confirmed active membership are
+        skipped, not errored.
+      x-required-modules: [notification]
+      responses:
+        "200":
+          description: OK — sent/skipped counts (recipients skipped, e.g. unconfirmed membership, are not an error).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      sent: { type: integer }
+                      skipped: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+components:
+  parameters:
+    companyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    channelId:
+      name: channelId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    pageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 200 }
+
+  schemas:
+    Channel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        key: { type: string }
+        label: { type: string }
+        kind: { type: string, enum: [in_app, email, webhook] }
+        target: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    CreateChannelRequest:
+      type: object
+      required: [key, label, kind]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        kind: { type: string, enum: [in_app, email, webhook] }
+        target: { type: string, nullable: true }
+    ChannelEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Channel" }
+    ChannelPageEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Channel" }
+            total: { type: integer }
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalPages: { type: integer }
+    SubscribeRequest:
+      type: object
+      properties:
+        email: { type: string, nullable: true }
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        channelId: { type: string, format: uuid }
+        subjectLine: { type: string }
+        body: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time, nullable: true }
+    SendMessageRequest:
+      type: object
+      required: [channelId, subjectLine, body]
+      properties:
+        channelId: { type: string, format: uuid }
+        subjectLine: { type: string, minLength: 1, maxLength: 200, description: "1..200 characters; must not contain control characters." }
+        body: { type: string }
+    MessageEnvelope:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Message" }
+    MessagePageEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Message" }
+            total: { type: integer }
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalPages: { type: integer }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+
+  responses:
+    BadRequest:
+      description: BAD_REQUEST / VALIDATION_ERROR
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: AUTH_TOKEN_MISSING / AUTH_TOKEN_INVALID
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: NOT_FOUND
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Conflict:
+      description: CONFLICT
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ValidationFailed:
+      description: >
+        VALIDATION_FAILED — a domain-policy rejection distinct from ordinary field-shape
+        validation (BAD_REQUEST/VALIDATION_ERROR). Used for a webhook channel
+        target rejected by the SSRF guard (loopback/private/link-local/multicast/unspecified
+        address, or a non-https scheme without the KIBAN_WEBHOOK_ALLOW_HTTP dev opt-in).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    IdempotencyConflict:
+      description: >
+        IDEMPOTENCY_CONFLICT — the Idempotency-Key header was already used on this channel with a
+        DIFFERENT request payload (idempotency keys are payload-bound). The
+        same key with the SAME payload instead replays the original response (200, not 409).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    CapabilityOrAuthzError:
+      description: >
+        One of the three capability codes (MODULE_NOT_INSTALLED, MODULE_DISABLED,
+        MODULE_DEPENDENCY_MISSING — checked in that order by the gateway, before this service
+        is ever reached) or this service's own AUTHORIZATION_DENIED (caller is not a member of
+        companyId).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    AuthorizationUnavailable:
+      description: >
+        AUTHORIZATION_UNAVAILABLE — authz (or another required dependency) could not be reached;
+        fail-closed, never a stale allow.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

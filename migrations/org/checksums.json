@@ -1,0 +1,15 @@
+{
+  "checksums": {
+    "0001_schema.sql": "95541dd727338208b5574441488ae8791e17246f9e5b87b3e965a90fe6597095",
+    "0002_org_tables.sql": "9a2dc69dac6cc4ed7a4177f4625b80ae216adc0534208d2caba8f694f972566c",
+    "0003_audit.sql": "9baa4323e7f6e85bf5b9c9a12b8c051a3bab66ff15d0bc18f9ff84dbe891c5b5",
+    "0004_cross_company_constraints.sql": "381be1ba76df7dcb786a994247a9e508cc324dc6654db1598655fdf081464d46",
+    "0005_org_unit_move_company_integrity.sql": "1017a4cc00e03b30413ecf40adfddce6a9255bad51c11e95b1b09acb33ac0572",
+    "0006_org_tree_write_serialization.sql": "539b2706bb1343f7e0bb9556cd739c7b7c7b55d2a036549b2015deb0e8838263",
+    "0007_company_id_immutable.sql": "5e454c2acfdc16ba22108f2202e03372bde45720c6c10dae59fee72ad9cb0202",
+    "0008_grant_registry_authz_read_company.sql": "74adca2f27ed581b2b2fd88bef194d0c45cf6239249ba354fadb7955bd3d50f9",
+    "0009_half_open_assignment_windows.sql": "736a862f685d3d73c1586ddc52513ea802baf4b30943e481eb4805c110e2f0ed",
+    "0010_group_tables.sql": "09c5555e7ba723eaad7e61067e8a17ab3fdc831091f90be36cdfcd4a5feb1ac1",
+    "0011_audit_reject_truncate.sql": "85ac8cf3610179a0beaacb06adf9428273053bdf3fa699cbcfdd1e3458a82992"
+  }
+}

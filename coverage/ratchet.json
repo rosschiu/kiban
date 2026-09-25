@@ -1,0 +1,178 @@
+{
+  "_comment": "Coverage ratchet. Per-scope 'min' is the threshold `make check` enforces; 'floor' is the target (95 for security-critical scopes, 80 elsewhere). Raise 'min' toward 'floor' as tests land; a scope is done when min == floor. Minimums may only increase, never decrease (tools/ratchetguard checks this). Initial values were the measured coverage minus 1.0 point of slack for measurement jitter, clamped at 0.",
+  "internal/authz/engine": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/authz/decision": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/identity": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/audit": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/gateway.critical": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/bootstrap.critical": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "internal/livestack": {
+    "min": 95.0,
+    "floor": 95,
+    "_comment": "The public-mode interlock guard. Measured 96.6%; min set to the 95 floor because a failure here could let tests mutate a live deployment. The runtime.Caller(0) failure fallback in PublicModeMarkerPath is unreachable in practice."
+  },
+  "web/sdk.auth": {
+    "min": 95.0,
+    "floor": 95
+  },
+  "cmd/authz": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "cmd/bootstrap": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "cmd/gateway": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "cmd/identity": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "cmd/org": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "cmd/registry": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/authz": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/authz/fragment": {
+    "min": 81.1,
+    "floor": 80
+  },
+  "internal/authz/store": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/authz/client": {
+    "_comment": "Measured 92.0% (Can 90.9%, New 100%). Uncovered: Can's json.Marshal error branch, unreachable because the marshalled request holds only strings.",
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/config": {
+    "min": 83.0,
+    "floor": 80
+  },
+  "internal/errenv": {
+    "min": 99.0,
+    "floor": 80
+  },
+  "internal/gateway.rest": {
+    "min": 82.7,
+    "floor": 80
+  },
+  "internal/httpx": {
+    "min": 95.6,
+    "floor": 80
+  },
+  "internal/bootstrap.rest": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/obs": {
+    "min": 99.0,
+    "floor": 80
+  },
+  "internal/org": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/registry": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "internal/modvalidate": {
+    "_comment": "Module artifact validator. Measured 86.6%; min set with slack below that.",
+    "min": 85.0,
+    "floor": 80
+  },
+  "web/sdk.rest": {
+    "min": 80.0,
+    "floor": 80
+  },
+  "web/shell": {
+    "_comment": "Measured 95.38% (v8, statements, all files) via `npm run -w shell test:coverage`; min set with slack below that.",
+    "min": 94.5,
+    "floor": 80
+  },
+  "modulekit": {
+    "_comment": "Shared module scaffolding (token verifier, HTTP/pg helpers, org/authz/notification clients) lifted out of the four module service packages. Measured 100.0%; min set with slack below that.",
+    "min": 95.0,
+    "floor": 80
+  },
+  "modules/notification/service": {
+    "_comment": "Measured 81.3%. Uncovered by design: the full HTTP and SMTP delivery success path (the SSRF policy correctly refuses loopback and private targets, so a local test server cannot be reached without weakening it). Headroom above the floor is thin; re-run `make coverage-gate` before adding code here.",
+    "min": 80.0,
+    "floor": 80
+  },
+  "modules/timesheet/service": {
+    "_comment": "Measured 82.3%. Uncovered: handleReady's 503 branch (a shared live pool's Ping cannot be made to fail in a test), and store tx.Begin/Commit error branches that need a mid-transaction database failure.",
+    "min": 80.0,
+    "floor": 80
+  },
+  "modules/docs/service": {
+    "_comment": "Measured 82.0%. Uncovered: handleReady's 503 branch, and store tx.Begin/Commit error branches that need a mid-transaction database failure.",
+    "min": 80.0,
+    "floor": 80
+  },
+  "modules/helpdesk/service": {
+    "_comment": "Measured 80.2%; headroom is thin, so re-run `make coverage-gate` before adding code here. Uncovered: handleReady's 503 branch, store tx.Begin/Commit error branches, and a not-found branch in AssignTicket/UpdateTicketStatus that HTTP cannot reach because the handlers answer 404 first.",
+    "min": 80.0,
+    "floor": 80
+  },
+  "modules/notification/service/cmd": {
+    "_comment": "Visibility scope: cmd/main.go wiring, which the service scope does not measure. No tests yet (0.0%); min clamped at 0.0 so the gap shows in `make coverage-report` without failing the gate.",
+    "min": 0.0,
+    "floor": 80
+  },
+  "modules/timesheet/service/cmd": {
+    "_comment": "Visibility scope, same as modules/notification/service/cmd: no tests yet, min clamped at 0.0.",
+    "min": 0.0,
+    "floor": 80
+  },
+  "modules/docs/service/cmd": {
+    "_comment": "Visibility scope, same as modules/notification/service/cmd: no tests yet, min clamped at 0.0.",
+    "min": 0.0,
+    "floor": 80
+  },
+  "modules/helpdesk/service/cmd": {
+    "_comment": "Visibility scope, same as modules/notification/service/cmd: no tests yet, min clamped at 0.0.",
+    "min": 0.0,
+    "floor": 80
+  },
+  "internal/obs/metrics": {
+    "_comment": "Measured 92.2% (unit tests plus the live-tagged drift test against the Metrics documentation page); min 90.0. Uncovered: defensive nil-receiver branches no production caller reaches.",
+    "min": 90.0,
+    "floor": 80
+  },
+  "internal/version": {
+    "_comment": "Visibility scope: build-identity variables set via -ldflags, nothing unit-testable. Proven live by kiban_build_info{version,commit} in every scrape (internal/obs/metrics/docs_metrics_live_test.go). min clamped at 0.0.",
+    "min": 0.0,
+    "floor": 80
+  }
+}

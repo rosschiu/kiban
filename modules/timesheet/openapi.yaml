@@ -1,0 +1,532 @@
+openapi: 3.0.3
+info:
+  title: Timesheet module API
+  version: "1.0.0"
+  description: >
+    Module-owned API fragment. All paths live under
+    service.basePath (/api/timesheet) with the major version inside the module's own path space
+    (/v1).
+servers:
+  - url: /api/timesheet
+  # The registry's own catalog (internal/registry/seed.go
+  # HealthPath) and the running mux (mountRoutes: "GET /health"/"GET /ready", no
+  # /api/timesheet prefix) both confirm liveness/readiness probes are hit directly against the
+  # module's own host:port, OUTSIDE service.basePath. A second global server entry (not a
+  # per-path override — see modules/docs/openapi.yaml's own comment for why: kin-openapi's
+  # gorillamux router has an order-dependent bug where a per-path `servers` override leaks into
+  # every path processed afterward) documents that reality.
+  - url: /
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe. Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200": { description: OK }
+
+  /ready:
+    # handleReady, mounted by mountRoutes as "GET /ready".
+    get:
+      operationId: getReady
+      summary: Readiness probe (database ping). Served on the service's own listener, not under `/api/<module>`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, properties: { status: { type: string } } }
+        "503":
+          description: Database unreachable (errenv code INTERNAL_ERROR, verbatim from the running handler — not a dedicated unavailable code).
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+
+  /v1/companies/{companyId}/config:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: getConfig
+      summary: Read the company's timesheet configuration (defaults if never set)
+      x-required-modules: [timesheet]
+      responses:
+        "200":
+          description: Configuration
+          content: { application/json: { schema: { $ref: "#/components/schemas/ConfigEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    put:
+      operationId: updateConfig
+      summary: Update the company's timesheet configuration (timesheet.config.manage)
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpdateConfigRequest" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/ConfigEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/projects:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listProjects
+      x-required-modules: [timesheet]
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Page of projects
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProjectPageEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: createProject
+      summary: Create a project (timesheet.projects.manage)
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateProjectRequest" } } }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProjectEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/projects/{projectId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: projectId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      operationId: updateProject
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateProjectRequest" } } }
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProjectEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/approvers:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listApprovers
+      summary: List submitter -> assigned-approver assignments (timesheet.approvers.manage)
+      x-required-modules: [timesheet]
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Page of assignments
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApproverAssignmentPageEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: assignApprover
+      summary: Assign memberId's approver (grants submitter/approver relations, timesheet.approvers.manage)
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/AssignApproverRequest" } } }
+      responses:
+        "200":
+          description: Assigned
+          content: { application/json: { schema: { $ref: "#/components/schemas/ApproverAssignmentEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/companies/{companyId}/entries:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listEntries
+      summary: List the caller's own entries for a week (timesheet.entries.manage-own)
+      x-required-modules: [timesheet]
+      parameters:
+        - name: weekStart
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Entries for the week (7 days)
+          content: { application/json: { schema: { $ref: "#/components/schemas/EntryListEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: upsertEntry
+      summary: Create or update a draft entry for the caller (timesheet.entries.manage-own)
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/UpsertEntryRequest" } } }
+      responses:
+        "200":
+          description: Upserted
+          content: { application/json: { schema: { $ref: "#/components/schemas/EntryEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/entries/{entryId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: entryId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: deleteEntry
+      x-required-modules: [timesheet]
+      responses:
+        "204": { description: Deleted }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/submissions:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+    get:
+      operationId: listSubmissions
+      summary: List submissions (view=mine|approvals|all)
+      x-required-modules: [timesheet]
+      parameters:
+        - name: view
+          in: query
+          schema: { type: string, enum: [mine, approvals, all], default: mine }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Page of submissions
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionPageEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+    post:
+      operationId: submitWeek
+      summary: Submit the caller's draft week (timesheet.submissions.submit)
+      x-required-modules: [timesheet]
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SubmitWeekRequest" } } }
+      responses:
+        "201":
+          description: Submitted
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionEnvelope" } } }
+        "200":
+          description: Idempotent replay — same Idempotency-Key + same payload as a prior submit returns the ORIGINAL submission unchanged.
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionEnvelope" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/submissions/{submissionId}:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: submissionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getSubmission
+      x-required-modules: [timesheet]
+      responses:
+        "200":
+          description: Submission
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/companies/{companyId}/submissions/{submissionId}/approve:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: submissionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: approveSubmission
+      summary: Approve (assigned approver only, timesheet.submissions.approve)
+      x-required-modules: [timesheet]
+      responses:
+        "200":
+          description: Approved
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+  /v1/companies/{companyId}/submissions/{submissionId}/reject:
+    parameters:
+      - $ref: "#/components/parameters/companyId"
+      - name: submissionId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: rejectSubmission
+      summary: Reject with a reason (assigned approver only, timesheet.submissions.approve)
+      x-required-modules: [timesheet]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RejectSubmissionRequest" } } }
+      responses:
+        "200":
+          description: Rejected
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionEnvelope" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/CapabilityOrAuthzError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+
+components:
+  parameters:
+    companyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    pageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 200 }
+
+  schemas:
+    Config:
+      type: object
+      properties:
+        companyId: { type: string, format: uuid }
+        enforceBillableWithinActual: { type: boolean }
+        allowBillableAboveEightHours: { type: boolean }
+        allowedPreviousWeeks: { type: integer }
+        allowedFutureWeeks: { type: integer }
+    ConfigEnvelope:
+      type: object
+      properties: { data: { $ref: "#/components/schemas/Config" } }
+    UpdateConfigRequest:
+      type: object
+      properties:
+        enforceBillableWithinActual: { type: boolean }
+        allowBillableAboveEightHours: { type: boolean }
+        allowedPreviousWeeks: { type: integer }
+        allowedFutureWeeks: { type: integer }
+
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [active, inactive] }
+    ProjectEnvelope:
+      type: object
+      properties: { data: { $ref: "#/components/schemas/Project" } }
+    ProjectPageEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Project" } }
+            total: { type: integer }
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalPages: { type: integer }
+    CreateProjectRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, description: "^[A-Z0-9_-]{1,20}$" }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        status: { type: string, enum: [active, inactive] }
+
+    ApproverAssignment:
+      type: object
+      properties:
+        companyId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        approverMemberId: { type: string, format: uuid }
+        assignedAt: { type: string, format: date-time }
+    ApproverAssignmentEnvelope:
+      type: object
+      properties: { data: { $ref: "#/components/schemas/ApproverAssignment" } }
+    ApproverAssignmentPageEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ApproverAssignment" } }
+            total: { type: integer }
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalPages: { type: integer }
+    AssignApproverRequest:
+      type: object
+      required: [memberId, approverMemberId]
+      properties:
+        memberId: { type: string, format: uuid }
+        approverMemberId: { type: string, format: uuid }
+
+    Entry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        entryDate: { type: string, format: date }
+        realHours: { type: number }
+        billableHours: { type: number }
+        status: { type: string, enum: [draft, submitted, approved, rejected] }
+    EntryEnvelope:
+      type: object
+      properties: { data: { $ref: "#/components/schemas/Entry" } }
+    EntryListEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Entry" } }
+    UpsertEntryRequest:
+      type: object
+      required: [projectId, entryDate, realHours]
+      properties:
+        projectId: { type: string, format: uuid }
+        entryDate: { type: string, format: date }
+        realHours: { type: number, minimum: 0, maximum: 24 }
+        billableHours: { type: number, minimum: 0, maximum: 24 }
+
+    Submission:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        weekStart: { type: string, format: date }
+        versionNumber: { type: integer }
+        rootId: { type: string, format: uuid }
+        supersedesId: { type: string, format: uuid, nullable: true }
+        isCurrent: { type: boolean }
+        status: { type: string, enum: [submitted, approved, rejected] }
+        assignedApproverMemberId: { type: string, format: uuid }
+        rejectReason: { type: string, nullable: true }
+        permissions:
+          type: object
+          properties:
+            canApprove: { type: boolean }
+            canReject: { type: boolean }
+            canRevert: { type: boolean }
+    SubmissionEnvelope:
+      type: object
+      properties: { data: { $ref: "#/components/schemas/Submission" } }
+    SubmissionPageEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/Submission" } }
+            total: { type: integer }
+            page: { type: integer }
+            pageSize: { type: integer }
+            totalPages: { type: integer }
+    SubmitWeekRequest:
+      type: object
+      required: [weekStart]
+      properties:
+        weekStart: { type: string, format: date }
+    RejectSubmissionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+
+  responses:
+    BadRequest:
+      description: BAD_REQUEST — malformed path/query/body input (invalid UUID, invalid JSON, bad date format, oversized Idempotency-Key).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unauthorized:
+      description: AUTH_TOKEN_MISSING / AUTH_TOKEN_INVALID
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Unavailable:
+      description: >
+        503 — a required dependency (authz, or org for member resolution) could not be reached;
+        fail-closed, never a stale allow. Code varies:
+        AUTHORIZATION_UNAVAILABLE for authz; INTERNAL_ERROR for org (a known code-consistency
+        gap across modules — right status, generic code).
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    NotFound:
+      description: NOT_FOUND
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    Conflict:
+      description: CONFLICT
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    ValidationFailed:
+      description: VALIDATION_ERROR / VALIDATION_FAILED — a domain rule rejection with field detail.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    IdempotencyConflict:
+      description: IDEMPOTENCY_CONFLICT — Idempotency-Key reused with a different payload.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    CapabilityOrAuthzError:
+      description: >
+        One of the three capability codes (MODULE_NOT_INSTALLED, MODULE_DISABLED,
+        MODULE_DEPENDENCY_MISSING) or this service's own AUTHORIZATION_DENIED.
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }

@@ -1,0 +1,49 @@
+{
+  "name": "@rosschiu/kiban-sdk",
+  "version": "0.1.0",
+  "description": "Kiban platform SDK: OIDC/PKCE session, envelope-aware API client, typed clients, use-case recipes.",
+  "type": "module",
+  "private": false,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rosschiu/kiban.git",
+    "directory": "web/sdk"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "pree2e": "npm run build",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "docs": "typedoc"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "jsdom": "^25.0.1",
+    "tsup": "^8.3.5",
+    "typedoc": "^0.28.20",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "moduleKey": "docs",
+  "roles": [
+    {
+      "roleKey": "docs_admin",
+      "label": "Docs Admin",
+      "scopeType": "company",
+      "grantsShellAccess": true,
+      "seedCompanyCreatorRole": true,
+      "sortOrder": 10
+    }
+  ],
+  "objects": [
+    {
+      "objectType": "docs_document",
+      "label": "Document",
+      "scopeKind": "object",
+      "parentKind": "company_module",
+      "managerRelation": "owner",
+      "grantableRelations": ["owner", "editor", "viewer"],
+      "showInPermissionUi": true,
+      "sortOrder": 10
+    }
+  ],
+  "relations": {
+    "docs_document": {
+      "company_module": { "this": true },
+      "owner": { "this": true },
+      "editor": { "union": [{ "this": true }, { "computedUserset": "owner" }] },
+      "viewer": { "union": [{ "this": true }, { "computedUserset": "editor" }] }
+    }
+  },
+  "features": [
+    {
+      "featureKey": "docs.manage",
+      "label": "Manage the docs module (audit trail, orphan cleanup)",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 10,
+      "isSidebarEntry": true
+    },
+    {
+      "featureKey": "docs.create",
+      "label": "Create a document",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": {},
+      "sortOrder": 20,
+      "isSidebarEntry": true
+    }
+  ],
+  "fieldCatalog": [],
+  "fieldSets": [],
+  "rowScopes": [
+    { "entityType": "docs_document", "rules": ["all"] }
+  ],
+  "bootstrapPolicy": { "seedCompanyCreatorObjectRelations": [] },
+  "_comment": "docs_document shows fine-grained sharing. There is deliberately NO tupleToUserset bridge from viewer/editor to company_module#admin or #member: read access to a document comes ONLY from the per-document owner/editor/viewer tuples this module writes through the authz grants S2S API on create/share/revoke. A document nobody shared is therefore unreadable even by the platform superadmin. docs.manage (module-level: audit trail, orphan cleanup) and docs.create are the only two features anchored on company_module, and neither implies content read access. docs.create has an empty accessRulePayload: it is company-membership-gated only (no relation leg), the same shape as timesheet's entries.manage-own and notification's inbox.view, because company_module has no base-model 'member' relation to anchor on."
+}

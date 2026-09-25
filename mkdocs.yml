@@ -1,0 +1,43 @@
+site_name: Kiban
+site_description: Self-hostable organizational identity and access foundation for business applications.
+site_url: https://rosschiu.github.io/kiban/
+repo_url: https://github.com/rosschiu/kiban
+docs_dir: docs
+strict: true
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+  palette:
+    - scheme: default
+      toggle: { icon: material/brightness-7, name: Dark mode }
+    - scheme: slate
+      toggle: { icon: material/brightness-4, name: Light mode }
+markdown_extensions:
+  - admonition
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.superfences
+nav:
+  - Why Kiban: index.md
+  - Quickstart: quickstart.md
+  - Integrate your app: integrate.md
+  - Concepts: concepts.md
+  - Operating Kiban: operating.md
+  - Building on Kiban: building.md
+  - SDK guide: sdk-guide.md
+  - Reference: reference.md
+  - Metrics: metrics.md
+  - Security: security.md
+  - Known limitations: limitations.md
+  - Contributing: contributing.md
+# The glossary stays buildable and linkable (concepts.md links it) but out of the navigation.
+not_in_nav: |
+  glossary.md
+exclude_docs: |
+  requirements.txt
+  LICENSE
+  sdk/recipes.md

@@ -1,0 +1,63 @@
+# The non-secret half of the compose env contract (infra/compose.yaml,
+# deploy/quickstart/docker-compose.yml), collapsed into one ConfigMap consumed via `envFrom` by
+# every Deployment/Job below — mirrors .env's own non-secret fields. Values here are the
+# kind-proof defaults; overlays/production patches KIBAN_GATEWAY_ORIGIN/KIBAN_DOMAIN for a real
+# domain (see README.md "Production notes").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiban-config
+data:
+  # The cluster superuser (initdb scripts only — see .env.example); the app DB's owner is
+  # the `kiban` role those scripts create.
+  POSTGRES_USER: "postgres"
+  POSTGRES_DB: "kiban"
+  KEYCLOAK_REALM: "kiban"
+  KC_BOOTSTRAP_ADMIN_USERNAME: "admin"
+  KIBAN_SUPERADMIN_USERNAME: "superadmin"
+  KIBAN_SUPERADMIN_EMAIL: "superadmin@kiban.local"
+  KIBAN_INSTALLED_MODULES: "notification,timesheet,docs,helpdesk"
+  # infra/compose.yaml's KIBAN_DOMAIN comment (`bootstrap` service) applies unchanged
+  # here: leave unset for a kind proof (RealmStep falls back to its dev-loopback redirect
+  # allowlist) and set to the real hostname in overlays/production once one exists.
+  KIBAN_DOMAIN: ""
+  # The origin every token-verifying service compares a JWT's `iss` claim against.
+  # This MUST be the origin Keycloak actually derives its self-referencing issuer URL from
+  # (KC_HOSTNAME_STRICT=false — see infra/compose.yaml's KEYCLOAK_ISSUER_URL comment), which is
+  # whatever `Host` header the request that hit the gateway's `/auth/*` proxy carried. The kind
+  # port-forward's OWN origin (`localhost:8090`) only works for a host-side caller: an in-cluster
+  # Pod such as the demo-reset runner reaches the gateway via its Service DNS name
+  # (`Host: gateway:8090`), gets a token with a different issuer, and every service 401s it. The
+  # in-cluster Service DNS name is the one address BOTH a real in-cluster caller (the demo-reset
+  # CronJob, any other in-cluster job) and a host-side caller can agree on — a host-side caller
+  # just adds `-H "Host: gateway:8090"` to its port-forwarded curl calls. overlays/production overrides this to the
+  # real HTTPS domain, which every caller (browser via Ingress, in-cluster jobs) reaches through
+  # uniformly, so this whole workaround is kind-only.
+  KIBAN_GATEWAY_ORIGIN: "http://gateway:8090"
+  KEYCLOAK_ISSUER_URL: "http://gateway:8090/realms/kiban"
+---
+# Mirrors infra/postgres-init/*.sh (deploy/quickstart/docker-compose.yml's own `configs:` block
+# already established this same inlining pattern for a from-images deployment with no repo
+# checkout to mount the file from). A ConfigMap mount is not executable, so the image entrypoint
+# sources these; KC_DB_PASSWORD/KIBAN_DB_PASSWORD come from the postgres StatefulSet's env.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiban-postgres-init
+data:
+  01-keycloak-db.sh: |
+    : "${KC_DB_PASSWORD:?KC_DB_PASSWORD not set}"
+    psql -v ON_ERROR_STOP=1 -v pw="$KC_DB_PASSWORD" --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
+    CREATE ROLE keycloak LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD :'pw';
+    CREATE DATABASE keycloak OWNER keycloak;
+    REVOKE CONNECT ON DATABASE keycloak FROM PUBLIC;
+    SQL
+  02-kiban-owner.sh: |
+    : "${KIBAN_DB_PASSWORD:?KIBAN_DB_PASSWORD not set}"
+    [ "$POSTGRES_DB" = kiban ] || { echo "POSTGRES_DB must be 'kiban' (got '$POSTGRES_DB'): the shipped migrations name the database by literal — see docs/playbooks/deploy.md" >&2; exit 1; }
+    psql -v ON_ERROR_STOP=1 -v pw="$KIBAN_DB_PASSWORD" -v db="$POSTGRES_DB" --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
+    CREATE ROLE kiban LOGIN NOSUPERUSER NOCREATEDB CREATEROLE NOBYPASSRLS PASSWORD :'pw';
+    ALTER DATABASE :"db" OWNER TO kiban;
+    REVOKE CONNECT ON DATABASE :"db" FROM PUBLIC;
+    GRANT CONNECT ON DATABASE :"db" TO kiban;
+    SQL

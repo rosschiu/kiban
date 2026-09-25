@@ -1,0 +1,4 @@
+code:string
+isActive:bool
+name:string
+source:string

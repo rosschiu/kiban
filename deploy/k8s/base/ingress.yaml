@@ -1,0 +1,32 @@
+# Class-agnostic Ingress — no `ingressClassName` set here on purpose (works with
+# whichever controller a real cluster already runs: nginx, Traefik, cloud-provider-native, etc.;
+# overlays/production pins one + adds cert-manager annotations). Routes the Ingress's plaintext
+# backend straight to the gateway's own :8090 dev-HTTP listener — the controller (or, in
+# production, cert-manager-issued cert data referenced by `tls:` below) is what terminates real
+# TLS, matching the design gateway/kustomization.yaml's own header comment already states. No `tls:` block in
+# THIS base (a bare host with no cert-manager Issuer would fail to admit); overlays/production
+# adds one once a real domain + Issuer exist.
+#
+# kind ships NO ingress controller by default, so the kind quickstart uses `kubectl port-forward
+# svc/gateway` instead (README.md "kind quickstart"); this Ingress resource's own
+# admission/routing behavior is not exercised on kind.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway
+  annotations:
+    # Most controllers default to this already; stated explicitly since the gateway's own dev-
+    # HTTP listener (gateway/kustomization.yaml) has no TLS of its own for the controller to talk to.
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  rules:
+    - host: kiban.example.com # overlays/production patches this to the real domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8090

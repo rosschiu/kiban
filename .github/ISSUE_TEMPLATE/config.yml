@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/rosschiu/kiban/security
+    about: >
+      Do not file security vulnerabilities as a public issue. See SECURITY.md for the
+      private-disclosure channel (and its current fallback, if the Security tab isn't reachable
+      yet on this repo).

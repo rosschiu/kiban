@@ -1,0 +1,4 @@
+companyId:string
+memberId:string
+versionNumber:number
+weekStart:string

@@ -1,0 +1,149 @@
+# Public demo deployment override: routes kiban-gateway onto a host-owned shared Traefik edge
+# (external network KIBAN_PUBLIC_NETWORK, default `kiban-public`) at https://$KIBAN_PUBLIC_HOST.
+# This is a shared-host exception: Kiban normally expects the gateway to terminate TLS itself,
+# but here a host-owned Traefik already holds :80/:443, so this override asks the gateway to run
+# its plain-HTTP listener (KIBAN_INSECURE_HTTP=true, :8090) instead and lets the shared Traefik
+# terminate TLS via its `letsencrypt` certresolver.
+#
+# The gateway binary only runs ONE mode at a time (cmd/gateway/main.go: TLS config present ->
+# TLS listener; else KIBAN_INSECURE_HTTP=="true" -> dev HTTP; never both) — public mode wins
+# here, so the local https://127.0.0.1:8443 listener stops answering while
+# this override is applied (the container still publishes the port; nothing listens on it).
+#
+# Usage: `make public-up` (compose.yaml + this file). Bootstrap must be re-run once after first
+# applying this file so the kiban-frontend realm client's redirect URIs/web origins include the
+# public origin (KIBAN_DOMAIN below) — see the Makefile's public-up target.
+
+networks:
+  public-edge:
+    external: true
+    name: ${KIBAN_PUBLIC_NETWORK:-kiban-public}
+
+services:
+  # Public exposure means the stack must survive host reboots: the shared Traefik restarts
+  # itself, but compose.yaml's services carry no restart policy (fine for `make dev`), so a
+  # reboot would leave the public origin serving Traefik's bare 404. Long-lived
+  # services get unless-stopped here; one-shot jobs (migrate/bootstrap/gateway-devcert) keep
+  # compose.yaml's run-once semantics.
+  postgres:
+    restart: unless-stopped
+  registry:
+    restart: unless-stopped
+  org:
+    restart: unless-stopped
+
+  # identity/authz/notification verify bearer tokens themselves, so they must expect the PUBLIC
+  # issuer — in public mode browsers mint tokens through https://$KIBAN_PUBLIC_HOST/auth, so
+  # their `iss` is the public origin, and compose.yaml's dev issuer (https://127.0.0.1:8443/...)
+  # would make these services 401 every real user request. Gateway's own override
+  # is below; JWKS URLs stay internal (key material is issuer-independent).
+  identity:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+  authz:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+  notification:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+  timesheet:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+  docs:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+  helpdesk:
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+
+  keycloak:
+    restart: unless-stopped
+    environment:
+      # KC_HOSTNAME_STRICT=false (compose.yaml) makes Keycloak derive its `iss` claim and
+      # self-referencing URLs from whatever X-Forwarded-Host/-Proto it's told to trust. That chain
+      # breaks one hop further out in this shared-Traefik topology: Go's
+      # httputil.ReverseProxy.SetXForwarded (internal/gateway/auth_proxy.go) derives
+      # X-Forwarded-Proto from whether the request reached the GATEWAY itself over TLS — true in
+      # `make dev` (the gateway terminates TLS directly), but false here (TLS is terminated one hop
+      # earlier at the shared Traefik), so the issuer would come back as `http://...:443/...`.
+      # Pinning Keycloak's hostname (hostname v2 config, 26.x) to the public origin makes every
+      # self-referencing URL/issuer Keycloak renders independent of proxy headers entirely.
+      KC_HOSTNAME: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}
+      KC_HOSTNAME_STRICT: "true"
+
+  gateway:
+    restart: unless-stopped
+    networks:
+      - default
+      - public-edge
+    environment:
+      # Turn off the operator-cert TLS mode compose.yaml configures (gateway-devcert) so
+      # buildTLSConfig falls through to the plain-HTTP branch below; the shared Traefik — not
+      # this container — owns the host's :80/:443 and terminates TLS.
+      KIBAN_TLS_CERT_FILE: ""
+      KIBAN_TLS_KEY_FILE: ""
+      KIBAN_INSECURE_HTTP: "true"
+      # The shared Traefik terminates TLS and overwrites X-Forwarded-* itself, so the gateway
+      # must pass the edge's X-Forwarded-Proto/-Host through instead of self-deriving `http`
+      # from its own plaintext listener — otherwise the /auth body rewrite (auth_proxy.go's
+      # rewriteAuthOrigin) never matches Keycloak's KC_HOSTNAME-pinned https URLs and the login
+      # form's action goes out without the /auth prefix, 404ing every browser login at the
+      # password-submit step.
+      KIBAN_TRUSTED_PROXY: "true"
+      # compose.yaml's KEYCLOAK_ISSUER_URL comment explains why this must equal whatever origin a
+      # browser's /auth/* round trip actually used: here that's the public origin, not
+      # https://127.0.0.1:8443.
+      KEYCLOAK_ISSUER_URL: https://${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}/realms/${KEYCLOAK_REALM}
+      # This override file IS the public-demo deployment's own compose overlay, so
+      # this is the one place the demo banner flag turns on — every other deployment (`make
+      # dev`, a private customer instance) never sets KIBAN_DEMO_MODE and stays off by default
+      # (cmd/gateway's own config default is "false").
+      KIBAN_DEMO_MODE: "true"
+    healthcheck:
+      # compose.yaml's own healthcheck curls the TLS listener on :8443, which no longer answers
+      # once KIBAN_INSECURE_HTTP wins (see above) — re-point it at the dev-HTTP listener this
+      # override activates instead, same 200-on-`/` expectation (static.go serves web/shell's
+      # index.html there).
+      test:
+        [
+          "CMD-SHELL",
+          "test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8090/)\" = 200",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    labels:
+      # Label-based attachment to the shared Traefik:
+      # HTTP router 301-redirects to HTTPS; HTTPS router terminates TLS with the host's existing
+      # `letsencrypt` certresolver and forwards plaintext to the gateway's dev-HTTP port (8090)
+      # over the external network — no new host-published port.
+      traefik.enable: "true"
+      traefik.docker.network: ${KIBAN_PUBLIC_NETWORK:-kiban-public}
+      traefik.http.routers.kiban-http.rule: Host(`${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}`)
+      traefik.http.routers.kiban-http.entrypoints: web
+      traefik.http.routers.kiban-http.middlewares: kiban-https
+      traefik.http.routers.kiban-http.service: noop@internal
+      traefik.http.middlewares.kiban-https.redirectscheme.scheme: https
+      traefik.http.middlewares.kiban-https.redirectscheme.permanent: "true"
+      traefik.http.routers.kiban.rule: Host(`${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}`)
+      traefik.http.routers.kiban.entrypoints: websecure
+      traefik.http.routers.kiban.tls: "true"
+      traefik.http.routers.kiban.tls.certresolver: letsencrypt
+      traefik.http.services.kiban.loadbalancer.server.port: "8090"
+
+  bootstrap:
+    environment:
+      # compose.yaml deliberately leaves this unset in dev (see its own comment on the
+      # `bootstrap` service) so RealmStep's frontendOrigins() falls back to the dev-loopback
+      # redirect URIs/web origins. Setting it here makes bootstrap reconcile the kiban-frontend
+      # realm client's redirectUris/webOrigins to the public origin instead (internal/bootstrap/
+      # realm.go's frontendOrigins) — safe to re-run any number of times (RealmStep
+      # create-or-reconciles, per infra/e2e-login.sh's own idempotency proof).
+      KIBAN_DOMAIN: ${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}
