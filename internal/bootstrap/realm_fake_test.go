@@ -16,6 +16,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -1224,8 +1225,13 @@ func exactIdentityServiceRoleReps() []kcRoleRep {
 // dimension stays at its "already converged" value — so each RealmStep.Run test isolates the one
 // branch it's proving.
 type runStepFakeConfig struct {
-	realmSettingsStatus int  // non-zero: GET /admin/realms/kiban fails with this status
-	realmDisplayNameBad bool // GET returns a wrong displayName, forcing a settings PUT (applied)
+	// serviceClients are the KIBAN_SERVICE_CLIENTS ids the fake knows: absent on first lookup
+	// (created, id "sc-<id>"), and their mapper list is empty (created).
+	serviceClients            []string
+	serviceClientLookupStatus int
+	serviceMapperLookupStatus int
+	realmSettingsStatus       int  // non-zero: GET /admin/realms/kiban fails with this status
+	realmDisplayNameBad       bool // GET returns a wrong displayName, forcing a settings PUT (applied)
 
 	apiClientLookupStatus int  // non-zero: GET clients?clientId=kiban-api fails
 	apiClientNeedsRepair  bool // kiban-api comes back not bearer-only (forces a PUT, applied)
@@ -1258,6 +1264,8 @@ func realmStepFakeServer(t *testing.T, cfg runStepFakeConfig) *httptest.Server {
 	// flips the fake's state so the next read reflects it.
 	var directGrantCopied, directGrantMFAAdded, directGrantMFARequired bool
 
+	var srv *httptest.Server
+	srvURL := func() string { return srv.URL }
 	mux := http.NewServeMux()
 	mux.HandleFunc("/realms/master/protocol/openid-connect/token", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"access_token": "fake-token"})
@@ -1322,8 +1330,29 @@ func realmStepFakeServer(t *testing.T, cfg runStepFakeConfig) *httptest.Server {
 			case realmManagementClientID:
 				writeJSON(w, []kcClientRep{{ID: "rm-id", ClientID: realmManagementClientID}})
 			default:
+				if cfg.serviceClientLookupStatus != 0 && slices.Contains(cfg.serviceClients, r.URL.Query().Get("clientId")) {
+					w.WriteHeader(cfg.serviceClientLookupStatus)
+					return
+				}
 				writeJSON(w, []kcClientRep{})
 			}
+		// 3c. Service clients: created fresh, then given the audience mapper.
+		case r.URL.Path == "/admin/realms/kiban/clients" && r.Method == http.MethodPost:
+			var rep kcClientRep
+			_ = json.NewDecoder(r.Body).Decode(&rep)
+			if !slices.Contains(cfg.serviceClients, rep.ClientID) || rep.PublicClient || !rep.ServiceAccountsEnabled {
+				t.Errorf("unexpected client create %+v", rep)
+			}
+			w.Header().Set("Location", srvURL()+"/admin/realms/kiban/clients/sc-"+rep.ClientID)
+			w.WriteHeader(http.StatusCreated)
+		case strings.HasPrefix(r.URL.Path, "/admin/realms/kiban/clients/sc-") && strings.HasSuffix(r.URL.Path, "/protocol-mappers/models") && r.Method == http.MethodGet:
+			if cfg.serviceMapperLookupStatus != 0 {
+				w.WriteHeader(cfg.serviceMapperLookupStatus)
+				return
+			}
+			writeJSON(w, []kcProtocolMapperRep{})
+		case strings.HasPrefix(r.URL.Path, "/admin/realms/kiban/clients/sc-") && strings.HasSuffix(r.URL.Path, "/protocol-mappers/models") && r.Method == http.MethodPost:
+			w.WriteHeader(http.StatusCreated)
 		case strings.HasPrefix(r.URL.Path, "/admin/realms/kiban/clients/") && r.Method == http.MethodPut:
 			w.WriteHeader(http.StatusNoContent)
 
@@ -1425,7 +1454,7 @@ func realmStepFakeServer(t *testing.T, cfg runStepFakeConfig) *httptest.Server {
 		}
 	})
 
-	srv := httptest.NewServer(mux)
+	srv = httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -1448,6 +1477,23 @@ func runStepFakeDeps(t *testing.T, cfg runStepFakeConfig) *Deps {
 		KibanDomain:              "",
 		IdentityClientSecret:     "the-secret",
 		SecretsDir:               dir,
+		ServiceClients:           cfg.serviceClients,
+	}
+}
+
+func TestRealmStep_Run_ServiceClientsApplied(t *testing.T) {
+	deps := runStepFakeDeps(t, runStepFakeConfig{serviceClients: []string{"tokidesk-worker", "tokidesk-mailer"}})
+	outcome, detail, err := RealmStep{}.Run(context.Background(), deps)
+	if err != nil {
+		t.Fatalf("unexpected error: %v (detail: %s)", err, detail)
+	}
+	if outcome != OutcomeApplied {
+		t.Fatalf("outcome = %s, want applied: %s", outcome, detail)
+	}
+	for _, want := range []string{"service client tokidesk-worker: applied", "service client tokidesk-mailer: applied"} {
+		if !containsAll(detail, want) {
+			t.Errorf("detail = %q, want it to contain %q", detail, want)
+		}
 	}
 }
 
@@ -1498,6 +1544,8 @@ func TestRealmStep_Run_ErrorPropagation(t *testing.T) {
 		{"MFA flow wiring", runStepFakeConfig{mfaFlowExecutionsStatus: http.StatusInternalServerError}, "realm: MFA flow wiring:"},
 		{"identity service roles", runStepFakeConfig{rolesLookupStatus: http.StatusInternalServerError}, "find client " + identityServiceClientID},
 		{"secrets", runStepFakeConfig{secretsClientLookupStatus: http.StatusInternalServerError}, "realm: secrets:"},
+		{"service client", runStepFakeConfig{serviceClients: []string{"w"}, serviceClientLookupStatus: http.StatusInternalServerError}, "realm: service client w:"},
+		{"service client mapper", runStepFakeConfig{serviceClients: []string{"w"}, serviceMapperLookupStatus: http.StatusInternalServerError}, "realm: service client w audience mapper:"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
