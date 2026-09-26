@@ -20,4 +20,5 @@ docs-site-build/
 # Real credentials written by deploy/k8s/gen-secrets.sh. secret.example.yaml (placeholders) is committed.
 deploy/k8s/base/secret.yaml
 .venv-docs/
+docs/changelog.md
 internal/authz/bench/bench-report.md

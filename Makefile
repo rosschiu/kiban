@@ -109,9 +109,10 @@ images-all: images images-quickstart images-devcert ## the full 13-image set rel
 pin-images: ## refresh the @sha256 digest pin on every third-party base image (Dockerfiles, compose, k8s postgres) to the tag's current index digest — scripts/pin-images.sh; run `make quickstart-compose` after
 	./scripts/pin-images.sh
 
-docs-site: ## build the public documentation site (MkDocs Material, pinned in docs/requirements.txt) into the gitignored docs-site-build/ — the generated docs/api + docs/sdk trees are served as static reference pages
+docs-site: ## build the public documentation site (MkDocs Material, pinned in docs/requirements.txt) into the gitignored docs-site-build/ — the generated docs/api + docs/sdk trees are served as static reference pages; the root CHANGELOG.md is copied in as the changelog page
 	@python3 -m venv .venv-docs >/dev/null
 	@.venv-docs/bin/pip install -q -r docs/requirements.txt
+	@sed -E 's#\]\(([A-Z][A-Z0-9_.-]*(\.md)?)\)#](https://github.com/rosschiu/kiban/blob/main/\1)#g' CHANGELOG.md > docs/changelog.md
 	.venv-docs/bin/mkdocs build --strict -f mkdocs.yml -d docs-site-build
 
 test-stack-up: ## bring up an ISOLATED test stack (project `kiban-test`, separate volumes + host ports) — never the `kiban` project `make dev`/`make public-up` manage

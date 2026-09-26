@@ -33,6 +33,8 @@ nav:
   - Metrics: metrics.md
   - Security: security.md
   - Known limitations: limitations.md
+  - Roadmap: roadmap.md
+  - Changelog: changelog.md
   - Contributing: contributing.md
 # The glossary stays buildable and linkable (concepts.md links it) but out of the navigation.
 not_in_nav: |

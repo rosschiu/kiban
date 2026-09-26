@@ -1,7 +1,7 @@
-# Builds the public documentation site (docs/, MkDocs Material) on every push to main
-# and on every pull request, and deploys it to GitHub Pages on a `v*` tag push or a manual
-# dispatch. The `build` job runs `make docs-site` (strict mode); the `deploy` job publishes the
-# artifact it uploaded.
+# Builds the public documentation site (docs/, MkDocs Material) on every push to main and on
+# every pull request, and deploys it to GitHub Pages on every push to main, on a `v*` tag push
+# and on a manual dispatch. The `build` job runs `make docs-site` (strict mode); the `deploy`
+# job publishes the artifact it uploaded.
 name: docs
 
 on:
@@ -34,7 +34,7 @@ jobs:
           path: docs-site-build
 
   deploy:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     needs: build
     runs-on: ubuntu-latest
     environment:

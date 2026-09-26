@@ -1,7 +1,7 @@
 # Known limitations (0.1)
 
 Items are grouped by who they affect. Where something is planned, it is planned;
-nothing here is promised for a date.
+nothing here is promised for a date. The [roadmap](roadmap.md) lists what is planned.
 
 ## Security-relevant
 
