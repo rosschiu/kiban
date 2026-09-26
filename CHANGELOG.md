@@ -4,6 +4,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Service credential: `KIBAN_SERVICE_CLIENTS` creates confidential Keycloak clients whose client-credentials tokens the gateway accepts, for workers and connectors
 - Roadmap and Changelog pages on the documentation site; the site deploys on every push to main
 
 ## [0.1.0] — 2026-09-25

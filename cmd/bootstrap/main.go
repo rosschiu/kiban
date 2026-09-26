@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -78,6 +79,7 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		{Name: "KC_BOOTSTRAP_ADMIN_USERNAME", Default: ""},
 		{Name: "KC_BOOTSTRAP_ADMIN_PASSWORD", Default: ""},
 		{Name: "KIBAN_DOMAIN", Default: ""},
+		{Name: "KIBAN_SERVICE_CLIENTS", Default: ""}, // comma-separated confidential client ids
 		{Name: "KEYCLOAK_IDENTITY_CLIENT_SECRET", Default: ""},
 		{Name: "KIBAN_SECRETS_DIR", Default: ""}, // e.g. /run/kiban-secrets
 
@@ -179,6 +181,7 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		KCBootstrapAdminUsername: values["KC_BOOTSTRAP_ADMIN_USERNAME"],
 		KCBootstrapAdminPassword: values["KC_BOOTSTRAP_ADMIN_PASSWORD"],
 		KibanDomain:              values["KIBAN_DOMAIN"],
+		ServiceClients:           splitCSV(values["KIBAN_SERVICE_CLIENTS"]),
 		IdentityClientSecret:     values["KEYCLOAK_IDENTITY_CLIENT_SECRET"],
 		SecretsDir:               values["KIBAN_SECRETS_DIR"],
 		RotateSecrets:            rotateSecrets,
@@ -241,4 +244,15 @@ func optionalServicePool(ctx context.Context, service, role, password string, va
 		return nil, fmt.Errorf("ping %s database as %s: %w", service, role, err)
 	}
 	return pool, nil
+}
+
+// splitCSV splits a comma-separated list, trimming blanks; "" yields nil.
+func splitCSV(v string) []string {
+	var out []string
+	for _, p := range strings.Split(v, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

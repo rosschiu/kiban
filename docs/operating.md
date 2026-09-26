@@ -41,6 +41,9 @@ Key settings:
 - `KEYCLOAK_REALM`: the realm name (default `kiban`).
 - `KIBAN_IDENTITY_BASE_URL`: required by the gateway, which provisions users through it.
 - `KIBAN_PUBLIC_HOST`: required in public mode (`make public-up`), the hostname the edge serves.
+- `KIBAN_SERVICE_CLIENTS`: read by `bootstrap`; comma-separated ids of confidential Keycloak
+  clients with a service account and the `kiban-api` audience, for backends that need their own
+  token. See [Getting a token for a service](integrate.md#getting-a-token-for-a-service).
 - `KIBAN_DOMAIN`: read by `bootstrap` and by the gateway from their own environment, not from
   `.env`. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
   origins to exactly `https://<domain>/*` on every run, and the gateway allows that one origin

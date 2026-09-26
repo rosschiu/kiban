@@ -9,9 +9,9 @@ Everything here is also in the documentation at <https://rosschiu.github.io/kiba
 Kiban is a self-hostable identity, organization and authorization foundation for business
 applications: Go services, Postgres 18, an embedded Keycloak, a TypeScript SDK and a React
 sample shell, run with Docker Compose. Business logic lives in modules built on top; four
-sample modules ship in `modules/`. Version 0.1 supports in-tree Go modules only, has no
-machine-to-machine credential, and creates companies only through the org service's internal
-routes. `docs/limitations.md` is the complete list; read it before promising anything.
+sample modules ship in `modules/`. Version 0.1 supports in-tree Go modules only, issues a
+backend its own token only through a service client created at bootstrap, and creates
+companies only through the org service's internal routes. `docs/limitations.md` is the complete list; read it before promising anything.
 
 ## Read in this order
 

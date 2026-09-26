@@ -127,6 +127,9 @@ services:
       # KIBAN_DOMAIN deliberately unset in dev: RealmStep falls back to the realm import's own
       # dev-loopback redirect URIs/web origins (localhost:3000/5173/80) when empty.
       KIBAN_SECRETS_DIR: /run/kiban-secrets
+      # Comma-separated ids of confidential service-account clients bootstrap creates for
+      # backends that need their own token (client-credentials grant, kiban-api audience).
+      KIBAN_SERVICE_CLIENTS: ${KIBAN_SERVICE_CLIENTS:-}
 
       KIBAN_SUPERADMIN_USERNAME: ${KIBAN_SUPERADMIN_USERNAME}
       KIBAN_SUPERADMIN_EMAIL: ${KIBAN_SUPERADMIN_EMAIL}

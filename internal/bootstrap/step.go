@@ -107,6 +107,9 @@ type Deps struct {
 	// Empty falls back to the dev-loopback origins already in infra/keycloak-build/
 	// realm-kiban.json (localhost:3000/5173/80), so a domainless dev run still converges.
 	KibanDomain string
+	// ServiceClients (KIBAN_SERVICE_CLIENTS, comma-separated client ids) are the confidential
+	// service-account clients RealmStep creates for backends that need their own token.
+	ServiceClients []string
 	// IdentityClientSecret is the kiban-identity-service client's current secret
 	// (KEYCLOAK_IDENTITY_CLIENT_SECRET) — RealmStep writes it to SecretsDir as a 0600 file;
 	// with RotateSecrets it instead rotates the secret via the admin API first and writes the

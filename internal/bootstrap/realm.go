@@ -96,6 +96,21 @@ func (RealmStep) Run(ctx context.Context, deps *Deps) (Outcome, string, error) {
 	applied = applied || mapperChanged
 	details = append(details, fmt.Sprintf("audience mapper: %s", outcomeWord(mapperChanged)))
 
+	// 3c. Service clients (KIBAN_SERVICE_CLIENTS): confidential clients with a service account
+	// and the same kiban-api audience, so a backend can obtain a token by client credentials.
+	for _, id := range deps.ServiceClients {
+		scChanged, scInternalID, err := reconcileServiceClient(ctx, kc, id)
+		if err != nil {
+			return OutcomeFailed, strings.Join(details, "; "), fmt.Errorf("realm: service client %s: %w", id, err)
+		}
+		scMapperChanged, err := reconcileAudienceMapper(ctx, kc, scInternalID)
+		if err != nil {
+			return OutcomeFailed, strings.Join(details, "; "), fmt.Errorf("realm: service client %s audience mapper: %w", id, err)
+		}
+		applied = applied || scChanged || scMapperChanged
+		details = append(details, fmt.Sprintf("service client %s: %s", id, outcomeWord(scChanged || scMapperChanged)))
+	}
+
 	// 4. MFA browser-flow wiring: realm's browserFlow must be browserFlowAlias, and that flow
 	// must carry the MFA-setup authenticator as a REQUIRED step.
 	if err := verifyMFAFlowWiring(ctx, kc); err != nil {
@@ -383,6 +398,40 @@ func reconcileFrontendClient(ctx context.Context, kc *kcMasterClient, kibanDomai
 
 // setClientAttribute sets key=value on rep.Attributes, initializing the map if the client rep
 // (e.g. one fetched from a pre-attribute-era realm) had none.
+// reconcileServiceClient converges one confidential client with a service account and no
+// interactive flow: its only way to a token is the client-credentials grant. The token's `sub`
+// is the client's service-account user, which the gateway provisions like any other subject;
+// what the service may do is decided by the memberships and tuples an administrator gives that
+// subject, never by the client itself. The secret is Keycloak-generated and read from the admin
+// console (Clients → <id> → Credentials); bootstrap never prints or stores it.
+func reconcileServiceClient(ctx context.Context, kc *kcMasterClient, clientID string) (bool, string, error) {
+	rep, found, err := kc.findClientByClientID(ctx, clientID)
+	if err != nil {
+		return false, "", err
+	}
+	if !found {
+		id, err := kc.createClient(ctx, kcClientRep{
+			ClientID: clientID, Name: "Kiban service " + clientID, Enabled: true, Protocol: "openid-connect",
+			ServiceAccountsEnabled: true,
+		})
+		if err != nil {
+			return false, "", fmt.Errorf("create %s: %w", clientID, err)
+		}
+		return true, id, nil
+	}
+	if rep.PublicClient || rep.BearerOnly || !rep.ServiceAccountsEnabled || rep.StandardFlowEnabled ||
+		rep.DirectAccessGrantsEnabled || rep.ImplicitFlowEnabled || !rep.Enabled {
+		rep.PublicClient, rep.BearerOnly, rep.ServiceAccountsEnabled = false, false, true
+		rep.StandardFlowEnabled, rep.DirectAccessGrantsEnabled, rep.ImplicitFlowEnabled = false, false, false
+		rep.Enabled = true
+		if err := kc.updateClient(ctx, rep.ID, rep); err != nil {
+			return false, "", err
+		}
+		return true, rep.ID, nil
+	}
+	return false, rep.ID, nil
+}
+
 func setClientAttribute(rep *kcClientRep, key, value string) {
 	if rep.Attributes == nil {
 		rep.Attributes = map[string]string{}
@@ -408,7 +457,7 @@ func stringSlicesEqualUnordered(a, b []string) bool {
 
 func reconcileAudienceMapper(ctx context.Context, kc *kcMasterClient, frontendInternalID string) (bool, error) {
 	if frontendInternalID == "" {
-		return false, fmt.Errorf("no internal client id for %s", frontendClientID)
+		return false, fmt.Errorf("no internal client id for the audience mapper")
 	}
 	mappers, err := kc.protocolMappers(ctx, frontendInternalID)
 	if err != nil {

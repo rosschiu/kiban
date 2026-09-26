@@ -23,11 +23,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 
 ## Identity
 
-- **No machine-to-machine credential.** The realm has one interactive client, `kiban-frontend`
-  (public, PKCE); no direct-grant or client-credentials client issues a Kiban token, so a token
-  only ever comes from a user logging in through a browser. The realm's one service account,
-  `kiban-identity-service`, is the identity service's credential for Keycloak's own
-  user-management API; its token carries no `kiban-api` audience and the gateway rejects it.
+- **A service credential is created at bootstrap, not at runtime.** `KIBAN_SERVICE_CLIENTS`
+  names the confidential clients; adding one means a restart of the `bootstrap` one-shot. The
+  secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.
 - **Companies, org units and members are created only through the org service's internal
   routes.** The gateway mounts reads and the superadmin's position and group administration,
   which is what the sample shell's administration pages cover. Creating the first company means

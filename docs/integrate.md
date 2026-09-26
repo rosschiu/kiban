@@ -17,10 +17,10 @@ should see.
 
 Three things 0.1 does not do. They shape every track below.
 
-1. **There is no machine-to-machine credential.** The realm has one interactive client,
-   `kiban-frontend` (public, PKCE). No client-credentials or direct-grant client exists, so a
-   token only ever comes from a user logging in through a browser. A backend can act only with
-   a user's bearer token forwarded to it.
+1. **A backend gets its own token only through a service client.** `KIBAN_SERVICE_CLIENTS`
+   (set before `bootstrap` runs) creates confidential Keycloak clients with a service account;
+   the client-credentials grant then issues a token the gateway accepts. Without one, a backend
+   can act only with a user's bearer token forwarded to it. The REST-only track shows both.
 2. **Companies, org units and members are created through the org service's internal routes,
    not the gateway.** The gateway exposes reads (`/api/org/me/companies`, the member directory)
    and the superadmin's position and group administration under `/api/org/admin/...`. Creating a
@@ -574,7 +574,7 @@ subject named in the body and answers for the bearer; naming a different `actorI
 
 ### Getting a token for the shell
 
-Because there is no direct grant, take the token from a browser session. Log in to the sample
+Because there is no direct grant for users, take the token from a browser session. Log in to the sample
 shell (`https://127.0.0.1:8443`), open the browser's developer tools and run:
 
 ```js
@@ -584,6 +584,25 @@ JSON.parse(sessionStorage.getItem("kiban.oidc.tokens")).accessToken
 The shell persists its tokens under that key. Export the value as `TOKEN`. It is valid for 300
 seconds; take a fresh one when you get `401 AUTH_TOKEN_INVALID`. The same token carries your
 subject: `sub` in its payload is the `kcSub` the escape hatch below needs.
+
+### Getting a token for a service
+
+A worker, a connector or a mailer has no browser. Give it a service client: add its id to
+`KIBAN_SERVICE_CLIENTS` in `.env` (comma-separated) and run the stack; bootstrap creates a
+confidential client with a service account and the `kiban-api` audience. Read the secret in the
+Keycloak admin console: realm `kiban`, Clients, the id, Credentials. Then:
+
+```
+curl -sf https://127.0.0.1:8443/auth/realms/kiban/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=tokidesk-worker -d client_secret=$SECRET
+```
+
+You should see a JSON body with `access_token`, valid for 300 seconds; request a new one when
+you get `401 AUTH_TOKEN_INVALID`. Its `sub` is the client's service-account user. The gateway
+provisions that user on its first request, and until an administrator adds it as a member of a
+company (the escape hatch below, with this `sub` as `kcSub`) it is a member of nothing:
+`GET /api/org/me/companies` answers `200` with `[]`. What the service may do is decided by the
+memberships and tuples an administrator gives that subject, never by the client itself.
 
 ### Escape hatch: create a company and its first member
 
