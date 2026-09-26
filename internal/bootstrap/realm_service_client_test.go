@@ -61,6 +61,32 @@ func TestReconcileServiceClient(t *testing.T) {
 		}
 	})
 
+	t.Run("create error propagates", func(t *testing.T) {
+		kc := fakeKCFor(t, "kiban", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				writeJSON(w, []kcClientRep{})
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		if _, _, err := reconcileServiceClient(context.Background(), kc, "x"); err == nil {
+			t.Fatal("expected an error")
+		}
+	})
+
+	t.Run("repair PUT error propagates", func(t *testing.T) {
+		kc := fakeKCFor(t, "kiban", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				writeJSON(w, []kcClientRep{{ID: "sc-id", ClientID: "x", PublicClient: true}})
+				return
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		if _, _, err := reconcileServiceClient(context.Background(), kc, "x"); err == nil {
+			t.Fatal("expected an error")
+		}
+	})
+
 	t.Run("lookup error propagates", func(t *testing.T) {
 		kc := fakeKCFor(t, "kiban", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) })
 		if _, _, err := reconcileServiceClient(context.Background(), kc, "x"); err == nil {
