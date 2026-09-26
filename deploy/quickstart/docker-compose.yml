@@ -138,7 +138,7 @@ services:
       KIBAN_REGISTRY_DB_NAME: ${POSTGRES_DB:-kiban}
       KIBAN_REGISTRY_DB_PASSWORD: ${KIBAN_REGISTRY_DB_PASSWORD:?set a strong value in .env}
       KIBAN_AUTHZ_BASE_URL: http://authz:8140
-      KIBAN_INSTALLED_MODULES: notification,timesheet,docs,helpdesk
+      KIBAN_INSTALLED_MODULES: ${KIBAN_INSTALLED_MODULES:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -273,171 +273,6 @@ services:
       timeout: 3s
       retries: 20
       start_period: 5s
-  notification:
-    read_only: true
-    cap_drop:
-    - ALL
-    security_opt:
-    - no-new-privileges:true
-    tmpfs:
-    - /tmp
-    image: ghcr.io/rosschiu/kiban-notification:${KIBAN_VERSION:?set KIBAN_VERSION in .env}
-    environment:
-      KIBAN_LISTEN_ADDR: 0.0.0.0
-      KIBAN_NOTIFICATION_DB_HOST: postgres
-      KIBAN_NOTIFICATION_DB_PORT: '5432'
-      KIBAN_NOTIFICATION_DB_NAME: ${POSTGRES_DB:-kiban}
-      KIBAN_NOTIFICATION_DB_PASSWORD: ${KIBAN_NOTIFICATION_DB_PASSWORD:?set a strong value in .env}
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM:-kiban}/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URL: http://localhost:${KIBAN_GATEWAY_HTTP_HOST_PORT:-3000}/realms/${KEYCLOAK_REALM:-kiban}
-      KIBAN_ORG_BASE_URL: http://org:8130
-      KIBAN_AUTHZ_BASE_URL: http://authz:8140
-      KIBAN_NOTIFICATION_SMTP_HOST: localhost
-      KIBAN_NOTIFICATION_SMTP_PORT: '1025'
-      KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET: ${KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET:?set a strong value in .env}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      bootstrap:
-        condition: service_completed_successfully
-      org:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-    healthcheck:
-      test:
-      - CMD
-      - curl
-      - -sf
-      - http://127.0.0.1:8150/ready
-      interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
-  timesheet:
-    read_only: true
-    cap_drop:
-    - ALL
-    security_opt:
-    - no-new-privileges:true
-    tmpfs:
-    - /tmp
-    image: ghcr.io/rosschiu/kiban-timesheet:${KIBAN_VERSION:?set KIBAN_VERSION in .env}
-    environment:
-      KIBAN_LISTEN_ADDR: 0.0.0.0
-      KIBAN_TIMESHEET_DB_HOST: postgres
-      KIBAN_TIMESHEET_DB_PORT: '5432'
-      KIBAN_TIMESHEET_DB_NAME: ${POSTGRES_DB:-kiban}
-      KIBAN_TIMESHEET_DB_PASSWORD: ${KIBAN_TIMESHEET_DB_PASSWORD:?set a strong value in .env}
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM:-kiban}/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URL: http://localhost:${KIBAN_GATEWAY_HTTP_HOST_PORT:-3000}/realms/${KEYCLOAK_REALM:-kiban}
-      KIBAN_ORG_BASE_URL: http://org:8130
-      KIBAN_AUTHZ_BASE_URL: http://authz:8140
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      bootstrap:
-        condition: service_completed_successfully
-      org:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-    healthcheck:
-      test:
-      - CMD
-      - curl
-      - -sf
-      - http://127.0.0.1:8160/ready
-      interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
-  docs:
-    read_only: true
-    cap_drop:
-    - ALL
-    security_opt:
-    - no-new-privileges:true
-    tmpfs:
-    - /tmp
-    image: ghcr.io/rosschiu/kiban-docs:${KIBAN_VERSION:?set KIBAN_VERSION in .env}
-    environment:
-      KIBAN_LISTEN_ADDR: 0.0.0.0
-      KIBAN_DOCS_DB_HOST: postgres
-      KIBAN_DOCS_DB_PORT: '5432'
-      KIBAN_DOCS_DB_NAME: ${POSTGRES_DB:-kiban}
-      KIBAN_DOCS_DB_PASSWORD: ${KIBAN_DOCS_DB_PASSWORD:?set a strong value in .env}
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM:-kiban}/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URL: http://localhost:${KIBAN_GATEWAY_HTTP_HOST_PORT:-3000}/realms/${KEYCLOAK_REALM:-kiban}
-      KIBAN_ORG_BASE_URL: http://org:8130
-      KIBAN_AUTHZ_BASE_URL: http://authz:8140
-      KIBAN_NOTIFICATION_BASE_URL: http://notification:8150
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      bootstrap:
-        condition: service_completed_successfully
-      org:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-    healthcheck:
-      test:
-      - CMD
-      - curl
-      - -sf
-      - http://127.0.0.1:8170/ready
-      interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
-  helpdesk:
-    read_only: true
-    cap_drop:
-    - ALL
-    security_opt:
-    - no-new-privileges:true
-    tmpfs:
-    - /tmp
-    image: ghcr.io/rosschiu/kiban-helpdesk:${KIBAN_VERSION:?set KIBAN_VERSION in .env}
-    environment:
-      KIBAN_LISTEN_ADDR: 0.0.0.0
-      KIBAN_HELPDESK_DB_HOST: postgres
-      KIBAN_HELPDESK_DB_PORT: '5432'
-      KIBAN_HELPDESK_DB_NAME: ${POSTGRES_DB:-kiban}
-      KIBAN_HELPDESK_DB_PASSWORD: ${KIBAN_HELPDESK_DB_PASSWORD:?set a strong value in .env}
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM:-kiban}/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URL: http://localhost:${KIBAN_GATEWAY_HTTP_HOST_PORT:-3000}/realms/${KEYCLOAK_REALM:-kiban}
-      KIBAN_ORG_BASE_URL: http://org:8130
-      KIBAN_AUTHZ_BASE_URL: http://authz:8140
-      KIBAN_NOTIFICATION_BASE_URL: http://notification:8150
-    depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-      bootstrap:
-        condition: service_completed_successfully
-      org:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-    healthcheck:
-      test:
-      - CMD
-      - curl
-      - -sf
-      - http://127.0.0.1:8180/ready
-      interval: 3s
-      timeout: 3s
-      retries: 20
-      start_period: 5s
   gateway:
     read_only: true
     cap_drop:
@@ -456,10 +291,10 @@ services:
       KIBAN_AUTHZ_BASE_URL: http://authz:8140
       KIBAN_ORG_BASE_URL: http://org:8130
       KIBAN_IDENTITY_BASE_URL: http://identity:8120
-      KIBAN_MODULE_HOST_NOTIFICATION: notification
-      KIBAN_MODULE_HOST_TIMESHEET: timesheet
-      KIBAN_MODULE_HOST_DOCS: docs
-      KIBAN_MODULE_HOST_HELPDESK: helpdesk
+      KIBAN_MODULE_HOST_NOTIFICATION: localhost
+      KIBAN_MODULE_HOST_TIMESHEET: localhost
+      KIBAN_MODULE_HOST_DOCS: localhost
+      KIBAN_MODULE_HOST_HELPDESK: localhost
       KIBAN_TLS_CERT_FILE: ''
       KIBAN_TLS_KEY_FILE: ''
       KIBAN_STATIC_DIR: /var/www/kiban-shell
@@ -474,14 +309,6 @@ services:
       authz:
         condition: service_healthy
       org:
-        condition: service_healthy
-      notification:
-        condition: service_healthy
-      timesheet:
-        condition: service_healthy
-      docs:
-        condition: service_healthy
-      helpdesk:
         condition: service_healthy
     healthcheck:
       test:

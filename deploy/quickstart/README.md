@@ -48,9 +48,9 @@ chmod 600 secrets-in/superadmin-password
 docker compose up -d --wait
 ```
 
-The first run pulls 12 images (9 app services plus `migrate`/`bootstrap`/`keycloak`; the
-release also publishes `gateway-devcert`, which this file does not use) and takes a
-few minutes depending on your connection. `--wait` blocks until every service reports healthy.
+The first run pulls 8 images (the 5 foundation services plus `migrate`/`bootstrap`/`keycloak`;
+the release also publishes `gateway-devcert` and the four sample modules, which this file does
+not use) and takes a few minutes depending on your connection. `--wait` blocks until every service reports healthy.
 
 ## 4. Log in
 
@@ -88,9 +88,9 @@ TLS-terminating reverse proxy, or set `KIBAN_IMAGE_TAG=vX.Y.Z` to deploy from pr
 
 `docker-compose.yml` is GENERATED from the source repo's `infra/compose.yaml` by
 `scripts/gen-quickstart-compose.sh` (`make quickstart-compose`; `make docs-freshness-check` fails
-when the committed file drifts). Never edit it by hand. `infra/compose.yaml` runs 13 services
-across 4 `build:` contexts: the 9 app services, the `migrate`/`bootstrap` one-shot jobs, a
-`gateway-devcert` self-signed TLS generator, and a custom `keycloak-build` image (Keycloak plus
+when the committed file drifts). Never edit it by hand. `infra/compose.yaml` runs the 5 foundation
+services, the `migrate`/`bootstrap` one-shot jobs, a `gateway-devcert` self-signed TLS generator,
+the four sample modules behind the `samples` profile, and a custom `keycloak-build` image (Keycloak plus
 the Java MFA-setup authenticator and the imported realm). A zero-clone user has no checkout to
 build any of those from, so the generator:
 

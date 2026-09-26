@@ -61,8 +61,8 @@ Kiban is then at `https://127.0.0.1:8443` (self-signed certificate). Log in as
 first login makes you change it). `make dev-down` stops it and keeps data; `make dev-clean` also
 removes the volumes.
 
-A checkout-free variant lives in `deploy/quickstart/`: it pulls 12 of the 13 published images
-(`gateway-devcert` is not needed there).
+A checkout-free variant lives in `deploy/quickstart/`: it pulls the foundation images only
+(no `gateway-devcert`, no sample modules).
 
 ## Requirements
 

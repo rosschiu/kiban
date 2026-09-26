@@ -128,6 +128,10 @@ test-stack-up: ## bring up an ISOLATED test stack (project `kiban-test`, separat
 	@# compose container) — 18543 avoids that whole range.
 	@grep -q '^KIBAN_GATEWAY_TLS_HOST_PORT=' .env.test || echo 'KIBAN_GATEWAY_TLS_HOST_PORT=18543' >> .env.test
 	@grep -q '^KIBAN_GATEWAY_HTTP_HOST_PORT=' .env.test || echo 'KIBAN_GATEWAY_HTTP_HOST_PORT=18100' >> .env.test
+	@# The test stack always runs the four sample modules: their live tests, curl proofs and
+	@# the shell e2e suites are the module contract's proof.
+	@sed -i '/^COMPOSE_PROFILES=/d; /^KIBAN_INSTALLED_MODULES=/d' .env.test
+	@printf 'COMPOSE_PROFILES=samples\nKIBAN_INSTALLED_MODULES=notification,timesheet,docs,helpdesk\n' >> .env.test
 	@# The bootstrap service always requires the one-time superadmin password FILE at
 	@# infra/secrets-in/superadmin-password; on a fresh checkout (no prior `make dev`) bootstrap
 	@# would otherwise fail with "SuperadminUsername/SuperadminPassword required".

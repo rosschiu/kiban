@@ -233,9 +233,10 @@ services:
       # Registry's own (defense-in-depth) confirmation of a platform-admin mutation
       # caller, independent of the gateway's own guard — internal/registry/adminauthz.go.
       KIBAN_AUTHZ_BASE_URL: http://authz:8140
-      # The product modules installed+enabled at boot. Their manifest metadata is the
-      # cmd/registry/main.go builtinModules literal (see that file's comment for why).
-      KIBAN_INSTALLED_MODULES: notification,timesheet,docs,helpdesk
+      # Sample modules installed+enabled at boot: empty by default (Kiban runs beside your app;
+      # the samples are examples). `notification,timesheet,docs,helpdesk` with the `samples`
+      # profile brings them up; their manifest metadata is cmd/registry/main.go's literal.
+      KIBAN_INSTALLED_MODULES: ${KIBAN_INSTALLED_MODULES:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -416,6 +417,9 @@ services:
   # catalog via `registry`'s KIBAN_INSTALLED_MODULES=notification (above); routed by the gateway
   # with ZERO gateway code changes (catalog.go/proxy.go are registry-driven, module-key-generic).
   notification:
+    # Sample module: an example of the module contract, not part of the default stack.
+    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
+    profiles: ["samples"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -470,6 +474,9 @@ services:
   # KIBAN_INSTALLED_MODULES=notification,timesheet (above); routed by the gateway with ZERO
   # gateway code changes, same as notification.
   timesheet:
+    # Sample module: an example of the module contract, not part of the default stack.
+    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
+    profiles: ["samples"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -514,6 +521,9 @@ services:
   # gateway code changes, same as notification/timesheet. Needs both `org` (member directory) and
   # `notification` (targeted-events S2S endpoint) reachable, in addition to `authz`.
   docs:
+    # Sample module: an example of the module contract, not part of the default stack.
+    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
+    profiles: ["samples"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -564,6 +574,9 @@ services:
   # directory) and `notification` (targeted-events S2S endpoint) reachable, in addition to
   # `authz`.
   helpdesk:
+    # Sample module: an example of the module contract, not part of the default stack.
+    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
+    profiles: ["samples"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -705,14 +718,8 @@ services:
         condition: service_healthy
       org:
         condition: service_healthy
-      notification:
-        condition: service_healthy
-      timesheet:
-        condition: service_healthy
-      docs:
-        condition: service_healthy
-      helpdesk:
-        condition: service_healthy
+      # The sample modules are not dependencies: the gateway routes only what the registry's
+      # catalog installs, and answers 503 for an installed module that is down.
       gateway-devcert:
         condition: service_completed_successfully
     healthcheck:

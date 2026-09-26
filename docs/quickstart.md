@@ -69,8 +69,9 @@ Compose network. The administration pages cover positions and groups.
    [Integrate your app](integrate.md#escape-hatch-create-a-company-and-its-first-member).
 2. Open the administration pages, create a position in that company and assign your member to
    it.
-3. Enable a sample module for the company, then grant it to the position rather than to the
-   person.
+3. Bring up a sample module (`COMPOSE_PROFILES=samples` and `KIBAN_INSTALLED_MODULES` in
+   `.env`, then `make dev` again), enable it for the company, and grant it to the position
+   rather than to the person.
 4. Change the position holder and watch access move with the chair.
 
 ## Next
