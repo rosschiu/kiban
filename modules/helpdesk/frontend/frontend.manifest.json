@@ -1,0 +1,15 @@
+{
+  "_comment": "Contract artifact documenting the module's routes/nav for the module validator. The actual TypeScript/React source lives under web/shell/src/modules/helpdesk/: the shell has no remote module loading, so its local module registry (web/shell/src/modules/registry.ts) is the only way a module ships frontend code. Same as notification's, timesheet's and docs's own frontend.manifest.json.",
+  "_featureKeyComment": "Routes gate on 'helpdesk.access' (the generic <moduleKey>.access key internal/authz/summary.go synthesizes for any enabled module at company scope) rather than authz.fragment.json's fine-grained 'helpdesk.manage'/'helpdesk.tickets.work'/'helpdesk.tickets.create', because the fragment-declared feature keys are not surfaced to the route resolver's featureKey gate. Hiding the All-tickets nav from reporters happens inside the module's own React tree, from a dedicated GET .../me tier read (web/shell/src/modules/helpdesk/tier.ts), not from this route-level gate.",
+  "moduleKey": "helpdesk",
+  "routeBase": "/app/helpdesk",
+  "routes": [
+    { "id": "my-tickets", "path": "", "featureKey": "helpdesk.access" },
+    { "id": "ticket-detail", "path": "tickets/:ticketId", "featureKey": "helpdesk.access" },
+    { "id": "all-tickets", "path": "all", "featureKey": "helpdesk.access" },
+    { "id": "agents-admin", "path": "agents", "featureKey": "helpdesk.access" }
+  ],
+  "navFromFeatures": true,
+  "sdkVersionRange": ">=0.1.0 <1.0.0",
+  "remoteEntryUrl": null
+}

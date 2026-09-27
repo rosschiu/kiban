@@ -1,0 +1,4 @@
+code:string
+companyId:string
+orgUnitId:string
+title:string

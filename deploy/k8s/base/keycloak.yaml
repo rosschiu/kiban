@@ -1,0 +1,108 @@
+# The `kiban-keycloak` image (custom build — Java MFA-setup authenticator + imported realm baked
+# in, NOT stock Keycloak; see deploy/quickstart/README.md's "Design notes" for the rationale).
+# Single replica —
+# Keycloak's own embedded caching (Infinispan) assumes either one node or a real cluster
+# transport config neither this base nor the kind proof needs.
+#
+# Resources measured, not guessed: `docker stats` against kiban-test showed keycloak idle at
+# ~811MiB RSS (JVM heap + metaspace dominate; this is normal for Keycloak, not a leak) / ~9% CPU.
+# Request set near that idle floor; limit gives room for the realm import + a login burst.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: kiban
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak
+        app.kubernetes.io/part-of: kiban
+    spec:
+      containers:
+        - name: keycloak
+          # Placeholder — overlays/kind patches this to the kind-loaded
+          # kiban-keycloak:v0.1.0 image (README.md "kind quickstart"); overlays/production
+          # patches it to the real ghcr.io/rosschiu/kiban-keycloak:<tag>.
+          image: kiban-keycloak:latest
+          env:
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_DB
+              value: "postgres"
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://postgres:5432/keycloak"
+            - name: KC_DB_USERNAME
+              value: "keycloak"
+            - name: KC_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KC_DB_PASSWORD } }
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KC_BOOTSTRAP_ADMIN_USERNAME } }
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KC_BOOTSTRAP_ADMIN_PASSWORD } }
+            - name: KEYCLOAK_IDENTITY_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KEYCLOAK_IDENTITY_CLIENT_SECRET } }
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9000
+              name: management
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '"status": "UP"' <&3
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '"status": "UP"' <&3
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 640Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/part-of: kiban
+spec:
+  selector:
+    app.kubernetes.io/name: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+    - port: 9000
+      targetPort: 9000
+      name: management

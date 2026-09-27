@@ -1,0 +1,9 @@
+# base Namespace. Overlays never rename it (kustomization.yaml's `namespace:` field
+# applies it to every resource) — see README.md "Apply order" for why a fixed name keeps
+# gen-secrets.sh / apply.sh / the demo-reset CronJob's Service DNS assumptions all in sync.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kiban
+  labels:
+    app.kubernetes.io/part-of: kiban

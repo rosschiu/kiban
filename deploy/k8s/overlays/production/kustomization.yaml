@@ -1,0 +1,119 @@
+# Production overlay — SAMPLE shape for a real cluster. Edit every placeholder below
+# (`kiban.example.com`, the image tag, the StorageClass name) for the real deployment before
+# applying. See ../../README.md "Production notes" for the full list of real-cluster differences
+# this overlay does and does not cover.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: kiban-registry
+    newName: ghcr.io/rosschiu/kiban-registry
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-identity
+    newName: ghcr.io/rosschiu/kiban-identity
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-org
+    newName: ghcr.io/rosschiu/kiban-org
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-authz
+    newName: ghcr.io/rosschiu/kiban-authz
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-notification
+    newName: ghcr.io/rosschiu/kiban-notification
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-timesheet
+    newName: ghcr.io/rosschiu/kiban-timesheet
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-docs
+    newName: ghcr.io/rosschiu/kiban-docs
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-helpdesk
+    newName: ghcr.io/rosschiu/kiban-helpdesk
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-gateway
+    newName: ghcr.io/rosschiu/kiban-gateway
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-migrate
+    newName: ghcr.io/rosschiu/kiban-migrate
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-bootstrap
+    newName: ghcr.io/rosschiu/kiban-bootstrap
+    newTag: REPLACE_WITH_RELEASE_TAG
+  - name: kiban-keycloak
+    newName: ghcr.io/rosschiu/kiban-keycloak
+    newTag: REPLACE_WITH_RELEASE_TAG
+patches:
+  # Real domain: every token-verifying service reads KEYCLOAK_ISSUER_URL from this one ConfigMap
+  # key (base/configmap.yaml's own header explains why) — one edit here fixes it everywhere.
+  # KIBAN_DOMAIN drives bootstrap's RealmStep to register the real redirect URIs/web origins
+  # (infra/compose.yaml's own KIBAN_DOMAIN comment, unchanged reasoning in K8s).
+  - target:
+      kind: ConfigMap
+      name: kiban-config
+    patch: |
+      - op: replace
+        path: /data/KIBAN_DOMAIN
+        value: "kiban.example.com"
+      - op: replace
+        path: /data/KIBAN_GATEWAY_ORIGIN
+        value: "https://kiban.example.com"
+      - op: replace
+        path: /data/KEYCLOAK_ISSUER_URL
+        value: "https://kiban.example.com/realms/kiban"
+  # Pin Keycloak's issuer/self-referencing URLs to the real origin, exactly as
+  # infra/compose.public.yaml does (KC_HOSTNAME + KC_HOSTNAME_STRICT=true): with the base's
+  # STRICT=false, Keycloak derives them from X-Forwarded-Host, which the gateway
+  # (KIBAN_TRUSTED_PROXY=true — always one hop behind the Ingress here) passes through from
+  # whatever reached it, so any in-cluster pod hitting gateway:8090 directly could steer the
+  # rendered login-form/e-mail URLs (tokens themselves stay fail-closed on `iss`). Strategic
+  # merge: env entries merge by name.
+  - target:
+      kind: Deployment
+      name: keycloak
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: keycloak
+      spec:
+        template:
+          spec:
+            containers:
+              - name: keycloak
+                env:
+                  - name: KC_HOSTNAME
+                    value: "https://kiban.example.com"
+                  - name: KC_HOSTNAME_STRICT
+                    value: "true"
+  # Real domain + ingress class + cert-manager (pointer only — the ClusterIssuer itself is a
+  # cluster-level resource this overlay does not create; README.md "Production notes" links the
+  # cert-manager docs). Swap `nginx` for whatever controller the real cluster runs.
+  - target:
+      kind: Ingress
+      name: gateway
+    patch: |
+      - op: replace
+        path: /spec/rules/0/host
+        value: "kiban.example.com"
+      - op: add
+        path: /spec/ingressClassName
+        value: "nginx"
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: "letsencrypt-prod"
+      - op: add
+        path: /spec/tls
+        value:
+          - hosts: ["kiban.example.com"]
+            secretName: kiban-gateway-tls
+  # Real clusters rarely want their default StorageClass for a database volume — swap the name
+  # for whatever this cluster's SSD/block-storage class is actually called (`gp3` on EKS,
+  # `premium-rwo` on GKE, `managed-csi-premium` on AKS, ...).
+  - target:
+      kind: StatefulSet
+      name: postgres
+    patch: |
+      - op: add
+        path: /spec/volumeClaimTemplates/0/spec/storageClassName
+        value: "REPLACE_WITH_REAL_STORAGE_CLASS"

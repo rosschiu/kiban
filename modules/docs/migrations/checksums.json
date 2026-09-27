@@ -1,0 +1,9 @@
+{
+  "checksums": {
+    "0001_schema.sql": "29be152e0085d8e5b68e46aa5e452b53756b370e84a867ec8e0ef1a0d1a0da4d",
+    "0002_docs_tables.sql": "cef925b07d531b4458727a3417d62d531803645ef1c72ca828681c7379a4ace4",
+    "0003_audit.sql": "4fac26da34ae6af10d01b439e86cc0c54e84e4f2eaa4f66254f5dc6d2ed09241",
+    "0004_idempotency_keys.sql": "5df4c416720fe7ebcf368aa630bf4e602dd074d0739ca0c4903e98ed7aa73703",
+    "0005_audit_company.sql": "7c4de3eea2882d220b682284104ff172442386807709a54f325e5f8792767b1a"
+  }
+}

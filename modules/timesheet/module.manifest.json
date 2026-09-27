@@ -1,0 +1,36 @@
+{
+  "contractVersion": "1",
+  "moduleKey": "timesheet",
+  "displayName": "Timesheet",
+  "version": "0.1.0",
+  "scopeType": "company",
+  "mandatory": false,
+
+  "service": {
+    "basePath": "/api/timesheet",
+    "port": 8160,
+    "healthPath": "/health",
+    "image": null
+  },
+
+  "dependencies": [],
+
+  "org": {
+    "requiredOrgUnitTypes": ["company"],
+    "usesMembers": true,
+    "usesPositions": false
+  },
+
+  "data": {
+    "postgresSchema": "timesheet",
+    "migrationsPath": "migrations"
+  },
+
+  "license": {
+    "class": "foundation",
+    "spdx": "Apache-2.0",
+    "entitlementRequired": false
+  },
+
+  "events": null
+}

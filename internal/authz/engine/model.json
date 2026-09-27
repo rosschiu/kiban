@@ -1,0 +1,428 @@
+{
+  "user": {},
+
+  "system": {
+    "superadmin": { "this": true }
+  },
+
+  "module": {
+    "system": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "company": {
+    "system": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "member": { "this": true }
+  },
+
+  "company_module": {
+    "system": { "this": true },
+    "company": { "this": true },
+    "member": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "company", "computedUserset": "member" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "company", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "submitter": { "this": true },
+    "approver": { "this": true },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "editor" },
+        { "computedUserset": "submitter" },
+        { "computedUserset": "approver" },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "module_role_binding": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "member": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    }
+  },
+
+  "access_bundle": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "manager": { "this": true },
+    "member": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    }
+  },
+
+  "access_segment": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "bundle": { "this": true },
+    "viewer": { "this": true },
+    "editor": { "this": true },
+    "owner": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    }
+  },
+
+  "member_directory": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "editor" },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "create": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "import": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "export": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "member": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "directory": { "this": true },
+    "mapped_user": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "owner" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "owner" },
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "editor" } },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "editor" },
+        { "computedUserset": "owner" },
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "viewer" } },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "project_directory": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "editor" },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "create": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "import": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "export": {
+      "union": [
+        { "this": true },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "project": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "directory": { "this": true },
+    "admin": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "owner" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "editor" } },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "computedUserset": "editor" },
+        { "tupleToUserset": { "tupleset": "directory", "computedUserset": "viewer" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "can_assign": {
+      "union": [
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" }
+      ]
+    }
+  },
+
+  "timesheet_entry": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "member": { "this": true },
+    "project": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "mapped_user" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "mapped_user" } },
+        { "tupleToUserset": { "tupleset": "project", "computedUserset": "viewer" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "mapped_user" } },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    },
+    "can_edit": {
+      "union": [
+        { "computedUserset": "editor" },
+        { "computedUserset": "owner" }
+      ]
+    }
+  },
+
+  "submission": {
+    "system": { "this": true },
+    "company_module": { "this": true },
+    "member": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "mapped_user" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "mapped_user" } },
+        { "computedUserset": "admin" },
+        { "tupleToUserset": { "tupleset": "company_module", "computedUserset": "editor" } }
+      ]
+    }
+  },
+
+  "position": {
+    "company": { "this": true },
+    "holder": { "this": true }
+  },
+
+  "group": {
+    "company": { "this": true },
+    "member": { "this": true }
+  },
+
+  "document": {
+    "system": { "this": true },
+    "member": { "this": true },
+    "project": { "this": true },
+    "timesheet_entry": { "this": true },
+    "submission": { "this": true },
+    "admin": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "project", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "timesheet_entry", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "submission", "computedUserset": "admin" } },
+        { "tupleToUserset": { "tupleset": "system", "computedUserset": "superadmin" } }
+      ]
+    },
+    "owner": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "owner" } },
+        { "tupleToUserset": { "tupleset": "project", "computedUserset": "owner" } },
+        { "tupleToUserset": { "tupleset": "timesheet_entry", "computedUserset": "owner" } },
+        { "tupleToUserset": { "tupleset": "submission", "computedUserset": "owner" } },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "editor": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "editor" } },
+        { "tupleToUserset": { "tupleset": "project", "computedUserset": "editor" } },
+        { "tupleToUserset": { "tupleset": "timesheet_entry", "computedUserset": "editor" } },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "viewer": {
+      "union": [
+        { "this": true },
+        { "tupleToUserset": { "tupleset": "member", "computedUserset": "viewer" } },
+        { "tupleToUserset": { "tupleset": "project", "computedUserset": "viewer" } },
+        { "tupleToUserset": { "tupleset": "timesheet_entry", "computedUserset": "viewer" } },
+        { "tupleToUserset": { "tupleset": "submission", "computedUserset": "viewer" } },
+        { "computedUserset": "editor" },
+        { "computedUserset": "owner" },
+        { "computedUserset": "admin" }
+      ]
+    },
+    "shared_viewer": { "this": true }
+  }
+}

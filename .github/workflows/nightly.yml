@@ -1,0 +1,24 @@
+# Nightly full-tier run: same full tier as a push-to-main (`make check` + `make test`), PLUS
+# Playwright e2e (web/sdk + web/shell) every night, not just on demand. Also
+# `workflow_dispatch`-able on any branch/ref (`gh workflow run nightly.yml --ref <branch>`), so
+# anyone can force a full+e2e run on demand.
+#
+# 03:00 UTC — outside normal working hours, ahead of the next morning.
+
+name: Nightly full tier
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      run_e2e:
+        description: "Also run the Playwright e2e suites (web/sdk + web/shell)"
+        type: boolean
+        default: true
+
+jobs:
+  full:
+    uses: ./.github/workflows/full-tier.yml
+    with:
+      run_e2e: ${{ github.event_name == 'schedule' || inputs.run_e2e }}

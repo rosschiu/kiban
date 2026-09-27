@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# gitleaks configuration. Extends gitleaks' default ruleset unchanged (no rule disabled, no
+# detector weakened) and adds one allowlist entry for a confirmed non-secret pattern. Every
+# allowlist addition must state why the pattern is not a secret; never add one just to make a
+# scan pass.
+
+title = "Kiban gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+modules/*/migrations/checksums.json and migrations/*/checksums.json: sha256 hex digests of migration FILE CONTENT
+(the module migration immutability ledger, written by internal/modvalidate's
+WriteChecksumLedger / `modvalidate -write-checksums`). A 64-char lowercase hex string trips
+gitleaks' generic-api-key heuristic, but these are content hashes of already-public SQL files in
+the same repo, not secrets of any kind: anyone can recompute them from the SQL files beside them.
+"""
+paths = [
+  '''modules/.*/migrations/checksums\.json$''',
+  '''migrations/.*/checksums\.json$''',
+]

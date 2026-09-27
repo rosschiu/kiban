@@ -1,0 +1,307 @@
+# Release automation. Triggered by pushing a tag matching `v*`. Publishes the release
+# artifacts: the 9 app-service images to GHCR, the SDK to GitHub Packages, and a GitHub Release
+# with notes assembled from CHANGELOG.md. This workflow only reacts to a tag that already exists
+# on origin; it never creates one.
+#
+# The `images` job also builds+pushes `kiban-migrate`, `kiban-bootstrap`,
+# and `kiban-keycloak` — the one-shot jobs deploy/quickstart/docker-compose.yml
+# (the zero-clone quickstart) needs as GHCR images since it has no `build:` blocks at all (see
+# that file's own header comment and Makefile's `images-quickstart` target) — and
+# `kiban-gateway-devcert` (13 images total), so a `KIBAN_IMAGE_TAG=<tag>` deploy of the TLS
+# `make dev` shape never builds anything from the checkout (Makefile's `images-devcert`).
+#
+# Four jobs, in dependency order:
+#   gate    — the SAME fast-tier gate ci.yml's own `fast` job runs (`make setup && make
+#             test-stack-up && make check`), but at the TAG's commit. A release never publishes
+#             from a red tree — nothing else in this file runs unless this job is
+#             green, so a release can never be cut off a state CI itself would have blocked.
+#   images  — `make images-all VERSION=<tag>`, then retag+push all 13 `kiban-<service>:<tag>` images already built
+#             locally to `ghcr.io/rosschiu/kiban-<service>:<tag>`. A `:latest` alias is pushed
+#             ONLY for a stable tag (`vX.Y.Z`, no suffix) — never for -rc/-alpha/-beta/-citest, so
+#             `latest` never points at a pre-release or a throwaway CI-proof build.
+#   sdk     — publishes `@rosschiu/kiban-sdk` at its package.json version to GitHub Packages.
+#             GUARDED: fails loudly (before ever running `npm publish`) if package.json's version
+#             does not literally match the tag with its leading `v` stripped — version/tag drift
+#             must break the release, not ship a mismatched artifact. Idempotent: if the exact
+#             version is already published (a workflow re-run, or a re-triggered tag), the publish
+#             step is skipped rather than failing on npm's "cannot publish over existing version".
+#   release — creates the GitHub Release for the tag once both artifacts are out, with notes
+#             assembled from CHANGELOG.md's section for that version plus links to the
+#             changelog and the documentation site's limitations page. Idempotent: re-running
+#             on an existing release edits it in place rather than failing.
+#
+# Auth: the built-in GITHUB_TOKEN only (packages:write + contents:write below) — no PATs, no new
+# secrets.
+#
+# No CI-only logic: `make images` and `make check` are the exact targets a human runs by hand;
+# this workflow automates running them, not what they do.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  # Never cancel a release mid-flight (unlike ci.yml's fast-moving branch pushes) — a half-pushed
+  # set of GHCR images or a half-published SDK is worse than a slightly delayed second run.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: rosschiu
+
+jobs:
+  gate:
+    name: gate (make check at the tag)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout tag (full history — secret-scan + ratchet-guard need it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node (npm workspaces, cache keyed on web/package-lock.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: make setup (toolchain preflight + scaffold .env)
+        run: make setup
+
+      - name: make test-stack-up (isolated kiban-test compose stack)
+        run: make test-stack-up
+
+      - name: make check (fast gate — same as ci.yml's fast job)
+        run: make check
+
+      - name: docker compose logs (debug aid, only on failure)
+        if: failure()
+        run: docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra logs --tail 200
+
+      - name: make test-stack-down
+        if: always()
+        run: make test-stack-down
+
+  images:
+    name: images (build + push to GHCR)
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify tag (stable vX.Y.Z vs prerelease/test)
+        id: classify
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: make images VERSION=<tag> (builds all 9 app-service images, real short SHA via KIBAN_COMMIT)
+        run: make images VERSION=${{ steps.classify.outputs.tag }}
+
+      - name: Verify kiban_build_info{commit} is the real short SHA, not "unknown" (strings smoke check — no live stack needed to inspect the built binary)
+        run: |
+          SHA="$(git rev-parse --short HEAD)"
+          for s in registry identity org authz gateway notification timesheet docs helpdesk; do
+            docker run --rm --entrypoint sh "kiban-$s:${{ steps.classify.outputs.tag }}" -c "which strings >/dev/null 2>&1 || apk add --no-cache binutils >/dev/null; strings /usr/local/bin/$s | grep -q '$SHA'" \
+              || { echo "::error::kiban-$s image does not embed commit $SHA in its binary" >&2; exit 1; }
+          done
+          echo "verify: all 9 images embed commit $SHA"
+
+      # The three one-shot-job images the zero-clone quickstart needs
+      # (deploy/quickstart/docker-compose.yml has no `build:` blocks at all — see its own header
+      # comment). `make images-quickstart` (Makefile) builds them the exact same
+      # way `make images` builds the 9 app services above.
+      - name: make images-quickstart VERSION=<tag> (builds kiban-{migrate,bootstrap,keycloak})
+        run: make images-quickstart VERSION=${{ steps.classify.outputs.tag }}
+
+      - name: Verify kiban-bootstrap embeds the real short SHA too (same smoke check as the 9 app services; `migrate` runs `go tool tern` from source, not a version-stamped binary — nothing to check; `keycloak` has no Go binary either)
+        run: |
+          SHA="$(git rev-parse --short HEAD)"
+          docker run --rm --entrypoint sh "kiban-bootstrap:${{ steps.classify.outputs.tag }}" -c "which strings >/dev/null 2>&1 || apk add --no-cache binutils >/dev/null; strings /out/bootstrap | grep -q '$SHA'" \
+            || { echo "::error::kiban-bootstrap image does not embed commit $SHA in its binary" >&2; exit 1; }
+          echo "verify: kiban-bootstrap embeds commit $SHA"
+
+      - name: make images-devcert VERSION=<tag> (builds kiban-gateway-devcert — openssl + a script, nothing to verify)
+        run: make images-devcert VERSION=${{ steps.classify.outputs.tag }}
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+
+      - name: Retag + push all 9 app-service images to GHCR
+        run: |
+          TAG="${{ steps.classify.outputs.tag }}"
+          for s in registry identity org authz gateway notification timesheet docs helpdesk; do
+            SRC="kiban-$s:$TAG"
+            DST="$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:$TAG"
+            docker tag "$SRC" "$DST"
+            docker push "$DST"
+            if [ "${{ steps.classify.outputs.stable }}" = "true" ]; then
+              LATEST="$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:latest"
+              docker tag "$SRC" "$LATEST"
+              docker push "$LATEST"
+            fi
+          done
+
+      - name: Retag + push the 4 one-shot images (migrate, bootstrap, keycloak, gateway-devcert) to GHCR
+        run: |
+          TAG="${{ steps.classify.outputs.tag }}"
+          for s in migrate bootstrap keycloak gateway-devcert; do
+            SRC="kiban-$s:$TAG"
+            DST="$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:$TAG"
+            docker tag "$SRC" "$DST"
+            docker push "$DST"
+            if [ "${{ steps.classify.outputs.stable }}" = "true" ]; then
+              LATEST="$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:latest"
+              docker tag "$SRC" "$LATEST"
+              docker push "$LATEST"
+            fi
+          done
+
+      - name: Summary
+        run: |
+          echo "### Images pushed to GHCR" >> "$GITHUB_STEP_SUMMARY"
+          TAG="${{ steps.classify.outputs.tag }}"
+          for s in registry identity org authz gateway notification timesheet docs helpdesk migrate bootstrap keycloak gateway-devcert; do
+            echo "- \`$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          if [ "${{ steps.classify.outputs.stable }}" = "true" ]; then
+            echo "- plus \`:latest\` alias for each (stable tag)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- no \`:latest\` alias (non-stable tag: rc/alpha/beta/citest/etc.)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  sdk:
+    name: sdk (publish @rosschiu/kiban-sdk to GitHub Packages)
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node (scoped to GitHub Packages for @rosschiu)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@rosschiu"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # GUARD (non-negotiable): version/tag drift must break the release, not ship
+      # a mismatched artifact. Runs BEFORE any build/publish step.
+      - name: Guard — package.json version must equal the tag (v stripped)
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./web/sdk/package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::web/sdk/package.json version ($PKG_VERSION) does not match tag ${GITHUB_REF_NAME} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            exit 1
+          fi
+          echo "guard: package.json version $PKG_VERSION matches tag ${GITHUB_REF_NAME}"
+
+      - name: web/ npm ci
+        run: cd web && npm ci
+
+      - name: Build SDK (npm run -w sdk build — regenerates dist/ from the version being published)
+        run: cd web && npm run -w sdk build
+
+      - name: Publish (skip if this exact version is already published — idempotent re-runs)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd web/sdk
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if npm view "@rosschiu/kiban-sdk@$PKG_VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "sdk: @rosschiu/kiban-sdk@$PKG_VERSION already published — skipping (idempotent re-run)"
+          else
+            npm publish
+            echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION"
+          fi
+
+  release:
+    name: GitHub Release
+    needs: [images, sdk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assemble release notes (CHANGELOG.md section + reference doc links)
+        id: notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          # Extract the CHANGELOG.md section between "## [<VER>]" and the next "## [" header.
+          awk -v ver="$VER" '
+            BEGIN { found = 0 }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "[" ver "]") > 0) { found = 1; next }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > /tmp/changelog-section.md
+
+          {
+            if [ -s /tmp/changelog-section.md ]; then
+              cat /tmp/changelog-section.md
+            else
+              echo "_No CHANGELOG.md entry found for [$VER] — see commit history for this tag._"
+            fi
+            echo
+            REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+            echo "- Full changelog: ${REPO_URL}/blob/${TAG}/CHANGELOG.md"
+            echo "- Known limitations: https://rosschiu.github.io/kiban/limitations/"
+          } > /tmp/release-notes.md
+
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create (or update) the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          PRERELEASE_FLAG=""
+          if [ "${{ steps.notes.outputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release: $TAG already exists — updating notes in place (idempotent re-run)"
+            gh release edit "$TAG" --notes-file /tmp/release-notes.md $PRERELEASE_FLAG
+          else
+            gh release create "$TAG" --title "$TAG" --notes-file /tmp/release-notes.md $PRERELEASE_FLAG
+          fi

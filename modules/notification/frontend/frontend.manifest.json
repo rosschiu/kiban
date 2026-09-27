@@ -1,0 +1,13 @@
+{
+  "_comment": "Contract artifact documenting the notification module's frontend routes/nav for the module validator. The actual TypeScript/React source lives under web/shell/src/modules/notification/ rather than this directory's own src/: there is no remote-module-loading mechanism, so the shell's local module registry (web/shell/src/modules/registry.ts) is the only frontend distribution path a module has today.",
+  "_featureKeyComment": "Routes gate on 'notification.access' (the generic <moduleKey>.access key internal/authz/summary.go synthesizes for any enabled module at company scope) rather than authz.fragment.json's fine-grained 'notification.inbox.view'/'notification.channels.manage': the fragment-declared keys are not loaded into the live authz engine, so they are never granted to anyone.",
+  "moduleKey": "notification",
+  "routeBase": "/app/notification",
+  "routes": [
+    { "id": "inbox", "path": "", "featureKey": "notification.access" },
+    { "id": "channels", "path": "channels", "featureKey": "notification.access" }
+  ],
+  "navFromFeatures": true,
+  "sdkVersionRange": ">=0.1.0 <1.0.0",
+  "remoteEntryUrl": null
+}

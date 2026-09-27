@@ -1,0 +1,8 @@
+{
+  "checksums": {
+    "0001_schema.sql": "e1acd9edfb9406867ee4a5ce2f54852900f91bd759a2e3e449da6c71fa2def0f",
+    "0002_timesheet_tables.sql": "059c59e6f4d53166b191292cc5f6070954e85a7eb7e900d818238a59f098f81e",
+    "0003_audit.sql": "dc4c983ab0fdfa989fc6bb5e11b0d841620260538123ce5c575227658298358e",
+    "0004_submission_idempotency_hash.sql": "156e4254bf23583afcc947fee0e854506c52f639bd26f93f2c7afc93205d5533"
+  }
+}

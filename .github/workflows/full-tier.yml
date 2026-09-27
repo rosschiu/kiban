@@ -1,0 +1,145 @@
+# The FULL tier: `make check` (again, self-contained — this file is also called
+# straight from nightly.yml with no preceding fast job) + `make test` (the full suite: `-race`,
+# and the OpenFGA differential harness), against the isolated `kiban-test` compose stack. Called
+# by `.github/workflows/ci.yml` on push-to-main and by `.github/workflows/nightly.yml` on the
+# nightly cron / workflow_dispatch — see those files for triggers. Playwright e2e (web/sdk +
+# web/shell) is a separate job here, gated by `run_e2e` (nightly/dispatch only, never on every
+# push-to-main — video-recorded e2e runs are the most expensive/slowest thing this repo's gates
+# do).
+#
+# No CI-only logic: every step below is a `make` target or the exact npm command
+# web/sdk/e2e/playwright.config.ts's / web/shell/e2e/playwright.config.ts's own header comments
+# document as the way a developer runs these suites locally.
+
+name: Full tier
+
+on:
+  workflow_call:
+    inputs:
+      run_e2e:
+        description: "Also run the Playwright e2e suites (web/sdk + web/shell)"
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      run_e2e:
+        description: "Also run the Playwright e2e suites (web/sdk + web/shell)"
+        type: boolean
+        default: true
+
+jobs:
+  full:
+    name: full (make check + make test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout (full history — secret-scan + ratchet-guard need it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node (npm workspaces, cache keyed on web/package-lock.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: make setup (toolchain preflight + scaffold .env)
+        run: make setup
+
+      - name: make test-stack-up (isolated kiban-test compose stack)
+        run: make test-stack-up
+
+      - name: make check (fast gate, re-verified here — this job is also called standalone from nightly.yml)
+        run: make check
+
+      - name: "make test (full suite: -race + the OpenFGA differential harness)"
+        run: make test
+
+      - name: docker compose logs (debug aid, only on failure)
+        if: failure()
+        run: docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra logs --tail 200
+
+      - name: make test-stack-down
+        if: always()
+        run: make test-stack-down
+
+  e2e:
+    name: e2e (Playwright, nightly/dispatch only)
+    needs: full
+    if: ${{ inputs.run_e2e }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go (version from go.mod)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # web/e2e-shared/env.ts is imported directly by both e2e suites'
+      # playwright.config.ts (`import ... from "../../e2e-shared/env.js"`, no build step, no
+      # tsx/ts-node dependency anywhere in web/) — it only runs at all because Node's OWN native
+      # TypeScript support resolves it. web/package.json's `engines.node` says ">=20", which is
+      # true for everything `make check`'s web-check exercises (typecheck/test/build all run
+      # through tsc/vite/vitest, never execute a .ts file directly) — but Node 20 has no native TS
+      # support at all, so importing env.ts directly fails outright on Node 20
+      # ("SyntaxError: Named export 'loadTestEnv' not found ... is a CommonJS module").
+      # Node 24 resolves it natively. Scoped to this job
+      # only (not `full`, above, or `fast`/`full-on-main` in ci.yml) — nothing else in this repo's
+      # gates needs it, and >=20 stays accurate for everything else.
+      - name: Set up Node (npm workspaces, cache keyed on web/package-lock.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: make setup (toolchain preflight + scaffold .env)
+        run: make setup
+
+      - name: make test-stack-up (isolated kiban-test compose stack)
+        run: make test-stack-up
+
+      - name: web/ npm ci
+        run: cd web && npm ci
+
+      - name: Install Playwright browsers (chromium — the only browser either e2e config uses)
+        run: cd web && npx playwright install --with-deps chromium
+
+      - name: web/sdk e2e (npm run -w sdk e2e)
+        run: cd web && npm run -w sdk e2e
+
+      - name: web/shell e2e (npm run -w shell e2e)
+        run: cd web && npm run -w shell e2e
+
+      - name: Upload Playwright artifacts (report + video, always — small and useful even on pass)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-artifacts
+          path: |
+            web/sdk/playwright-report/
+            web/sdk/e2e-artifacts/
+            web/shell/playwright-report/
+            web/shell/e2e-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: docker compose logs (debug aid, only on failure)
+        if: failure()
+        run: docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra logs --tail 200
+
+      - name: make test-stack-down
+        if: always()
+        run: make test-stack-down

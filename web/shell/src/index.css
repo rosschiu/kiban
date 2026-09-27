@@ -1,0 +1,232 @@
+/* Design-system tokens (shadcn/Slate palette). Font: self-hosted @fontsource/fira-sans (imported
+   below) rather than a Google-Fonts @import — a render-blocking third-party call, wrong for a
+   self-hosted platform. Dark mode uses the class strategy (`.dark` on <html>, toggled by
+   ui/theme-toggle.tsx). */
+@import "@fontsource/fira-sans/400.css";
+@import "@fontsource/fira-sans/500.css";
+@import "@fontsource/fira-sans/600.css";
+@import "@fontsource/fira-sans/700.css";
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color: #0f172a;
+  background: #f8fafc;
+  --radius: 0.625rem;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222.2 84% 4.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222.2 84% 4.9%);
+  --primary: hsl(222.2 47.4% 11.2%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 96.1%);
+  --accent-foreground: hsl(222.2 47.4% 11.2%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(214 24% 94%);
+  --input: hsl(214 24% 94%);
+  --ring: hsl(217.2 91.2% 59.8%);
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: var(--border);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+/* No body gradient: @layer base below sets a plain token background. */
+#root {
+  min-height: 100vh;
+}
+
+.dark {
+  --background: hsl(222.2 84% 4.9%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(222.2 84% 4.9%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(222.2 84% 4.9%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(210 40% 98%);
+  --primary-foreground: hsl(222.2 47.4% 11.2%);
+  --secondary: hsl(217.2 32.6% 17.5%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(217.2 32.6% 17.5%);
+  --muted-foreground: hsl(215 20.2% 65.1%);
+  --accent: hsl(217.2 32.6% 17.5%);
+  --accent-foreground: hsl(210 40% 98%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --border: hsl(217.2 32.6% 17.5%);
+  --input: hsl(217.2 32.6% 17.5%);
+  --ring: hsl(224.3 76.3% 48%);
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: var(--border);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  *, ::before, ::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+@keyframes fade-out {
+  from { opacity: 1 }
+  to { opacity: 0 }
+}
+
+@keyframes zoom-in-95 {
+  from { opacity: 0; transform: scale(0.95) }
+  to { opacity: 1; transform: scale(1) }
+}
+
+@keyframes zoom-out-95 {
+  from { opacity: 1; transform: scale(1) }
+  to { opacity: 0; transform: scale(0.95) }
+}
+
+@keyframes slide-in-from-top-2 {
+  from { transform: translateY(-0.5rem) }
+  to { transform: translateY(0) }
+}
+
+@keyframes slide-in-from-bottom-2 {
+  from { transform: translateY(0.5rem) }
+  to { transform: translateY(0) }
+}
+
+@keyframes slide-in-from-left-2 {
+  from { transform: translateX(-0.5rem) }
+  to { transform: translateX(0) }
+}
+
+@keyframes slide-in-from-right-2 {
+  from { transform: translateX(0.5rem) }
+  to { transform: translateX(0) }
+}
+
+@keyframes accordion-down {
+  from { height: 0 }
+  to { height: var(--radix-accordion-content-height) }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height) }
+  to { height: 0 }
+}
+
+.animate-in {
+  animation: fade-in 0.15s ease-out, zoom-in-95 0.15s ease-out;
+}
+
+.animate-out {
+  animation: fade-out 0.1s ease-in, zoom-out-95 0.1s ease-in;
+}
+
+.data-\[state\=open\]\:animate-in[data-state="open"] {
+  animation: fade-in 0.15s ease-out, zoom-in-95 0.15s ease-out;
+}
+
+.data-\[state\=closed\]\:animate-out[data-state="closed"] {
+  animation: fade-out 0.1s ease-in, zoom-out-95 0.1s ease-in;
+}
+
+.data-\[state\=open\]\:fade-in-0[data-state="open"] {
+  animation: fade-in 0.15s ease-out;
+}
+
+.data-\[state\=closed\]\:fade-out-0[data-state="closed"] {
+  animation: fade-out 0.1s ease-in;
+}
+
+.data-\[state\=open\]\:zoom-in-95[data-state="open"] {
+  animation: zoom-in-95 0.15s ease-out;
+}
+
+.data-\[state\=closed\]\:zoom-out-95[data-state="closed"] {
+  animation: zoom-out-95 0.1s ease-in;
+}
+
+.data-\[side\=bottom\]\:slide-in-from-top-2[data-side="bottom"] {
+  animation: slide-in-from-top-2 0.15s ease-out;
+}
+
+.data-\[side\=top\]\:slide-in-from-bottom-2[data-side="top"] {
+  animation: slide-in-from-bottom-2 0.15s ease-out;
+}
+
+.data-\[side\=left\]\:slide-in-from-right-2[data-side="left"] {
+  animation: slide-in-from-right-2 0.15s ease-out;
+}
+
+.data-\[side\=right\]\:slide-in-from-left-2[data-side="right"] {
+  animation: slide-in-from-left-2 0.15s ease-out;
+}
+
+[data-slot="accordion-content"][data-state="open"] {
+  animation: accordion-down 0.2s ease-out;
+}
+
+[data-slot="accordion-content"][data-state="closed"] {
+  animation: accordion-up 0.2s ease-out;
+}

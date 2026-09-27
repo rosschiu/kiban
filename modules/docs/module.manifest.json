@@ -1,0 +1,36 @@
+{
+  "contractVersion": "1",
+  "moduleKey": "docs",
+  "displayName": "Docs",
+  "version": "0.1.0",
+  "scopeType": "company",
+  "mandatory": false,
+
+  "service": {
+    "basePath": "/api/docs",
+    "port": 8170,
+    "healthPath": "/health",
+    "image": null
+  },
+
+  "dependencies": [],
+
+  "org": {
+    "requiredOrgUnitTypes": ["company"],
+    "usesMembers": true,
+    "usesPositions": false
+  },
+
+  "data": {
+    "postgresSchema": "docs",
+    "migrationsPath": "migrations"
+  },
+
+  "license": {
+    "class": "foundation",
+    "spdx": "Apache-2.0",
+    "entitlementRequired": false
+  },
+
+  "events": null
+}

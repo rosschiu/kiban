@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kiban SDK e2e harness</title>
+  </head>
+  <body>
+    <h1>Kiban SDK e2e harness</h1>
+    <button id="login" type="button">Start login</button>
+    <script type="module">
+      import { createSession } from "/sdk/index.js";
+      import { HARNESS_CONFIG } from "./config.js";
+
+      const session = createSession({
+        authOrigin: HARNESS_CONFIG.gatewayOrigin,
+        realm: HARNESS_CONFIG.realm,
+        clientId: HARNESS_CONFIG.clientId,
+        redirectUri: HARNESS_CONFIG.redirectUri
+      });
+
+      document.getElementById("login").addEventListener("click", () => {
+        session.login();
+      });
+    </script>
+  </body>
+</html>

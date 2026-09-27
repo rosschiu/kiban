@@ -1,0 +1,81 @@
+{
+  "moduleKey": "timesheet",
+  "roles": [
+    {
+      "roleKey": "timesheet_admin",
+      "label": "Timesheet Admin",
+      "scopeType": "company",
+      "grantsShellAccess": true,
+      "seedCompanyCreatorRole": true,
+      "sortOrder": 10
+    }
+  ],
+  "objects": [],
+  "features": [
+    {
+      "featureKey": "timesheet.projects.manage",
+      "label": "Manage timesheet projects",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 10,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "timesheet.config.manage",
+      "label": "Manage timesheet configuration",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 20,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "timesheet.approvers.manage",
+      "label": "Assign timesheet submitters/approvers",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "admin" },
+      "sortOrder": 30,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "timesheet.submissions.submit",
+      "label": "Submit a timesheet week",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "submitter" },
+      "sortOrder": 40,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "timesheet.submissions.approve",
+      "label": "Approve or reject a timesheet submission",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "approver" },
+      "sortOrder": 50,
+      "isSidebarEntry": false
+    },
+    {
+      "featureKey": "timesheet.entries.manage-own",
+      "label": "Enter own hours",
+      "scopeType": "company",
+      "requiresCompany": true,
+      "accessRuleKind": "relation",
+      "accessRulePayload": { "objectType": "company_module", "relation": "member" },
+      "sortOrder": 60,
+      "isSidebarEntry": true
+    }
+  ],
+  "fieldCatalog": [],
+  "fieldSets": [],
+  "rowScopes": [],
+  "bootstrapPolicy": { "seedCompanyCreatorObjectRelations": [] },
+  "_comment": "This fragment declares no object types of its own and no top-level `relations` key: every access tier the module needs (admin/submitter/approver) already exists on the platform base model's `company_module` type (internal/authz/engine/model.json) and is referenced only, never redeclared. `timesheet.entries.manage-own` is company-membership-gated only (the ordered decision's steps 1-6), the same shape notification's `inbox.view` uses for its no-relation-leg tier (company_module has no `member` relation to anchor on). Submitter/approver designation (which member holds `company_module#submitter`/`#approver`) is written through the existing /internal/authz/grants surface by this module's own approvers API, never a parallel grant store; the module keeps only a read-side list cache because authz has a grant/revoke API but no list-by-object-relation query."
+}

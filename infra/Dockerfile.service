@@ -1,0 +1,117 @@
+# One shared Go build stage, per-service final stages built from it. `docker compose build`
+# picks the right stage per
+# service via each service's own `target:` in infra/compose.yaml.
+#
+# syntax=docker/dockerfile:1
+
+FROM golang:1.26.8-alpine@sha256:ce864e7223ac17b1775e6fd0b4c0db580c2eb50e7953a427916379e4b92a1628 AS builder
+WORKDIR /src
+RUN apk add --no-cache git postgresql-client bash
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# Build-time version stamping (internal/version's own package doc has the full
+# rationale — ldflags over a runtime file read, since runtime-base images below never ship the
+# source tree). KIBAN_COMMIT defaults to "unknown"; `make images` passes the real short git SHA.
+ARG KIBAN_COMMIT=unknown
+RUN LDFLAGS="-X github.com/rosschiu/kiban/internal/version.Version=$(cat VERSION) -X github.com/rosschiu/kiban/internal/version.Commit=${KIBAN_COMMIT}" \
+ && go build -ldflags "$LDFLAGS" -o /out/registry     ./cmd/registry \
+ && go build -ldflags "$LDFLAGS" -o /out/identity     ./cmd/identity \
+ && go build -ldflags "$LDFLAGS" -o /out/org          ./cmd/org \
+ && go build -ldflags "$LDFLAGS" -o /out/authz        ./cmd/authz \
+ && go build -ldflags "$LDFLAGS" -o /out/gateway      ./cmd/gateway \
+ && go build -ldflags "$LDFLAGS" -o /out/bootstrap    ./cmd/bootstrap \
+ && go build -ldflags "$LDFLAGS" -o /out/notification ./modules/notification/service/cmd \
+ && go build -ldflags "$LDFLAGS" -o /out/timesheet    ./modules/timesheet/service/cmd \
+ && go build -ldflags "$LDFLAGS" -o /out/docs         ./modules/docs/service/cmd \
+ && go build -ldflags "$LDFLAGS" -o /out/helpdesk     ./modules/helpdesk/service/cmd
+
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS runtime-base
+# curl: used only by each service's own compose healthcheck (infra/compose.yaml) — every
+# service already exposes GET /health for exactly this purpose.
+# Every app stage below inherits USER 65532 (a fixed uid so k8s `runAsUser` can pin the same
+# number); the binaries are COPY'd root-owned 0755, and no service writes to disk, so the root
+# filesystem is mounted read-only by infra/compose.yaml and deploy/k8s. `migrate`/`bootstrap`/
+# `gateway-devcert` are not built from this stage and stay root (they write to their volumes
+# and need the toolchain image).
+RUN apk add --no-cache ca-certificates curl \
+ && addgroup -g 65532 kiban && adduser -D -u 65532 -G kiban kiban
+USER 65532:65532
+
+# shell-build: builds web/shell's static bundle (`npm run build` builds web/sdk
+# first, then web/shell, matching web/package.json's own top-level script and Makefile's
+# `web-check` target) so the `gateway` stage below can serve it via KIBAN_STATIC_DIR. Its own
+# stage (not `builder`-based) because it needs Node, not Go; npm workspaces need the whole `web/`
+# tree present before `npm ci` (local `@kiban/sdk`/`@kiban/shell` package.json references), so
+# there's no cheaper layer-cache split here than copying it whole.
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS shell-build
+WORKDIR /src
+COPY web ./web
+RUN cd web && npm ci && npm run build
+
+FROM runtime-base AS registry
+COPY --from=builder /out/registry /usr/local/bin/registry
+ENTRYPOINT ["/usr/local/bin/registry"]
+
+FROM runtime-base AS identity
+COPY --from=builder /out/identity /usr/local/bin/identity
+ENTRYPOINT ["/usr/local/bin/identity"]
+
+FROM runtime-base AS org
+COPY --from=builder /out/org /usr/local/bin/org
+ENTRYPOINT ["/usr/local/bin/org"]
+
+FROM runtime-base AS authz
+COPY --from=builder /out/authz /usr/local/bin/authz
+ENTRYPOINT ["/usr/local/bin/authz"]
+
+FROM runtime-base AS notification
+COPY --from=builder /out/notification /usr/local/bin/notification
+ENTRYPOINT ["/usr/local/bin/notification"]
+
+FROM runtime-base AS timesheet
+COPY --from=builder /out/timesheet /usr/local/bin/timesheet
+ENTRYPOINT ["/usr/local/bin/timesheet"]
+
+FROM runtime-base AS docs
+COPY --from=builder /out/docs /usr/local/bin/docs
+ENTRYPOINT ["/usr/local/bin/docs"]
+
+FROM runtime-base AS helpdesk
+COPY --from=builder /out/helpdesk /usr/local/bin/helpdesk
+ENTRYPOINT ["/usr/local/bin/helpdesk"]
+
+FROM runtime-base AS gateway
+COPY --from=builder /out/gateway /usr/local/bin/gateway
+# The shell's built static bundle, served via KIBAN_STATIC_DIR (internal/gateway/
+# static.go's NewStaticHandler — index.html + SPA fallback, no directory listings). The path is
+# arbitrary (never referenced from outside this image); infra/compose.yaml's gateway service sets
+# KIBAN_STATIC_DIR to match.
+COPY --from=shell-build /src/web/shell/dist /var/www/kiban-shell
+ENTRYPOINT ["/usr/local/bin/gateway"]
+
+# migrate: NOT a final service — a one-shot compose job (infra/compose.yaml's `migrate` service,
+# restart: "no") that applies all four services' tern migrations + sets DB role passwords
+# against the compose-internal `postgres` host, before any app service starts (depends_on:
+# condition: service_completed_successfully). Keeps the full Go toolchain + module source
+# (needed for `go tool tern`, a go.mod tool dependency) rather than a slim runtime image.
+FROM builder AS migrate
+ENTRYPOINT ["/bin/sh", "/src/infra/migrate-entrypoint.sh"]
+
+# bootstrap: the one-shot kiban-bootstrap job (infra/compose.yaml's `bootstrap` service,
+# restart: "no"). FROM builder (not runtime-base), same
+# rationale as `migrate`: it shells out to `go tool tern` (a go.mod tool dependency needing the
+# full Go toolchain + module source) and migrations/registry/set-role-passwords.sh, both under
+# its WORKDIR (/src, matching Deps.RepoRoot's own default in cmd/bootstrap/main.go). psql isn't
+# needed here (bootstrap talks to Postgres over the wire via pgx, never shells out to psql).
+FROM builder AS bootstrap
+ENTRYPOINT ["/out/bootstrap"]
+
+# gateway-devcert: another one-shot compose job — generates the gateway's self-signed dev TLS
+# cert (infra/gateway-devcert-entrypoint.sh) onto a shared volume the `gateway` service mounts.
+# Deliberately its own minimal stage (not `builder`-based): needs only openssl, not the Go
+# toolchain.
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS gateway-devcert
+RUN apk add --no-cache openssl
+COPY infra/gateway-devcert-entrypoint.sh /gateway-devcert-entrypoint.sh
+ENTRYPOINT ["/bin/sh", "/gateway-devcert-entrypoint.sh"]

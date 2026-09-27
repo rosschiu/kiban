@@ -1,0 +1,39 @@
+# notification module (modules/notification) — port 8150, health /health.
+# KIBAN_NOTIFICATION_SMTP_HOST deliberately points at nothing reachable in this base (no mailpit
+# in a K8s deployment — that's a compose `test`-profile fixture, same call
+# deploy/quickstart/docker-compose.yml already made): the delivery worker logs+retries instead of
+# crashing, same as any other transient delivery failure the delivery lease/retry loop handles.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: notification }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: notification }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8150 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8150 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: notification }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-notification:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8150 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8150 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8150 }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_DB_HOST, value: "postgres" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_DB_PORT, value: "5432" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_DB_NAME, valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_DB_PASSWORD, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_NOTIFICATION_DB_PASSWORD } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_JWKS_URL, value: "http://keycloak:8080/realms/kiban/protocol/openid-connect/certs" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_ISSUER_URL, valueFrom: { configMapKeyRef: { name: kiban-config, key: KEYCLOAK_ISSUER_URL } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_BASE_URL, value: "http://org:8130" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_BASE_URL, value: "http://authz:8140" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_SMTP_HOST, value: "localhost" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_SMTP_PORT, value: "1025" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_NOTIFICATION_WEBHOOK_HMAC_SECRET } } } }

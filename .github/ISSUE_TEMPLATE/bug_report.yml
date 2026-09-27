@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in Kiban isn't working as documented.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please don't use this form for security vulnerabilities — see
+        [SECURITY.md](../../SECURITY.md) for the private reporting channel instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: >
+        The version and commit Kiban reports. Every service exposes this via the
+        `kiban_build_info{version,commit}` Prometheus metric
+        (see the documentation's Metrics page); if you can't reach metrics, the git tag or
+        commit SHA you deployed is enough.
+      placeholder: "e.g. v0.1.0 / commit abc1234, or kiban_build_info{version=\"0.1.0\",commit=\"abc1234\"}"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment shape
+      description: How is Kiban running?
+      options:
+        - "Compose from a checkout (make dev)"
+        - "Compose behind a reverse proxy (make public-up)"
+        - "Zero-clone quickstart (deploy/quickstart)"
+        - "Kubernetes (deploy/k8s)"
+        - "Other / not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, what did you expect, what happened instead?
+      placeholder: |
+        1. ...
+        2. ...
+        Expected: ...
+        Actual: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: >
+        If a request failed, look for `x-correlation-id` in the response headers or error body
+        and grep the affected service's logs for it; that thread usually
+        has the real cause. Paste the relevant excerpt, not a full log dump. Redact anything
+        sensitive first.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Environment details, workarounds tried, related issues.
+    validations:
+      required: false

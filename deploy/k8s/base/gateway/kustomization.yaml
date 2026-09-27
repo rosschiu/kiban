@@ -1,0 +1,55 @@
+# gateway (cmd/gateway) — the one edge service. Runs the dev-only plain-HTTP
+# listener (KIBAN_INSECURE_HTTP=true, :8090) rather than porting `gateway-devcert`
+# (infra/compose.yaml's self-signed-cert one-shot job) into K8s — same choice
+# deploy/quickstart/docker-compose.yml already made and infra/compose.public.yaml's own shared-
+# Traefik override independently converged on: a real K8s deployment terminates TLS at the
+# Ingress (base/ingress.yaml, cert-manager in overlays/production), not in the gateway process
+# itself. KIBAN_TRUSTED_PROXY is set to "true" here (not left at the compose default) because in
+# K8s the gateway is ALWAYS one hop behind something (Ingress controller in production, a plain
+# `kubectl port-forward` in kind — see README.md "kind quickstart" for why the origin still needs
+# to line up) — infra/compose.public.yaml's own KIBAN_TRUSTED_PROXY comment explains why this
+# flag exists. Probes hit `/` (the shell), not `/health`; it gets a slightly higher CPU budget
+# (13.9MiB RSS idle, every request passes through it).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: gateway }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: gateway }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8090 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8090 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: gateway }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-gateway:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8090 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8090 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8090 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/path, value: / }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/path, value: / }
+      - { op: replace, path: /spec/template/spec/containers/0/resources/requests/cpu, value: 20m }
+      - { op: replace, path: /spec/template/spec/containers/0/resources/limits/cpu, value: 300m }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_BASE_URL, value: "http://keycloak:8080" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_JWKS_URL, value: "http://keycloak:8080/realms/kiban/protocol/openid-connect/certs" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KEYCLOAK_ISSUER_URL, valueFrom: { configMapKeyRef: { name: kiban-config, key: KEYCLOAK_ISSUER_URL } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_BASE_URL, value: "http://registry:8110" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_BASE_URL, value: "http://authz:8140" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_ORG_BASE_URL, value: "http://org:8130" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_IDENTITY_BASE_URL, value: "http://identity:8120" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_MODULE_HOST_NOTIFICATION, value: "notification" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_MODULE_HOST_TIMESHEET, value: "timesheet" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_MODULE_HOST_DOCS, value: "docs" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_MODULE_HOST_HELPDESK, value: "helpdesk" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_TLS_CERT_FILE, value: "" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_TLS_KEY_FILE, value: "" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_INSECURE_HTTP, value: "true" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_TRUSTED_PROXY, value: "true" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_STATIC_DIR, value: "/var/www/kiban-shell" } }

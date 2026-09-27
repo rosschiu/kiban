@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kiban-sdk"
+version = "0.1.0"
+description = "Kiban SDK for a Python backend beside Kiban: service token, user token verification, access decisions, relation tuples, members."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+dependencies = ["PyJWT[crypto]>=2.7"]
+
+[project.urls]
+Homepage = "https://github.com/rosschiu/kiban"
+Documentation = "https://rosschiu.github.io/kiban/"
+
+[tool.setuptools.packages.find]
+include = ["kiban*"]

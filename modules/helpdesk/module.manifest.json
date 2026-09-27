@@ -1,0 +1,36 @@
+{
+  "contractVersion": "1",
+  "moduleKey": "helpdesk",
+  "displayName": "Helpdesk",
+  "version": "0.1.0",
+  "scopeType": "company",
+  "mandatory": false,
+
+  "service": {
+    "basePath": "/api/helpdesk",
+    "port": 8180,
+    "healthPath": "/health",
+    "image": null
+  },
+
+  "dependencies": [],
+
+  "org": {
+    "requiredOrgUnitTypes": ["company"],
+    "usesMembers": true,
+    "usesPositions": false
+  },
+
+  "data": {
+    "postgresSchema": "helpdesk",
+    "migrationsPath": "migrations"
+  },
+
+  "license": {
+    "class": "foundation",
+    "spdx": "Apache-2.0",
+    "entitlementRequired": false
+  },
+
+  "events": null
+}

@@ -1,0 +1,3 @@
+memberId:string
+positionId:string
+validFrom:string

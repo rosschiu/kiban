@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kiban SDK e2e harness — callback</title>
+  </head>
+  <body>
+    <h1>callback</h1>
+    <pre id="status" data-testid="status">pending</pre>
+    <pre id="summary" data-testid="summary"></pre>
+    <pre id="capabilities" data-testid="capabilities"></pre>
+    <pre id="can-i-result" data-testid="can-i-result"></pre>
+    <pre id="grant-result" data-testid="grant-result"></pre>
+    <pre id="revoke-result" data-testid="revoke-result"></pre>
+    <pre id="enable-result" data-testid="enable-result"></pre>
+    <pre id="disable-result" data-testid="disable-result"></pre>
+    <button id="logout" type="button" data-testid="logout" disabled>Logout</button>
+    <script type="module">
+      import {
+        createSession,
+        createApiClient,
+        createCapabilitiesClient,
+        createEffectiveAccessClient,
+        createSuperadminClient,
+        createCanI,
+        createGrantObjectAccess,
+        createOrgClient
+      } from "/sdk/index.js";
+      import { HARNESS_CONFIG } from "./config.js";
+
+      const statusEl = document.getElementById("status");
+      const summaryEl = document.getElementById("summary");
+      const capsEl = document.getElementById("capabilities");
+      const canIEl = document.getElementById("can-i-result");
+      const grantEl = document.getElementById("grant-result");
+      const revokeEl = document.getElementById("revoke-result");
+      const enableEl = document.getElementById("enable-result");
+      const disableEl = document.getElementById("disable-result");
+      const logoutBtn = document.getElementById("logout");
+
+      const session = createSession({
+        authOrigin: HARNESS_CONFIG.gatewayOrigin,
+        realm: HARNESS_CONFIG.realm,
+        clientId: HARNESS_CONFIG.clientId,
+        redirectUri: HARNESS_CONFIG.redirectUri
+      });
+
+      // Flow: login -> callback -> summary -> capabilities -> canI recipe -> fixture company
+      // (org.meCompanies) -> grantObjectAccess recipe (superadmin bearer, company-bound) ->
+      // module enable/disable (superadmin.ts) -> logout.
+      async function run() {
+        try {
+          statusEl.textContent = "exchanging code";
+          await session.handleCallback(window.location.href);
+
+          const apiClient = createApiClient({
+            baseUrl: HARNESS_CONFIG.gatewayOrigin,
+            getAccessToken: () => session.getAccessToken(),
+            refreshAccessToken: () => session.refresh()
+          });
+          const capabilities = createCapabilitiesClient(apiClient);
+          const effectiveAccess = createEffectiveAccessClient(apiClient);
+          const superadmin = createSuperadminClient(apiClient);
+          const canI = createCanI(effectiveAccess);
+          const { grantObjectAccess, revokeObjectAccess } = createGrantObjectAccess(apiClient);
+          const org = createOrgClient(apiClient);
+
+          statusEl.textContent = "fetching effective-access summary";
+          const summary = await effectiveAccess.summary();
+          summaryEl.textContent = JSON.stringify({
+            apiVersion: summary.apiVersion,
+            subjectId: summary.subjectId,
+            featureKeys: summary.featureKeys
+          });
+
+          statusEl.textContent = "fetching capabilities";
+          const caps = await capabilities.list();
+          capsEl.textContent = JSON.stringify({ count: caps.length });
+
+          statusEl.textContent = "canI superadministration";
+          const canIResult = await canI({
+            featureKey: "auth.platform_administration.access",
+            requiredPlatformRole: "kiban-superadmin"
+          });
+          canIEl.textContent = JSON.stringify(canIResult);
+
+          statusEl.textContent = "resolving fixture company";
+          const company = (await org.meCompanies()).find((c) => c.code === HARNESS_CONFIG.fixtureCompanyCode);
+          if (!company) throw new Error("fixture company " + HARNESS_CONFIG.fixtureCompanyCode + " not among the bearer's companies");
+          const fixture = {
+            companyId: company.id,
+            objectType: HARNESS_CONFIG.fixtureGrantObject.objectType,
+            objectId: HARNESS_CONFIG.fixtureGrantObject.objectId
+          };
+          // handleGrants accepts a module object only when it is anchored to
+          // company_module:<companyId>/<module>; a grant whose tuple IS that anchor counts, so
+          // the harness anchors the fixture document first, then grants/revokes the viewer
+          // tuple, then removes the anchor again (leaves no fixture state behind).
+          const anchor = {
+            ...fixture,
+            relation: "company_module",
+            subjectType: "company_module",
+            subjectId: company.id + "/" + HARNESS_CONFIG.fixtureGrantModuleKey
+          };
+          const viewer = { ...fixture, relation: "viewer", subjectType: "user", subjectId: HARNESS_CONFIG.fixtureGrantSubjectId };
+
+          statusEl.textContent = "anchoring fixture object";
+          await grantObjectAccess(anchor);
+
+          statusEl.textContent = "granting fixture object access";
+          const grantResult = await grantObjectAccess(viewer);
+          grantEl.textContent = JSON.stringify(grantResult);
+
+          statusEl.textContent = "revoking fixture object access";
+          const revokeResult = await revokeObjectAccess(viewer);
+          revokeEl.textContent = JSON.stringify(revokeResult);
+
+          statusEl.textContent = "removing fixture object anchor";
+          await revokeObjectAccess(anchor);
+
+          statusEl.textContent = "enabling fixture module";
+          const enableResult = await superadmin.enableModule(HARNESS_CONFIG.fixtureModuleKey);
+          enableEl.textContent = JSON.stringify(enableResult);
+
+          statusEl.textContent = "disabling fixture module";
+          const disableResult = await superadmin.disableModule(HARNESS_CONFIG.fixtureModuleKey);
+          disableEl.textContent = JSON.stringify(disableResult);
+
+          statusEl.textContent = "done";
+          logoutBtn.disabled = false;
+          logoutBtn.addEventListener("click", () => session.logout());
+        } catch (err) {
+          statusEl.textContent = "error: " + (err && err.message ? err.message : String(err));
+          statusEl.setAttribute("data-error", "true");
+        }
+      }
+
+      run();
+    </script>
+  </body>
+</html>

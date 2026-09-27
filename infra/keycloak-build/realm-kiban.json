@@ -1,0 +1,264 @@
+{
+  "realm": "kiban",
+  "enabled": true,
+  "displayName": "Kiban",
+  "browserFlow": "kiban browser",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "registrationAllowed": false,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "eventsEnabled": true,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "eventsExpiration": 7776000,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "kiban-frontend",
+      "name": "Kiban Frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:5173/*",
+        "http://localhost/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "kiban-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "kiban-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "user.attribute": "email"
+          }
+        },
+        {
+          "name": "given_name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "given_name",
+            "jsonType.label": "String",
+            "user.attribute": "firstName"
+          }
+        },
+        {
+          "name": "family_name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "family_name",
+            "jsonType.label": "String",
+            "user.attribute": "lastName"
+          }
+        },
+        {
+          "name": "identity_provider",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "identity_provider",
+            "jsonType.label": "String",
+            "user.attribute": "identity_provider"
+          }
+        },
+        {
+          "name": "idp_subject",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "idp_subject",
+            "jsonType.label": "String",
+            "user.attribute": "idp_subject"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "kiban-api",
+      "name": "Kiban API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+      }
+    },
+    {
+      "clientId": "kiban-identity-service",
+      "name": "Kiban Identity Service",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "secret": "${KEYCLOAK_IDENTITY_CLIENT_SECRET}",
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-kiban-identity-service",
+      "enabled": true,
+      "serviceAccountClientId": "kiban-identity-service",
+      "clientRoles": {
+        "realm-management": ["manage-users", "query-users", "view-users", "view-events"]
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "kiban browser",
+      "description": "Kiban browser login flow: REQUIRED 'kiban browser Auth' subflow, then the MFA-setup step once a user is established.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "flowAlias": "kiban browser Auth",
+          "requirement": "REQUIRED",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true,
+          "priority": 10
+        },
+        {
+          "authenticator": "kiban-local-mfa-setup",
+          "requirement": "REQUIRED",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 20
+        }
+      ]
+    },
+    {
+      "alias": "kiban browser Auth",
+      "description": "Cookie/IdP-redirect/Forms ALTERNATIVE chain, nested below 'kiban browser' so it never shares a level with a REQUIRED sibling.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 10
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "requirement": "ALTERNATIVE",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 25
+        },
+        {
+          "flowAlias": "kiban browser Forms",
+          "requirement": "ALTERNATIVE",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true,
+          "priority": 30
+        }
+      ]
+    },
+    {
+      "alias": "kiban browser Forms",
+      "description": "Username/password entry, adapted from Keycloak's built-in 'forms' subflow.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "requirement": "REQUIRED",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 10
+        },
+        {
+          "flowAlias": "kiban browser Conditional OTP",
+          "requirement": "CONDITIONAL",
+          "userSetupAllowed": false,
+          "autheticatorFlow": true,
+          "priority": 20
+        }
+      ]
+    },
+    {
+      "alias": "kiban browser Conditional OTP",
+      "description": "Challenges OTP only for users who already enrolled it, adapted from Keycloak's built-in conditional-OTP subflow.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-configured",
+          "requirement": "REQUIRED",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 10
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "requirement": "REQUIRED",
+          "userSetupAllowed": false,
+          "autheticatorFlow": false,
+          "priority": 20
+        }
+      ]
+    }
+  ]
+}

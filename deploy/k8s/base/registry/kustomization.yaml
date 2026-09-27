@@ -1,0 +1,29 @@
+# registry (cmd/registry) — port 8110, health /health.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../template
+labels:
+  - pairs: { app.kubernetes.io/name: registry }
+    includeSelectors: true
+patches:
+  - target: { name: SERVICE }
+    options: { allowNameChange: true }
+    patch: |
+      - { op: replace, path: /metadata/name, value: registry }
+  - target: { kind: Service }
+    patch: |
+      - { op: replace, path: /spec/ports/0/port, value: 8110 }
+      - { op: replace, path: /spec/ports/0/targetPort, value: 8110 }
+  - target: { kind: Deployment }
+    patch: |
+      - { op: replace, path: /spec/template/spec/containers/0/name, value: registry }
+      - { op: replace, path: /spec/template/spec/containers/0/image, value: kiban-registry:latest }
+      - { op: replace, path: /spec/template/spec/containers/0/ports/0/containerPort, value: 8110 }
+      - { op: replace, path: /spec/template/spec/containers/0/readinessProbe/httpGet/port, value: 8110 }
+      - { op: replace, path: /spec/template/spec/containers/0/livenessProbe/httpGet/port, value: 8110 }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_DB_HOST, value: "postgres" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_DB_PORT, value: "5432" } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_DB_NAME, valueFrom: { configMapKeyRef: { name: kiban-config, key: POSTGRES_DB } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_REGISTRY_DB_PASSWORD, valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_REGISTRY_DB_PASSWORD } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_AUTHZ_BASE_URL, value: "http://authz:8140" } }

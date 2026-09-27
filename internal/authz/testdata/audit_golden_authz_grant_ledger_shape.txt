@@ -1,0 +1,11 @@
+actor:text:no
+correlation_id:text:yes
+id:bigint:no
+object_id:text:no
+object_type:text:no
+occurred_at:timestamp with time zone:no
+op:text:no
+relation:text:no
+subject_id:text:no
+subject_relation:text:no
+subject_type:text:no

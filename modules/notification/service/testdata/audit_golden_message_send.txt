@@ -1,0 +1,3 @@
+companyId:string
+messageId:string
+recipients:number
