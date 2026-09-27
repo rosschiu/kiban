@@ -311,6 +311,21 @@ is authorized by whatever an administrator granted the app's service account.
     d, err := kiban.CanService(ctx, sdk.CanRequest{FeatureKey: "tokidesk.reminders.run", ModuleKey: "tokidesk", CompanyID: companyID})
     ```
 
+## Where the user's token lives
+
+Two shapes work with Kiban as shipped; the choice is the app's, not a Kiban setting.
+
+- **The browser holds the token.** The frontend track below: the browser SDK logs the user in,
+  keeps the token in session storage, and the browser calls Kiban and your app with it. Simple,
+  and it fits any static frontend. A script that manages to run in the page could read the
+  token, so a strict content security policy matters.
+- **Your backend holds the token.** The user logs in, your backend receives the token and keeps
+  it server-side, and gives the browser its own httpOnly cookie for the session, the shape an app
+  with an existing cookie session already has. The browser never sees a Kiban token; your backend
+  calls Kiban with the SDK and the token it holds, and your existing CSRF protection stays as it
+  is. Register your backend's callback URL as the login's redirect URI (`KIBAN_EXTRA_ORIGINS`) and
+  exchange the code there.
+
 ## Frontend track
 
 Every TypeScript snippet on this page is compiled and run against the SDK by its test suite, so
