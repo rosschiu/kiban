@@ -44,6 +44,10 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **Compose is the supported path.** Kubernetes manifests exist, are hardened (non-root, read-only
   filesystems, readiness probes) and were proven on a local kind cluster only. They are not a
   supported production path in 0.1.
+- **Kiban is served at the root of its host, never under a path.** `KIBAN_DOMAIN` takes a host
+  name only; the gateway owns `/auth`, `/realms`, `/resources`, `/api` and `/`, and Keycloak's
+  pages link to root paths. `https://example.com/id` does not work in 0.1; give Kiban its own
+  host name such as `id.example.com`.
 - **The gateway does not obtain certificates itself.** Use operator certificates or a
   TLS-terminating proxy in front.
 - **`POSTGRES_DB` must be `kiban`** and `POSTGRES_USER` must not be `kiban`: the migrations name
