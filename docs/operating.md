@@ -52,8 +52,8 @@ Key settings:
   `.env`. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
   origins to exactly `https://<domain>/*` on every run, and the gateway allows that one origin
   for CORS; when unset, both use the fixed localhost set. `make public-up` sets it on
-  `bootstrap` from `KIBAN_PUBLIC_HOST`; `make dev` and the image quickstart leave it unset. There
-  is no variable for an extra origin.
+  `bootstrap` from `KIBAN_PUBLIC_HOST`; `make dev` and the image quickstart leave it unset.
+  `KIBAN_EXTRA_ORIGINS` adds to the list.
 - `KEYCLOAK_AUDIENCE` (default `kiban-api`): the audience every service requires in a bearer.
   The realm's audience mapper on `kiban-frontend` writes `kiban-api`, and the Compose files do
   not pass this variable through, so it only matters for a compose file of your own.

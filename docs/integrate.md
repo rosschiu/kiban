@@ -330,13 +330,12 @@ client. Bootstrap writes that list on every start of the stack:
   Your application must be served from that origin, or behind the same reverse proxy as the
   gateway.
 
-For any other origin, open the Keycloak admin console at `http://127.0.0.1:<KEYCLOAK_HOST_PORT>`
-(`8081` for `make dev`, `25081` for the image quickstart), log in as `KC_BOOTSTRAP_ADMIN_USERNAME`
-with `KC_BOOTSTRAP_ADMIN_PASSWORD` from `.env`, switch to realm `kiban`, open client
-`kiban-frontend` and add your origin to "Valid redirect URIs" and "Web origins". Be aware that
-bootstrap reconciles both lists to the set above every time the stack starts, so a console edit
-lasts until the next `make dev` or `docker compose up`. There is no configuration variable for
-an extra origin in 0.1.
+For any other origin, add it to `KIBAN_EXTRA_ORIGINS` in `.env` (comma-separated) and restart
+the stack: a web origin such as `https://app.example.com` is allowed to complete the login and
+joins the gateway's CORS allow-list; a custom scheme such as `com.example.app:/callback` is a
+native app's redirect URI. Bootstrap reconciles the client's lists to `KIBAN_DOMAIN` plus this
+variable on every start, so an edit in the Keycloak admin console lasts only until the next
+start; the variable is the place.
 
 You should see: after the change, a login started from your origin lands back on your callback
 route instead of Keycloak's "Invalid parameter: redirect_uri" page.
