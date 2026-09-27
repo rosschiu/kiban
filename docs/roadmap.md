@@ -6,9 +6,8 @@ Planned, in no particular order; nothing is promised for a date. Shipped items m
 - Service clients created, rotated and revoked through the API, secret returned once, the way Keycloak registers a client
 - Decisions resolved from the feature declaration: one string is one feature, the manifest is the only source of truth for what it checks
 - Hosting Kiban under a path prefix such as `https://example.com/id`: today `KIBAN_DOMAIN` takes a host name only, the gateway owns `/auth`, `/realms`, `/resources`, `/api` and `/` at the root, and Keycloak's pages link to root paths
-- Invitations: an administrator invites an email address and the first login with it becomes the member
 - Native (mobile) login guide and a refresh-token policy for mobile sessions
-- "List every object this subject may see" API, and checks about a third subject for an app
+- List the objects a subject may reach through a relation (OpenFGA's ListObjects), for the app's own types: filtered by object type and company, sorted, cursor-paginated, so a large list never comes back whole; and checks about a third subject for an app
 - Apps enabled per company, and self-service app registration for a company administrator
 - Runtime dependency resolution between modules
 - One error code across modules when a foundation service is unavailable
