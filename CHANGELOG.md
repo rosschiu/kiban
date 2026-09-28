@@ -4,11 +4,20 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Nothing yet
+
+## [0.1.1] — 2026-10-04
+
+From two integration reviews: a public origin and a standard OIDC issuer for the published
+images, second-factor policy and company administrators through the gateway, service accounts
+as members, org reads and SDK parity, and package publishing.
+
 - Compose marks Keycloak healthy only on a `200` readiness status, not on any `"status": "UP"` fragment; bootstrap's readiness wait grows from 30s to 90s, so a cold first `docker compose up --wait` no longer fails
 - Authz debug check answers an engine refusal as `422` `VALIDATION_FAILED` (was the `VALIDATION_ERROR` shape code)
 - Quickstart "What to try first" points at the admin routes instead of a removed section
 - The discovery document's `issuer` equals the `iss` every token carries (`<origin>/realms/<realm>`) at both `/auth/realms/…` and `/realms/…`, so a standard OpenID Connect library accepts Kiban's tokens; the `/realms/` mount forwards Keycloak untouched, so a login started there completes
 - An object carries one company anchor: the grants route refuses a second anchor with `422` and migration `authz/0012` adds the unique index behind it; a repeated tuple is still a no-op; the grant ledger records changes only (a duplicate grant or a revoke of a missing tuple no longer writes a phantom row)
+- Kubernetes: `apply.sh` waits only for the Deployments the overlay created, so a core-only apply no longer fails on the absent sample modules; the gateway receives `KIBAN_DOMAIN` and `KIBAN_EXTRA_ORIGINS` from `kiban-config`, as bootstrap already did
 - The Kustomize base carries no Secret, so it works as a remote base from another repository; each overlay supplies `kiban-secrets` (`gen-secrets.sh <overlay>` writes it there and moves a 0.1.0 `base/secret.yaml` into place); `make k8s-check` renders base and overlays without a cluster
 - Zero-clone quickstart serves a real origin: `deploy/quickstart/compose.public.yaml` (generated from the source overlay) sets the public issuer, Keycloak hostname, `KIBAN_DOMAIN` and `KIBAN_TRUSTED_PROXY` from one `KIBAN_PUBLIC_HOST`
 - Second-factor policy through the gateway: `GET`/`PUT /api/platform/admin/mfa-policy/global`, `GET`/`PUT`/`DELETE .../users/{subject}`, `POST .../sync` (superadmin); documented on the Operating page, with the note that a new realm requires no second factor

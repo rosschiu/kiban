@@ -13,7 +13,7 @@ cp .env.example .env
 
 ## 2. Set two things
 
-**a. `KIBAN_VERSION`** in `.env`: the published image tag to run. It defaults to `v0.1.0`; see
+**a. `KIBAN_VERSION`** in `.env`: the published image tag to run. It defaults to `v0.1.1`; see
 the [available tags](https://github.com/rosschiu/kiban/pkgs/container/kiban-gateway).
 
 **b. Every secret field** in `.env`. They are all blank by default, because no passwords are
