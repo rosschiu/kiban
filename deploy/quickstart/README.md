@@ -64,6 +64,23 @@ the realm, so the browser OAuth login only completes from that origin. Remapping
 breaks the browser login, and there is no other way to get a token: the realm has no
 direct-grant client. Use the same host:port every time you sign in: `KEYCLOAK_ISSUER_URL` is compared as a string against the token's `iss` claim.
 
+## 5. Serve it at a real address (optional)
+
+Behind your own TLS-terminating reverse proxy (Caddy, Traefik, nginx), add the public overlay:
+
+```
+curl -fsSL -o compose.public.yaml https://raw.githubusercontent.com/rosschiu/kiban/main/deploy/quickstart/compose.public.yaml
+echo 'KIBAN_PUBLIC_HOST=id.example.com' >> .env
+docker compose -f docker-compose.yml -f compose.public.yaml up -d --wait
+```
+
+Point the proxy at the gateway's host port (`KIBAN_GATEWAY_HTTP_HOST_PORT`, default 3000) and
+make it forward `X-Forwarded-Proto` and `X-Forwarded-Host`. The overlay sets the public issuer
+on every token verifier, pins Keycloak's hostname to the origin, registers the realm's redirect
+URIs for it (`KIBAN_DOMAIN`) and makes the gateway trust the proxy (`KIBAN_TRUSTED_PROXY`). On
+an existing stack, re-run `docker compose ... up bootstrap` once after adding the overlay so the
+realm client learns the new origin. Kiban must own the whole hostname (no path prefix).
+
 ## Tear down
 
 ```
@@ -75,10 +92,10 @@ docker compose down -v       # also drops the Postgres volume — full reset
 
 This is the quickest way to see Kiban running with nothing but Docker. It is **not** a
 production setup:
-- There is no TLS. The gateway runs its dev-only plain-HTTP listener, since there's no domain to
-  issue a real certificate for.
+- The gateway runs its dev-only plain-HTTP listener. TLS is your reverse proxy's job (step 5);
+  without one there is no TLS at all.
 - Postgres is a single node.
-- Keycloak's redirect allowlist is fixed to dev-only local origins.
+- Without the public overlay, Keycloak's redirect allowlist is fixed to dev-only local origins.
 
 For a real deployment, clone the repository and use the full `infra/compose.yaml`. You can
 `make dev` for a local build from source, `make public-up` for a deployment behind a
@@ -111,3 +128,8 @@ build any of those from, so the generator:
 
 Everything else (env var names, service topology, healthchecks, startup ordering) is
 `infra/compose.yaml`'s own service definitions, unchanged.
+
+`compose.public.yaml` is generated the same way (`gen-quickstart-compose.sh --public`) from
+`infra/compose.public.yaml`: the origin-dependent settings (issuer, Keycloak hostname,
+`KIBAN_DOMAIN`, `KIBAN_TRUSTED_PROXY`, restart policies) for the services the quickstart runs,
+without the source tree's shared-Traefik labels and network.

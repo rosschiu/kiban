@@ -59,6 +59,20 @@ registered for `http://localhost:3000`) and log in as the superadmin with the pa
 `secrets-in/superadmin-password`; the first login makes you set a new one. Path B pulls the
 released images from GHCR; set `KIBAN_VERSION` in `.env` to choose the image tag.
 
+To serve path B at a real address, put your own TLS-terminating reverse proxy in front of the
+gateway's host port and add the public overlay:
+
+```
+curl -fsSL -o compose.public.yaml https://raw.githubusercontent.com/rosschiu/kiban/main/deploy/quickstart/compose.public.yaml
+echo 'KIBAN_PUBLIC_HOST=id.example.com' >> .env
+docker compose -f docker-compose.yml -f compose.public.yaml up -d --wait
+```
+
+Every token is then issued for `https://id.example.com/realms/kiban`, the realm's login redirect
+is registered for that origin, and the gateway trusts the proxy's forwarded headers. The proxy
+must forward `X-Forwarded-Proto` and `X-Forwarded-Host`. Kiban must own the whole hostname; a
+path prefix such as `https://example.com/id` is a [known limitation](limitations.md).
+
 ## What to try first
 
 A fresh stack has no company. The superadmin creates the first one and its first member
