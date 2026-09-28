@@ -584,7 +584,7 @@ func (svc *Service) handleDebugCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	allowed, err := fragment.Check(r.Context(), en, loaded, req.ObjectType, req.ObjectID, req.Relation, req.SubjectType, req.SubjectID)
 	if err != nil {
-		errenv.WriteError(w, http.StatusUnprocessableEntity, errenv.APIError{Code: errenv.CodeValidationError, Message: err.Error()})
+		errenv.WriteError(w, http.StatusUnprocessableEntity, errenv.APIError{Code: errenv.CodeValidationFailed, Message: err.Error()})
 		return
 	}
 	errenv.WriteData(w, http.StatusOK, map[string]bool{"allowed": allowed})
