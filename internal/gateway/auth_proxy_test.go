@@ -10,6 +10,7 @@ package gateway
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -167,6 +168,50 @@ func TestRewriteAuthOrigin(t *testing.T) {
 		got, _ := io.ReadAll(resp.Body)
 		if string(got) != body {
 			t.Errorf("body = %q, want untouched %q (no X-Forwarded-* headers to rewrite against)", got, body)
+		}
+	})
+
+	t.Run("discovery document keeps the token issuer while its endpoints move behind /auth", func(t *testing.T) {
+		body := `{"issuer":"https://127.0.0.1:8443/realms/kiban","authorization_endpoint":"https://127.0.0.1:8443/realms/kiban/protocol/openid-connect/auth","jwks_uri":"https://127.0.0.1:8443/realms/kiban/protocol/openid-connect/certs"}`
+		req := makeReq("https", "127.0.0.1:8443")
+		req.URL.Path = "/realms/kiban/.well-known/openid-configuration"
+		resp := &http.Response{
+			Request: req,
+			Header:  http.Header{"Content-Type": {"application/json"}},
+			Body:    io.NopCloser(strings.NewReader(body)),
+		}
+		if err := rewriteAuthOrigin(resp); err != nil {
+			t.Fatalf("rewriteAuthOrigin: %v", err)
+		}
+		got, _ := io.ReadAll(resp.Body)
+		var doc map[string]string
+		if err := json.Unmarshal(got, &doc); err != nil {
+			t.Fatalf("rewritten discovery is not JSON: %v: %s", err, got)
+		}
+		if doc["issuer"] != "https://127.0.0.1:8443/realms/kiban" {
+			t.Errorf("issuer = %q, want the un-prefixed token issuer", doc["issuer"])
+		}
+		if doc["authorization_endpoint"] != "https://127.0.0.1:8443/auth/realms/kiban/protocol/openid-connect/auth" {
+			t.Errorf("authorization_endpoint = %q, want it behind /auth", doc["authorization_endpoint"])
+		}
+		if doc["jwks_uri"] != "https://127.0.0.1:8443/auth/realms/kiban/protocol/openid-connect/certs" {
+			t.Errorf("jwks_uri = %q, want it behind /auth", doc["jwks_uri"])
+		}
+	})
+
+	t.Run("a non-discovery JSON body gets no issuer special-casing", func(t *testing.T) {
+		body := `{"issuer":"https://127.0.0.1:8443/realms/kiban"}`
+		resp := &http.Response{
+			Request: makeReq("https", "127.0.0.1:8443"),
+			Header:  http.Header{"Content-Type": {"application/json"}},
+			Body:    io.NopCloser(strings.NewReader(body)),
+		}
+		if err := rewriteAuthOrigin(resp); err != nil {
+			t.Fatalf("rewriteAuthOrigin: %v", err)
+		}
+		got, _ := io.ReadAll(resp.Body)
+		if want := `{"issuer":"https://127.0.0.1:8443/auth/realms/kiban"}`; string(got) != want {
+			t.Errorf("body = %s, want %s", got, want)
 		}
 	})
 }
@@ -546,10 +591,18 @@ func TestNewKeycloakVerbatimProxy_CookiePathNotRewritten(t *testing.T) {
 // TestNewKeycloakVerbatimProxy_OriginStillSpliced proves the verbatim variant still runs
 // rewriteAuthOrigin/rewriteLocationHeader (the same origin/auth splice, ONLY for absolute
 // URLs) — only the cookie-Path rewrite is suppressed, not the whole ModifyResponse pipeline.
-func TestNewKeycloakVerbatimProxy_OriginStillSpliced(t *testing.T) {
+func TestNewKeycloakVerbatimProxy_NothingRewritten(t *testing.T) {
+	// A flow that starts on /realms/ must stay on /realms/: Keycloak's absolute self-links, its
+	// redirects and its cookie Paths all agree there, and splicing /auth into any of them sends
+	// the next request to a path the /realms/{realm}/ session cookie does not cover.
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/realms/kiban/protocol/openid-connect/auth" {
+			w.Header().Set("Location", "https://gateway.example/realms/kiban/login-actions/authenticate?x=1")
+			w.WriteHeader(http.StatusFound)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, `<a href="https://gateway.example/realms/kiban/account">Account</a>`)
+		fmt.Fprint(w, `<form action="https://gateway.example/realms/kiban/login-actions/authenticate"><a href="https://gateway.example/realms/kiban/account">Account</a>`)
 	}))
 	defer backend.Close()
 
@@ -559,16 +612,27 @@ func TestNewKeycloakVerbatimProxy_OriginStillSpliced(t *testing.T) {
 	}
 	proxy := NewKeycloakVerbatimProxy(target, false, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/realms/kiban/login-actions/reset-credentials", nil)
-	req.Host = "gateway.example"
-	req.TLS = &tls.ConnectionState{}
-	rec := httptest.NewRecorder()
-	proxy.ServeHTTP(rec, req)
+	t.Run("absolute self-links keep their /realms/ path", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/realms/kiban/login-actions/reset-credentials", nil)
+		req.Host = "gateway.example"
+		req.TLS = &tls.ConnectionState{}
+		rec := httptest.NewRecorder()
+		proxy.ServeHTTP(rec, req)
+		if strings.Contains(rec.Body.String(), "/auth/") {
+			t.Errorf("body = %s, want no /auth splice on the verbatim mount", rec.Body.String())
+		}
+	})
 
-	want := `href="https://gateway.example/auth/realms/kiban/account"`
-	if !strings.Contains(rec.Body.String(), want) {
-		t.Errorf("body = %s, want it to contain %q", rec.Body.String(), want)
-	}
+	t.Run("redirect Location keeps its /realms/ path", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/realms/kiban/protocol/openid-connect/auth", nil)
+		req.Host = "gateway.example"
+		req.TLS = &tls.ConnectionState{}
+		rec := httptest.NewRecorder()
+		proxy.ServeHTTP(rec, req)
+		if got, want := rec.Header().Get("Location"), "https://gateway.example/realms/kiban/login-actions/authenticate?x=1"; got != want {
+			t.Errorf("Location = %q, want %q", got, want)
+		}
+	})
 }
 
 // TestNewKeycloakVerbatimProxy_BinaryAssetPassthroughByteForByte proves theme assets under
@@ -670,8 +734,9 @@ func TestNewAuthProxy_RewritesLocationHeader(t *testing.T) {
 // TestNewAuthProxy_ForgedHostPinnedToPublicOrigin proves the operator-cert topology
 // (TrustProxyHeaders=false, KC_HOSTNAME_STRICT=false) no longer lets a client's Host header
 // become Keycloak's self-URL host: Host/X-Forwarded-Host/-Proto reaching Keycloak are the
-// configured issuer origin, whatever `Host` the request carried, and the body/Location rewrites
-// splice /auth on that same pinned origin. Both the /auth and the verbatim mounts.
+// configured issuer origin, whatever `Host` the request carried; the discovery issuer is built
+// on that pinned origin (and, being the issuer, never gains /auth). Both the /auth and the
+// verbatim mounts.
 func TestNewAuthProxy_ForgedHostPinnedToPublicOrigin(t *testing.T) {
 	var gotHost, gotXFHost, gotXFProto string
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -704,7 +769,7 @@ func TestNewAuthProxy_ForgedHostPinnedToPublicOrigin(t *testing.T) {
 			if gotHost != "kiban.example:8443" || gotXFHost != "kiban.example:8443" || gotXFProto != "https" {
 				t.Fatalf("backend saw Host=%q X-Forwarded-Host=%q X-Forwarded-Proto=%q, want the pinned kiban.example:8443/https", gotHost, gotXFHost, gotXFProto)
 			}
-			want := `"issuer":"https://kiban.example:8443/auth/realms/kiban"`
+			want := `"issuer":"https://kiban.example:8443/realms/kiban"`
 			if !strings.Contains(rec.Body.String(), want) {
 				t.Errorf("body = %s, want it to contain %s", rec.Body.String(), want)
 			}

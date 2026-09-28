@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -80,14 +81,14 @@ func NewAuthProxy(target *url.URL, trustForwardedHeaders bool, publicOrigin *url
 	return newKeycloakProxy(target, trustForwardedHeaders, publicOrigin, true /* stripAuthPrefix */, true /* rewriteCookiePaths */)
 }
 
-// NewKeycloakVerbatimProxy backs the `/resources/` and `/realms/` gateway routes: the
-// SAME Keycloak target and response-rewrite pipeline as NewAuthProxy (rewriteAuthOrigin,
-// rewriteLocationHeader — Keycloak's absolute self-referencing URLs still need the `/auth`
-// splice so they keep resolving through the `/auth` proxy), but two
-// differences from NewAuthProxy, both because these routes carry no `/auth` prefix at all —
-// Keycloak's own root-relative references (`/resources/...` theme assets, `/realms/...`
-// Forgot-Password/action-page links) resolve directly at THIS path once it's mounted, which is
-// the whole point of these mounts:
+// NewKeycloakVerbatimProxy backs the `/resources/` and `/realms/` gateway routes: the SAME
+// Keycloak target as NewAuthProxy, but NO rewriting at all, because these routes carry no
+// `/auth` prefix — Keycloak's own absolute URLs, redirects, root-relative references
+// (`/resources/...` theme assets, `/realms/...` action pages) and cookie Paths all already agree
+// with the path the client is on. A login started at `/realms/{realm}/protocol/openid-connect/
+// auth` therefore completes on `/realms/` end to end (issuer_prefix_live_test.go), and
+// discovery fetched here advertises `/realms/` endpoints with the same `issuer` as the `/auth/`
+// copy. Concretely:
 //
 //  1. No prefix is stripped — the inbound path (already `/resources/...` or `/realms/...`) is
 //     forwarded to Keycloak verbatim; Keycloak itself still runs at relative-path "/", so this
@@ -142,6 +143,14 @@ func newKeycloakProxy(target *url.URL, trustForwardedHeaders bool, publicOrigin 
 			// needs, no further edit required.
 		},
 		ModifyResponse: func(resp *http.Response) error {
+			if !stripAuthPrefix {
+				// The verbatim mount rewrites NOTHING: a flow that starts on `/realms/` stays on
+				// `/realms/` (Keycloak's own links, redirects and cookie Paths already agree
+				// there). Splicing `/auth` into its bodies used to send the login form's POST to
+				// a path the `/realms/{realm}/` session cookie never covers ("Restart login
+				// cookie not found"). See NewKeycloakVerbatimProxy.
+				return nil
+			}
 			if rewriteCookiePaths {
 				rewriteSetCookiePaths(resp)
 			}
@@ -149,12 +158,7 @@ func newKeycloakProxy(target *url.URL, trustForwardedHeaders bool, publicOrigin 
 			if err := rewriteAuthOrigin(resp); err != nil {
 				return err
 			}
-			if stripAuthPrefix {
-				// Only on the /auth mount — see rewriteRootRelativeRealmsLinks's
-				// own comment for why the verbatim mount must NOT do this too.
-				return rewriteRootRelativeRealmsLinks(resp)
-			}
-			return nil
+			return rewriteRootRelativeRealmsLinks(resp)
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			writeProxyError(w, err, "keycloak unreachable")
@@ -262,6 +266,11 @@ func isTextualResponse(resp *http.Response) bool {
 	return false
 }
 
+// discoveryIssuerRe finds the `issuer` member of a discovery document after rewriteAuthOrigin
+// has spliced `/auth` into it; the origin itself is matched loosely because it is already known
+// to be the one the request was reached at.
+var discoveryIssuerRe = regexp.MustCompile(`("issuer"\s*:\s*")([a-z]+://[^/"]+)/auth/`)
+
 // rewriteAuthOrigin patches Keycloak's self-referencing absolute URLs (the login form's
 // `action`, the session-restart script URL, discovery-document endpoint URLs, ...) so they
 // resolve back through this gateway's `/auth` prefix instead of one path segment short of it.
@@ -285,6 +294,12 @@ func rewriteAuthOrigin(resp *http.Response) error {
 	}
 
 	rewritten := strings.ReplaceAll(string(body), origin+"/", origin+"/auth/")
+	if strings.HasSuffix(resp.Request.URL.Path, "/.well-known/openid-configuration") {
+		// The discovery document's `issuer` must equal the `iss` every token carries
+		// (OpenID Connect Discovery 1.0 §4.3), and Keycloak mints `iss` from the path it saw,
+		// which has no `/auth`. Only the endpoints move behind the prefix; the issuer stays.
+		rewritten = discoveryIssuerRe.ReplaceAllString(rewritten, "${1}"+origin+"/")
+	}
 	resp.Body = io.NopCloser(bytes.NewReader([]byte(rewritten)))
 	resp.ContentLength = int64(len(rewritten))
 	resp.Header.Set("Content-Length", strconv.Itoa(len(rewritten)))
