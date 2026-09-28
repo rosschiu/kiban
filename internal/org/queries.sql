@@ -69,7 +69,8 @@ UPDATE org.member SET user_id = NULL WHERE id = $1 RETURNING *;
 -- fields, paginated/authorized in SQL — never per-row API calls.
 SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
-       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle
+       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
+       u.kind AS user_kind
 FROM org.member m
 LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1
@@ -82,7 +83,8 @@ SELECT count(*) FROM org.member WHERE company_id = $1;
 -- name: GetMemberWithUser :one
 SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
-       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle
+       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
+       u.kind AS user_kind
 FROM org.member m
 LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.id = $1;
@@ -91,7 +93,7 @@ WHERE m.id = $1;
 -- The published read contract — the ONLY way org reads identity data. Resolves the
 -- internal user_id to store in member.user_id after the HTTP-level liveness check
 -- (internal/org/identityclient.go) has confirmed the account exists.
-SELECT id, kc_sub, email, preferred_username, lifecycle FROM identity.user_read_v WHERE kc_sub = $1;
+SELECT id, kc_sub, email, preferred_username, lifecycle, kind FROM identity.user_read_v WHERE kc_sub = $1;
 
 -- name: CreatePosition :one
 INSERT INTO org.position (company_id, code, title, org_unit_id)
@@ -202,8 +204,10 @@ ORDER BY ou.code;
 -- company, optional case-insensitive LITERAL substring filter on displayName/email (sqlc.narg —
 -- NULL means "no filter"; the store escapes `\`, `%`, `_` in q, hence ESCAPE '\'),
 -- filtered/sorted/paginated entirely in SQL.
-SELECT m.id, m.display_name, m.email, (m.user_id IS NOT NULL)::boolean AS has_linked_user
+SELECT m.id, m.display_name, m.email, (m.user_id IS NOT NULL)::boolean AS has_linked_user,
+       COALESCE(u.kind, 'person')::text AS kind
 FROM org.member m
+LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1 AND m.is_active = true
   AND (sqlc.narg('q')::text IS NULL
        OR m.display_name ILIKE '%' || sqlc.narg('q')::text || '%' ESCAPE '\'

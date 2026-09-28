@@ -41,6 +41,10 @@ Two levels of administration exist:
 - The **Keycloak Admin** is the identity provider's own master administrator, used only during
   bootstrap and by operators, never at runtime by the application.
 
+A user is a person or a service: an app's backend signs in as its service account, a Keycloak
+user that authenticates with a client secret. Authorization treats both alike, membership
+included; the member directory carries the kind so people and services can be told apart.
+
 Multi-factor policy (authenticator app or passkey) can be required globally or per user; a
 per-user override can only raise the requirement.
 

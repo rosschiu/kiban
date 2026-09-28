@@ -41,8 +41,10 @@ const (
 
 // identityServiceRoles is the EXACT realm-management client-role set the kiban-identity-service
 // service account must hold — least privilege proven, not assumed. Any role beyond this set
-// is a hard stop.
-var identityServiceRoles = []string{"manage-users", "query-users", "view-users", "view-events"}
+// is a hard stop. view-clients (read-only) exists so identity can tell a client's service
+// account from a person at provisioning (AdminClient.IsServiceAccount: Keycloak 26 does not
+// mark the user itself, only the client's service-account-user link says so).
+var identityServiceRoles = []string{"manage-users", "query-users", "view-users", "view-events", "view-clients"}
 
 // RealmStep reconciles the Keycloak realm via the admin REST API: realm settings, the
 // kiban-api/kiban-frontend clients, the MFA browser-flow wiring, the

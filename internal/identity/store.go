@@ -65,6 +65,7 @@ type User struct {
 	Email             string
 	PreferredUsername string
 	Lifecycle         string
+	Kind              string // "person" or "service" (a client's service account)
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -76,6 +77,7 @@ func userFromRow(r IdentityUserAccount) User {
 		Email:             pgconv.DerefStr(r.Email),
 		PreferredUsername: pgconv.DerefStr(r.PreferredUsername),
 		Lifecycle:         r.Lifecycle,
+		Kind:              r.Kind,
 		CreatedAt:         r.CreatedAt.Time,
 		UpdatedAt:         r.UpdatedAt.Time,
 	}
@@ -94,18 +96,29 @@ func pgFromUUID(id uuid.UUID) pgtype.UUID {
 // request body). It touches identity.user_account ONLY (never user_login_observation), and is
 // idempotent: calling it twice with the same kcSub returns the
 // same row id.
-func (s *Store) ResolveOrCreate(ctx context.Context, kcSub, email, preferredUsername string) (User, error) {
+func (s *Store) ResolveOrCreate(ctx context.Context, kcSub, email, preferredUsername, kind string) (User, error) {
+	if kind == "" {
+		kind = UserKindPerson
+	}
 	q := New(s.pool)
 	row, err := q.UpsertUserAccount(ctx, UpsertUserAccountParams{
 		KcSub:             kcSub,
 		Email:             pgconv.StrOrNil(email),
 		PreferredUsername: pgconv.StrOrNil(preferredUsername),
+		Kind:              kind,
 	})
 	if err != nil {
 		return User{}, fmt.Errorf("identity: resolve-or-create: %w", err)
 	}
 	return userFromRow(row), nil
 }
+
+// The two user kinds. A service account is a Keycloak client's own user (the identity an app's
+// backend presents when no human is present); authorization treats both alike.
+const (
+	UserKindPerson  = "person"
+	UserKindService = "service"
+)
 
 // ErrUserNotFound is returned when a kc_sub or user id has no identity.user_account row.
 var ErrUserNotFound = errors.New("identity: user not found")

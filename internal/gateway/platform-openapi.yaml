@@ -1337,6 +1337,7 @@ components:
         displayName: { type: string }
         email: { type: string }
         hasLinkedUser: { type: boolean }
+        kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account" }
 
     Capability:
       type: object
@@ -1388,6 +1389,7 @@ components:
         email: { type: string, nullable: true }
         userId: { type: string, nullable: true, description: "The linked identity user, or null" }
         isActive: { type: boolean }
+        kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account; `person` otherwise" }
     OrgMemberCreateRequest:
       type: object
       required: [companyId, code, displayName]
