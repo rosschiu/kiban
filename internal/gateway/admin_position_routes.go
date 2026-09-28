@@ -52,17 +52,19 @@ func rewriteAdminAssignmentEndPath() func(*http.Request) string {
 // downstream authz outage is 503, never a silent allow). orgTarget is org's compose-internal
 // base URL.
 func mountAdminPositionRoutes(mux routeMux, verifier *TokenVerifier, prov *Provisioner, orgTarget *url.URL, adminClient *AuthzAdminClient) {
-	guarded := func(action string, rewrite func(*http.Request) string) http.Handler {
-		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadmin(adminClient, action)(
+	// The superadmin, or an administrator of the company the position/assignment belongs to
+	// (company_admin.go).
+	guarded := func(action string, companyOf companyOfFunc, rewrite func(*http.Request) string) http.Handler {
+		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadminOrCompanyAdmin(adminClient, action, companyOf)(
 			newFixedProxy(orgTarget, rewrite))))
 	}
 
 	mux.Handle("GET /api/org/admin/companies/{companyId}/positions",
-		guarded("org.position.admin_list", rewriteAdminCompanyPositionsPath()))
+		guarded("org.position.admin_list", companyFromPath("companyId"), rewriteAdminCompanyPositionsPath()))
 	mux.Handle("POST /api/org/admin/companies/{companyId}/positions",
-		guarded("org.position.admin_create", rewriteAdminCompanyPositionsPath()))
+		guarded("org.position.admin_create", companyFromPath("companyId"), rewriteAdminCompanyPositionsPath()))
 	mux.Handle("POST /api/org/admin/positions/{id}/assignments",
-		guarded("org.assignment.admin_create", rewriteAdminPositionAssignmentsPath()))
+		guarded("org.assignment.admin_create", companyFromOrg(orgTarget, "positions", "id"), rewriteAdminPositionAssignmentsPath()))
 	mux.Handle("POST /api/org/admin/assignments/{id}/end",
-		guarded("org.assignment.admin_end", rewriteAdminAssignmentEndPath()))
+		guarded("org.assignment.admin_end", companyFromOrg(orgTarget, "assignments", "id"), rewriteAdminAssignmentEndPath()))
 }

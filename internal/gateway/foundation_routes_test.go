@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,8 @@ type foundationBackend struct {
 	}
 }
 
+var orgResourceLookupRe = regexp.MustCompile(`^/internal/org/(members|positions|assignments|groups)/[^/]+$`)
+
 func newFoundationBackend(t *testing.T) *foundationBackend {
 	t.Helper()
 	b := &foundationBackend{responses: map[string]struct {
@@ -57,6 +60,11 @@ func newFoundationBackend(t *testing.T) *foundationBackend {
 		if !ok {
 			resp.status = http.StatusOK
 			resp.body = `{"data":{"ok":true}}`
+			// The gateway's company-administrator guard reads an org resource to learn its
+			// company (company_admin.go's companyFromOrg): answer like org does.
+			if r.Method == http.MethodGet && orgResourceLookupRe.MatchString(r.URL.Path) {
+				resp.body = `{"data":{"id":"x","companyId":"co-1"}}`
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(resp.status)
@@ -72,6 +80,18 @@ func (b *foundationBackend) setResponse(path string, status int, body string) {
 		status int
 		body   string
 	}{status: status, body: body}
+}
+
+// nonLookupCalls counts the calls that were not the company-administrator guard's own read of
+// a resource (company_admin.go's companyFromOrg): the guarded action itself must not have run.
+func nonLookupCalls(b *foundationBackend) int {
+	n := 0
+	for _, c := range b.calls {
+		if !orgResourceLookupRe.MatchString(c.path) {
+			n++
+		}
+	}
+	return n
 }
 
 func (b *foundationBackend) lastCall() foundationBackendCall {

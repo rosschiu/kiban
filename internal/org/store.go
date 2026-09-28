@@ -982,6 +982,18 @@ type Assignment struct {
 	ValidTo    *time.Time
 }
 
+// GetAssignment reads one assignment; ErrAssignmentNotFound when absent.
+func (s *Store) GetAssignment(ctx context.Context, id uuid.UUID) (Assignment, error) {
+	row, err := New(s.pool).GetAssignment(ctx, pgFromUUID(id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Assignment{}, ErrAssignmentNotFound
+		}
+		return Assignment{}, fmt.Errorf("org: get assignment: %w", err)
+	}
+	return assignmentFromRow(row), nil
+}
+
 func assignmentFromRow(r OrgPositionAssignment) Assignment {
 	return Assignment{
 		ID: uuidFromPg(r.ID), PositionID: uuidFromPg(r.PositionID), MemberID: uuidFromPg(r.MemberID),

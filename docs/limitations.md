@@ -26,9 +26,10 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A service credential is created at bootstrap, not at runtime.** `KIBAN_SERVICE_CLIENTS`
   names the confidential clients; adding one means a restart of the `bootstrap` one-shot. The
   secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.
-- **Companies, org units and members are created by a superadmin.** The routes are on the
-  gateway (`/api/org/admin/units`, `/api/org/admin/members`); a company administrator cannot
-  create members of their own company yet.
+- **Companies and org units are created by a superadmin.** A company's administrator (the
+  `company:<id>#admin` relation) manages that company's members, positions, assignments and
+  groups through `/api/org/admin/*`; creating a company, or an org unit below it, is still
+  superadmin work.
 - **A new user has no company until an administrator adds them.** The gateway provisions the
   account on the first request; membership is an explicit administrator action (there is no
   invite flow).

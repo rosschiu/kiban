@@ -117,9 +117,15 @@ func (d *Decider) Evaluate(ctx context.Context, req Request) Decision {
 	}
 
 	// Step 6 — module state.
-	moduleEnabled, err := d.deps.ModuleState.Enabled(ctx, req.ModuleKey)
-	if err != nil {
-		return unavailable("registry", "module_state", &ev)
+	// The platform's own pseudo-module (`auth.*` keys) has no catalog entry and is never
+	// disabled; every other module must be enabled.
+	moduleEnabled := req.ModuleKey == FoundationModuleKey
+	if !moduleEnabled {
+		var err error
+		moduleEnabled, err = d.deps.ModuleState.Enabled(ctx, req.ModuleKey)
+		if err != nil {
+			return unavailable("registry", "module_state", &ev)
+		}
 	}
 	if !moduleEnabled {
 		return deny(ReasonModuleDisabled, &ev, "moduleEnabled", "false")

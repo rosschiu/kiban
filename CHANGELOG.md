@@ -12,6 +12,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Second-factor policy through the gateway: `GET`/`PUT /api/platform/admin/mfa-policy/global`, `GET`/`PUT`/`DELETE .../users/{subject}`, `POST .../sync` (superadmin); documented on the Operating page, with the note that a new realm requires no second factor
 - Members carry `kind` (`person` or `service`): identity records whether a user is a client's service account (confirmed through Keycloak's client link at provisioning), and the member directory and admin member routes return it; bootstrap grants identity's service account the read-only `view-clients` role for that check and repairs it on an existing realm
 - Docs: an app's service account is a user; to run background jobs in a company it must be made a member of that company (the two admin calls), while writing tuples on the app's own types needs no membership
+- A company's administrator (`company:<id>#admin`) manages that company's members, positions, assignments and groups through `/api/org/admin/*`; the gateway and org both decide "superadmin, or administrator of this company"; companies and org units stay superadmin work
 
 ## [0.1.0] — 2026-09-25
 
