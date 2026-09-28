@@ -26,3 +26,7 @@ internal/authz/bench/bench-report.md
 
 # npm workspaces install trees (web/, web/sdk, web/shell)
 node_modules/
+
+# local symlinks to a shared install (the directory patterns above do not match symlinks)
+web/node_modules
+web/sdk/node_modules

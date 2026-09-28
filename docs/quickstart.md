@@ -61,12 +61,11 @@ released images from GHCR; set `KIBAN_VERSION` in `.env` to choose the image tag
 
 ## What to try first
 
-A fresh stack has no company, and the gateway has no route that creates one: companies, org
-units and members are written through the org service's internal routes, from inside the
-Compose network. The administration pages cover positions and groups.
+A fresh stack has no company. The superadmin creates the first one and its first member
+through the admin routes on the gateway; the administration pages cover positions and groups.
 
-1. Create the first company and make yourself its first member with the commands in
-   [Integrate your app](integrate.md#escape-hatch-create-a-company-and-its-first-member).
+1. Create the first company and make yourself its first member with the two calls under
+   [Administration](integrate.md#administration).
 2. Open the administration pages, create a position in that company and assign your member to
    it.
 3. Bring up a sample module (`COMPOSE_PROFILES=samples` and `KIBAN_INSTALLED_MODULES` in

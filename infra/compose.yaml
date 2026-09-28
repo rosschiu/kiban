@@ -77,11 +77,13 @@ services:
       - "127.0.0.1:${KEYCLOAK_HOST_PORT}:8080"
     healthcheck:
       # No curl/wget in the stock Keycloak image; use bash's /dev/tcp against the management
-      # port (9000 — split from the app port on this Keycloak version).
+      # port (9000 — split from the app port on this Keycloak version). Match the HTTP status
+      # line, not a `"status": "UP"` fragment: while Keycloak initialises the body is 503 with the
+      # per-check list, and the "Graceful Shutdown" check reads UP before the realm is imported.
       test:
         [
           "CMD-SHELL",
-          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '\"status\": \"UP\"' <&3",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '^HTTP/1.1 200' <&3",
         ]
       interval: 5s
       timeout: 5s

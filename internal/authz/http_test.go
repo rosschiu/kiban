@@ -1085,8 +1085,10 @@ func TestHandleDebugCheck(t *testing.T) {
 		}
 		var out map[string]map[string]string
 		decodeBody(t, rec, &out)
-		if out["error"]["code"] != "VALIDATION_ERROR" {
-			t.Fatalf("error code = %q, want VALIDATION_ERROR", out["error"]["code"])
+		// 422 is a domain refusal, so it carries VALIDATION_FAILED, never the 400 shape code
+		// (errenv's contract: VALIDATION_ERROR = request shape, VALIDATION_FAILED = policy).
+		if out["error"]["code"] != "VALIDATION_FAILED" {
+			t.Fatalf("error code = %q, want VALIDATION_FAILED", out["error"]["code"])
 		}
 	})
 }

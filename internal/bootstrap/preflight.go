@@ -18,7 +18,7 @@ import (
 // success while realm import finishes. A single unretried check here would make PreflightStep
 // fail the whole bootstrap run on exactly the startup race the stub always retried through.
 const (
-	keycloakReadyRetries     = 15
+	keycloakReadyRetries     = 45 // 90s: a cold Keycloak on a loaded host takes well over 30s
 	keycloakReadyRetryDelay  = 2 * time.Second
 	realmDiscoveryRetries    = 10
 	realmDiscoveryRetryDelay = 2 * time.Second
