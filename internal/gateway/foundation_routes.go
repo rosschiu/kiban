@@ -116,6 +116,18 @@ func mountFoundationRoutes(mux routeMux, verifier *TokenVerifier, prov *Provisio
 	// auth + kcSub injection, same division of labor as summary/me-companies above.
 	mux.Handle("GET /api/org/companies/{companyId}/members", authed(newMemberDirectoryProxy(orgTarget)))
 
+	// A position's holder on a date and a group's members: readable by any active member of
+	// the company (an app's service account included, once it is a member) or the superadmin;
+	// the resource must belong to the company in the path (company_admin.go).
+	companyRead := func(action, kind string, rewrite func(*http.Request) string) http.Handler {
+		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadminOrCompanyMember(adminClient, action, companyFromPath("companyId"))(
+			requireResourceInCompany(orgTarget, kind, "id")(newFixedProxy(orgTarget, rewrite)))))
+	}
+	mux.Handle("GET /api/org/companies/{companyId}/positions/{id}/holder", companyRead("org.positions.holder", "positions",
+		func(r *http.Request) string { return "/internal/org/positions/" + r.PathValue("id") + "/holder" }))
+	mux.Handle("GET /api/org/companies/{companyId}/groups/{id}/members", companyRead("org.groups.members", "groups",
+		func(r *http.Request) string { return "/internal/org/groups/" + r.PathValue("id") + "/members" }))
+
 	// Member lookup by subject for an app's backend (or a superadmin): "is this user a member of
 	// this company, and which member" — org's own internal fact read, never a directory.
 	mux.Handle("GET /api/org/companies/{companyId}/members/by-subject/{subject}", limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadminOrApp(adminClient, catalog, "org.members.lookup")(

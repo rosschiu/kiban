@@ -167,6 +167,76 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/org/companies/{companyId}/positions/{id}/holder:
+    get:
+      operationId: orgPositionHolder
+      summary: The member holding a position on a date (any member of the company, or a superadmin)
+      description: >
+        Proxied to org's `/internal/org/positions/{id}/holder`. The caller must be an active
+        member of the company (an app's service account counts once it is a member) or the
+        superadmin; a position of another company answers 404. Resolves approvers and
+        owners "as of" a date.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: The assignment in force on that date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgAssignment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: No holder on that date, or the position is not in this company
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/companies/{companyId}/groups/{id}/members:
+    get:
+      operationId: orgGroupMembers
+      summary: A group's current members (any member of the company, or a superadmin)
+      description: >
+        Proxied to org's `/internal/org/groups/{id}/members`, with the same guard as the
+        position holder read; a group of another company answers 404.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The group's members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/OrgGroupMember" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
   /api/org/companies/{companyId}/members/by-subject/{subject}:
     get:
       operationId: orgMemberBySubject
