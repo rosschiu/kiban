@@ -114,6 +114,10 @@ func Routes(cfg RoutesConfig) http.Handler {
 	// member), the same slice pattern, same guard.
 	mountAdminGroupRoutes(mux, cfg.Verifier, prov, orgTarget, cfg.AdminClient)
 
+	// `/api/platform/admin/mfa-policy/...`: the second-factor policy, proxied to identity,
+	// superadmin-guarded (admin_identity_routes.go).
+	mountAdminIdentityRoutes(mux, cfg.Verifier, prov, mustParseAbsoluteURL(cfg.IdentityBaseURL), cfg.AdminClient)
+
 	// The gateway deliberately
 	// mounts NO bare `GET /metrics`. Unlike every other service, the gateway's only listener IS the
 	// edge — in public mode the shared Traefik forwards the whole host to it — so a bare mount here

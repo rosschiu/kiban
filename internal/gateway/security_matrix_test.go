@@ -40,6 +40,7 @@ func gatewayMatrixFixture(t *testing.T, adminClient *AuthzAdminClient) (*testsec
 	mountAdminPositionRoutes(rec, verifier, nil, target, adminClient)
 	mountAdminGroupRoutes(rec, verifier, nil, target, adminClient)
 	mountPlatformRoutes(rec, verifier, nil, target, adminClient, nil)
+	mountAdminIdentityRoutes(rec, verifier, nil, target, adminClient)
 	return rec, jwks, backend
 }
 
@@ -72,6 +73,12 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "platform_role_revoke", Pattern: "DELETE /api/platform/admin/platform-roles/{role}/{subjectId}", Method: http.MethodDelete, Path: "/api/platform/admin/platform-roles/kiban-superadmin/u-1"},
 	{Name: "platform_admin_module_enable", Pattern: "POST /api/platform/admin/modules/{key}/enable", Method: http.MethodPost, Path: "/api/platform/admin/modules/notification/enable"},
 	{Name: "platform_admin_module_disable", Pattern: "POST /api/platform/admin/modules/{key}/disable", Method: http.MethodPost, Path: "/api/platform/admin/modules/notification/disable"},
+	{Name: "platform_admin_mfa_global_get", Pattern: "GET /api/platform/admin/mfa-policy/global", Method: http.MethodGet, Path: "/api/platform/admin/mfa-policy/global"},
+	{Name: "platform_admin_mfa_global_set", Pattern: "PUT /api/platform/admin/mfa-policy/global", Method: http.MethodPut, Path: "/api/platform/admin/mfa-policy/global", Body: `{"required":true,"method":"otp"}`},
+	{Name: "platform_admin_mfa_user_get", Pattern: "GET /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodGet, Path: "/api/platform/admin/mfa-policy/users/sub-1"},
+	{Name: "platform_admin_mfa_user_set", Pattern: "PUT /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodPut, Path: "/api/platform/admin/mfa-policy/users/sub-1", Body: `{"required":true,"method":"otp"}`},
+	{Name: "platform_admin_mfa_user_clear", Pattern: "DELETE /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodDelete, Path: "/api/platform/admin/mfa-policy/users/sub-1"},
+	{Name: "platform_admin_mfa_sync", Pattern: "POST /api/platform/admin/mfa-policy/sync", Method: http.MethodPost, Path: "/api/platform/admin/mfa-policy/sync"},
 	{Name: "platform_admin_app_register", Pattern: "POST /api/platform/admin/apps", Method: http.MethodPost, Path: "/api/platform/admin/apps", Body: `{"key":"tokidesk","displayName":"TokiDesk","version":"1.0.0","serviceClientId":"tokidesk-backend","authzFragment":{}}`},
 	{Name: "platform_metrics", Pattern: "GET /api/platform/metrics", Method: http.MethodGet, Path: "/api/platform/metrics"},
 
