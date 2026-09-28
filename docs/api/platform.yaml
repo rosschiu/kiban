@@ -420,6 +420,151 @@ paths:
         "422": { $ref: "#/components/responses/ValidationFailed" }
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
 
+  /api/platform/admin/mfa-policy/global:
+    get:
+      operationId: superadminGetGlobalMfaPolicy
+      summary: Read the realm-wide second-factor policy (superadmin only)
+      description: >
+        Superadmin-gated fixed proxy to identity's `/internal/identity/mfa-policy/global`. A new
+        realm requires no second factor (`required: false`).
+      responses:
+        "200":
+          description: The global policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MfaPolicy" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    put:
+      operationId: superadminSetGlobalMfaPolicy
+      summary: Set the realm-wide second-factor policy (superadmin only)
+      description: >
+        Stores the policy. It reaches Keycloak on the next sync (`POST .../mfa-policy/sync`):
+        run the sync after every policy change. `required: true` needs an enforceable method.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MfaPolicyRequest" }
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      required: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: required without an enforceable method (VALIDATION_FAILED)
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/mfa-policy/users/{subject}:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        description: The user's Keycloak subject (`sub`). The user must have signed in once.
+        schema: { type: string }
+    get:
+      operationId: superadminGetUserMfaPolicy
+      summary: Read a user's effective second-factor policy (superadmin only)
+      description: The user's override when one is set, otherwise the global policy.
+      responses:
+        "200":
+          description: The effective policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MfaPolicy" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    put:
+      operationId: superadminSetUserMfaPolicy
+      summary: Set a user's second-factor override (superadmin only)
+      description: >
+        An override may only raise the requirement above the global policy, never lower it.
+        Takes effect on the next sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MfaPolicyRequest" }
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      required: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: required without an enforceable method, or weaker than the global policy (VALIDATION_FAILED)
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    delete:
+      operationId: superadminClearUserMfaPolicy
+      summary: Remove a user's second-factor override (superadmin only)
+      responses:
+        "200":
+          description: Removed; the global policy applies again after the next sync
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      userId: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/mfa-policy/sync:
+    post:
+      operationId: superadminSyncMfaPolicy
+      summary: Push the stored second-factor policy to every Keycloak user (superadmin only)
+      description: >
+        Writes each user's effective policy to Keycloak, where the login flow enforces it. Run
+        it after every policy change; safe to repeat.
+      responses:
+        "200":
+          description: One outcome per user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MfaSyncOutcome" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
   /api/platform/admin/modules/{key}/disable:
     post:
       operationId: superadminDisableModule
@@ -990,6 +1135,37 @@ components:
             code: { type: string }
             message: { type: string }
             details: {}
+
+    MfaPolicy:
+      type: object
+      required: [required]
+      properties:
+        required: { type: boolean }
+        method:
+          type: string
+          nullable: true
+          description: "`otp` (authenticator app), `passkey`, or `otp_or_passkey`; absent when not required."
+
+    MfaPolicyRequest:
+      type: object
+      required: [required]
+      properties:
+        required: { type: boolean }
+        method:
+          type: string
+          enum: [otp, passkey, otp_or_passkey]
+          description: Required when `required` is true.
+
+    MfaSyncOutcome:
+      type: object
+      description: One user's sync result.
+      properties:
+        UserID: { type: string }
+        KcSub: { type: string }
+        Required: { type: boolean }
+        RequiredMode: { type: string, description: "The mode written to Keycloak: `none`, `otp_required`, `passkey_required` or `otp_or_passkey_required`." }
+        Success: { type: boolean }
+        Error: { type: string }
 
     PlatformRoleRequest:
       type: object
