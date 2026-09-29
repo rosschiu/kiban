@@ -215,6 +215,13 @@ var platformLoginFormActionRe = regexp.MustCompile(`(?is)<form[^>]*id="kc-form-l
 // imported — package-private in both source packages).
 func platformInteractiveLogin(t *testing.T, gwBase, realm, username, password string) string {
 	t.Helper()
+	return platformInteractiveLoginAt(t, gwBase, "/auth", realm, username, password)
+}
+
+// platformInteractiveLoginAt is platformInteractiveLogin with the Keycloak mount chosen:
+// "/auth" (the rewriting proxy) or "" (the verbatim /realms/ mount).
+func platformInteractiveLoginAt(t *testing.T, gwBase, prefix, realm, username, password string) string {
+	t.Helper()
 	redirectURI := "http://localhost:5173/callback"
 	verifierBytes := make([]byte, 48)
 	if _, err := rand.Read(verifierBytes); err != nil {
@@ -235,7 +242,7 @@ func platformInteractiveLogin(t *testing.T, gwBase, realm, username, password st
 		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
 	}
 
-	authURL := fmt.Sprintf("%s/auth/realms/%s/protocol/openid-connect/auth?%s", gwBase, realm, url.Values{
+	authURL := fmt.Sprintf("%s%s/realms/%s/protocol/openid-connect/auth?%s", gwBase, prefix, realm, url.Values{
 		"client_id": {"kiban-frontend"}, "redirect_uri": {redirectURI}, "response_type": {"code"},
 		"scope": {"openid"}, "code_challenge": {challenge}, "code_challenge_method": {"S256"}, "state": {state},
 	}.Encode())
@@ -282,7 +289,7 @@ func platformInteractiveLogin(t *testing.T, gwBase, realm, username, password st
 		"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {redirectURI},
 		"client_id": {"kiban-frontend"}, "code_verifier": {verifier},
 	}
-	tokenResp, err := client.PostForm(fmt.Sprintf("%s/auth/realms/%s/protocol/openid-connect/token", gwBase, realm), tokenForm)
+	tokenResp, err := client.PostForm(fmt.Sprintf("%s%s/realms/%s/protocol/openid-connect/token", gwBase, prefix, realm), tokenForm)
 	if err != nil {
 		t.Fatalf("exchange code for token: %v", err)
 	}

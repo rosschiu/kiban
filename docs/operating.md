@@ -75,8 +75,11 @@ instance is a second Postgres container, never a second database name: `POSTGRES
 
 The gateway is the only public listener and forwards three Keycloak path families, all without
 a bearer: `/auth/*` (the login, token and logout endpoints, with Keycloak's absolute URLs
-rewritten to the gateway origin), `/realms/*` (action pages such as Forgot Password) and
-`/resources/*` (theme assets). `/auth/admin*`, `/auth/realms/master*` and `/realms/master*`
+rewritten behind the `/auth` prefix), `/realms/*` (the same realm endpoints, forwarded
+untouched; also Keycloak's action pages such as Forgot Password) and `/resources/*` (theme
+assets). A login works from either prefix. The discovery document at either prefix names the
+issuer `<origin>/realms/<realm>`, which is exactly what every token's `iss` carries, so a
+standard OpenID Connect library configured with either discovery URL accepts Kiban's tokens. `/auth/admin*`, `/auth/realms/master*` and `/realms/master*`
 answer `404`: the admin console, the admin REST API and the master realm are never on the public
 edge. They are reachable only on Keycloak's own host port, `http://127.0.0.1:<KEYCLOAK_HOST_PORT>`
 (default `8081`, bound to loopback), as `KC_BOOTSTRAP_ADMIN_USERNAME`.
