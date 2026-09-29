@@ -223,14 +223,17 @@ docs-freshness-check: ## regenerate docs/api, docs/sdk and the quickstart compos
 	cd web/sdk && npx typedoc --out /tmp/kiban-docs-freshness/sdk
 	cp web/sdk/RECIPES.md /tmp/kiban-docs-freshness/sdk/recipes.md
 	./scripts/gen-quickstart-compose.sh > /tmp/kiban-docs-freshness/docker-compose.yml
+	./scripts/gen-quickstart-compose.sh --public > /tmp/kiban-docs-freshness/compose.public.yaml
 	diff -rq docs/api /tmp/kiban-docs-freshness/api
 	diff -rq docs/sdk /tmp/kiban-docs-freshness/sdk
 	diff -u deploy/quickstart/docker-compose.yml /tmp/kiban-docs-freshness/docker-compose.yml
+	diff -u deploy/quickstart/compose.public.yaml /tmp/kiban-docs-freshness/compose.public.yaml
 	@rm -rf /tmp/kiban-docs-freshness
-	@echo "docs-freshness-check: docs/api, docs/sdk and deploy/quickstart/docker-compose.yml match their sources"
+	@echo "docs-freshness-check: docs/api, docs/sdk and deploy/quickstart/{docker-compose,compose.public}.yaml match their sources"
 
-quickstart-compose: ## regenerate deploy/quickstart/docker-compose.yml from infra/compose.yaml (scripts/gen-quickstart-compose.sh; docs-freshness-check diffs it)
+quickstart-compose: ## regenerate deploy/quickstart/{docker-compose,compose.public}.yaml from infra/compose{,.public}.yaml (scripts/gen-quickstart-compose.sh; docs-freshness-check diffs them)
 	./scripts/gen-quickstart-compose.sh > deploy/quickstart/docker-compose.yml
+	./scripts/gen-quickstart-compose.sh --public > deploy/quickstart/compose.public.yaml
 
 coverage-gate: ## coverage ratchet — fails if any scope drops below coverage/ratchet.json's min (needs the isolated test stack, `make test-stack-up`, not `make dev`)
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }
