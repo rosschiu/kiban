@@ -11,19 +11,14 @@ Every sample on this page compiles against the package as shipped: the same code
 
 ## Install
 
-The package is published to GitHub Packages, so npm needs to know where the `@rosschiu` scope
-lives. GitHub Packages requires an authenticated read even for public packages: a token with
-the `read:packages` scope.
-
-```
-# .npmrc, next to your package.json
-@rosschiu:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
-```
-
 ```
 npm i @rosschiu/kiban-sdk
 ```
+
+Every release is published to the public npm registry, so no `.npmrc` and no token are needed.
+The same version is also on GitHub Packages; to read from there instead, point the `@rosschiu`
+scope at `https://npm.pkg.github.com` in `.npmrc` with a token that has the `read:packages`
+scope.
 
 The package ships ESM only (`dist/index.js` and `dist/index.d.ts`). Node 20 or a modern browser
 gives you the `fetch` and `crypto.subtle` it relies on.

@@ -16,6 +16,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Two company reads for apps and members: a position's holder on a date (`GET /api/org/companies/{id}/positions/{positionId}/holder?date=`) and a group's members, for any active member of the company or a superadmin, never across companies
 - SDK parity: batch checks, companies the user may see, member directory, position holder and group members in the Go, Node (`server`) and Python SDKs; Python gains `batch_can`
 - Each sample module has its own Compose profile beside `samples`: `COMPOSE_PROFILES=docs` starts one container, not four
+- Releases publish `kiban-sdk` to PyPI and `@rosschiu/kiban-sdk` to the public npm registry (besides GitHub Packages), when the repository holds `PYPI_API_TOKEN` and `NPM_TOKEN`; the Python package is also attached to the workflow run as an artifact
 
 ## [0.1.0] — 2026-09-25
 

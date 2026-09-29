@@ -100,13 +100,12 @@ updates the app in place; a bad manifest is a `422` naming the field. No restart
     ```
 
     The backend entry is `@rosschiu/kiban-sdk/server` (ESM, Node 20 or later, no runtime
-    dependencies). GitHub Packages needs an authenticated read; see the
-    [SDK guide](sdk-guide.md#install).
+    dependencies). Published to the public npm registry; see the [SDK guide](sdk-guide.md#install).
 
 === "Python"
 
     ```
-    pip install ./sdk/python        # from a checkout; kiban-sdk on an index when published
+    pip install kiban-sdk           # or, from a checkout: pip install ./sdk/python
     ```
 
     Python 3.10 or later; depends on PyJWT with its cryptography extra.
