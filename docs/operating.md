@@ -112,6 +112,25 @@ minimum, not the username or email) and locks an account temporarily after ten f
 A user created in Keycloak is provisioned in Kiban by the gateway on that user's first
 request. Company membership is a separate administrator action.
 
+## Requiring a second factor
+
+A new realm requires no second factor. The superadmin sets the policy through the gateway and
+then pushes it to Keycloak, where the login flow enforces it:
+
+```
+# every user: password plus authenticator app (otp); passkey and otp_or_passkey also exist
+curl -X PUT $KIBAN/api/platform/admin/mfa-policy/global -H "Authorization: Bearer $SUPERADMIN" \
+  -H 'Content-Type: application/json' -d '{"required":true,"method":"otp"}'
+curl -X POST $KIBAN/api/platform/admin/mfa-policy/sync -H "Authorization: Bearer $SUPERADMIN"
+```
+
+Run the sync after every policy change; it is safe to repeat. A user without the credential is
+made to enrol at their next login; a user who has it is challenged for it. A per-user override
+(`PUT`/`DELETE .../mfa-policy/users/{subject}`, keyed by the user's Keycloak subject) may only
+raise the requirement above the global policy. `GET` on either path reads the effective policy.
+A passkey policy enrols a passkey but does not yet challenge for one at login; see
+[limitations](limitations.md).
+
 ## Backup and restore
 
 Back up two things: the Postgres application database (`pg_dump` of `kiban`; do not use
