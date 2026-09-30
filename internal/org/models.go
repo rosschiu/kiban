@@ -45,6 +45,7 @@ type IdentityUserAccount struct {
 	Lifecycle         string             `json:"lifecycle"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	Kind              string             `json:"kind"`
 }
 
 type IdentityUserLoginObservation struct {
@@ -59,6 +60,7 @@ type IdentityUserReadV struct {
 	Email             *string     `json:"email"`
 	PreferredUsername *string     `json:"preferred_username"`
 	Lifecycle         string      `json:"lifecycle"`
+	Kind              string      `json:"kind"`
 }
 
 type OrgGroup struct {

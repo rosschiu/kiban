@@ -207,6 +207,41 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); d.Allowed {
 		t.Fatal("after revoke the user's object check must be denied")
 	}
+
+	// --- 5. the service account is a user: a background job's own check is refused until an
+	// administrator makes the service account a member of the company, and the directory then
+	// shows it as kind "service" (TokiDesk spike, K11 and K12). ---
+	svcCheck := sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}
+	if d, err := app.CanService(ctx, svcCheck); err != nil || d.Allowed || d.Reason != "COMPANY_MEMBERSHIP_REQUIRED" {
+		t.Fatalf("service check before membership = %+v, %v; want denied COMPANY_MEMBERSHIP_REQUIRED", d, err)
+	}
+	serviceToken, err := app.ServiceToken(ctx)
+	if err != nil {
+		t.Fatalf("ServiceToken: %v", err)
+	}
+	serviceSub, err := app.VerifyUserToken(ctx, serviceToken)
+	if err != nil {
+		t.Fatalf("service token sub: %v", err)
+	}
+	svcMember := step("createServiceMember", http.MethodPost, "/api/org/admin/members", adminBearer, map[string]any{
+		"companyId": companyID, "code": "LIVESTORY_SVC", "displayName": "Live Story (worker)",
+	}, http.StatusCreated)
+	step("linkServiceAccount", http.MethodPost, "/api/org/admin/members/"+svcMember["id"].(string)+"/link-user", adminBearer, map[string]any{"kcSub": serviceSub}, http.StatusOK)
+	if d, err := app.CanService(ctx, svcCheck); err != nil || !d.Allowed {
+		t.Fatalf("service check after membership = %+v, %v; want allowed", d, err)
+	}
+	dir := step("directoryShowsKind", http.MethodGet, "/api/org/companies/"+companyID+"/members", userBearer, nil, http.StatusOK)
+	kinds := map[string]string{}
+	if items, _ := dir["items"].([]any); items != nil {
+		for _, it := range items {
+			m, _ := it.(map[string]any)
+			kinds[m["displayName"].(string)], _ = m["kind"].(string)
+		}
+	}
+	if kinds["Live Story (worker)"] != "service" || kinds[member["displayName"].(string)] != "person" {
+		t.Fatalf("directory kinds = %v; want the service account as service and the person as person", kinds)
+	}
+
 }
 
 func asAPIError(err error, target **sdk.APIError) bool {

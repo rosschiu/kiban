@@ -290,8 +290,28 @@ position), ask org whether the subject is an active member of the company.
 
 ### 10. Background jobs
 
-A worker, a connector or a mailer has no user. It asks for itself, with the service token, and
-is authorized by whatever an administrator granted the app's service account.
+A worker, a connector or a mailer has no user. It asks for itself, with the service token. The
+service account is a user like any other, only its sign-in differs, so it is authorized the same
+way: it must be a member of the company it acts in, and it gets what was granted to it. Until an
+administrator makes it a member, every check for it in that company answers
+`COMPANY_MEMBERSHIP_REQUIRED`. Enabling the app in a company means "this app exists here";
+membership means "this app's service account may act here". Both are deliberate.
+
+Make the service account a member once per company, with the two admin calls from
+[Administration](#administration): create a member for it, then link the member to the service
+account's subject (the `sub` of a service token; the account must have made one request
+through the gateway first, which any check does). The directory then lists it with
+`kind: "service"`, so a staff list can leave it out.
+
+```
+curl -X POST $KIBAN/api/org/admin/members -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+  -d '{"companyId":"<company>","code":"TOKIDESK","displayName":"TokiDesk (reminders)"}'
+curl -X POST $KIBAN/api/org/admin/members/<memberId>/link-user -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+  -d '{"kcSub":"<service account sub>"}'
+```
+
+Writing tuples on the app's own types needs no membership (the owner rule in step 8): that is
+the app defining its own model, not acting in the company.
 
 === "Node"
 

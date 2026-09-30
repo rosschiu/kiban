@@ -513,7 +513,7 @@ func (svc *Service) handleMemberDirectory(w http.ResponseWriter, r *http.Request
 	views := make([]map[string]any, 0, len(entries))
 	for _, e := range entries {
 		views = append(views, map[string]any{
-			"id": e.ID.String(), "displayName": e.DisplayName, "email": e.Email, "hasLinkedUser": e.HasLinkedUser,
+			"id": e.ID.String(), "displayName": e.DisplayName, "email": e.Email, "hasLinkedUser": e.HasLinkedUser, "kind": e.Kind,
 		})
 	}
 	totalPages := (total + pageSize - 1) / pageSize
@@ -672,6 +672,14 @@ func (svc *Service) handleUnlinkUser(w http.ResponseWriter, r *http.Request) {
 	errenv.WriteData(w, http.StatusOK, memberView(member))
 }
 
+// memberKind is the linked user's kind; an unlinked member is a person until proven otherwise.
+func memberKind(m Member) string {
+	if m.UserKind == "" {
+		return "person"
+	}
+	return m.UserKind
+}
+
 func memberView(m Member) map[string]any {
 	var userID any
 	if m.UserID != nil {
@@ -685,6 +693,7 @@ func memberView(m Member) map[string]any {
 		"email":       m.Email,
 		"userId":      userID,
 		"isActive":    m.IsActive,
+		"kind":        memberKind(m),
 	}
 	if m.UserID != nil {
 		v["user"] = map[string]any{
@@ -692,6 +701,7 @@ func memberView(m Member) map[string]any {
 			"email":             m.UserEmail,
 			"preferredUsername": m.UserPreferredUsername,
 			"lifecycle":         m.UserLifecycle,
+			"kind":              memberKind(m),
 		}
 	}
 	return v

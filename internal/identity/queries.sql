@@ -6,11 +6,12 @@
 -- Resolve-or-create: identity fields ONLY (never touches user_login_observation).
 -- Idempotent: calling twice with the same kc_sub returns the same row (id stable), refreshing
 -- email/preferred_username from the latest validated bearer claims.
-INSERT INTO identity.user_account (kc_sub, email, preferred_username)
-VALUES ($1, $2, $3)
+INSERT INTO identity.user_account (kc_sub, email, preferred_username, kind)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (kc_sub) DO UPDATE SET
     email = EXCLUDED.email,
     preferred_username = EXCLUDED.preferred_username,
+    kind = EXCLUDED.kind,
     updated_at = now()
 RETURNING *;
 

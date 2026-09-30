@@ -10,6 +10,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - The discovery document's `issuer` equals the `iss` every token carries (`<origin>/realms/<realm>`) at both `/auth/realms/…` and `/realms/…`, so a standard OpenID Connect library accepts Kiban's tokens; the `/realms/` mount forwards Keycloak untouched, so a login started there completes
 - Zero-clone quickstart serves a real origin: `deploy/quickstart/compose.public.yaml` (generated from the source overlay) sets the public issuer, Keycloak hostname, `KIBAN_DOMAIN` and `KIBAN_TRUSTED_PROXY` from one `KIBAN_PUBLIC_HOST`
 - Second-factor policy through the gateway: `GET`/`PUT /api/platform/admin/mfa-policy/global`, `GET`/`PUT`/`DELETE .../users/{subject}`, `POST .../sync` (superadmin); documented on the Operating page, with the note that a new realm requires no second factor
+- Members carry `kind` (`person` or `service`): identity records whether a user is a client's service account (confirmed through Keycloak's client link at provisioning), and the member directory and admin member routes return it; bootstrap grants identity's service account the read-only `view-clients` role for that check and repairs it on an existing realm
+- Docs: an app's service account is a user; to run background jobs in a company it must be made a member of that company (the two admin calls), while writing tuples on the app's own types needs no membership
 
 ## [0.1.0] — 2026-09-25
 

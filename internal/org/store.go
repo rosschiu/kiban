@@ -603,6 +603,7 @@ type Member struct {
 	UserEmail             string
 	UserPreferredUsername string
 	UserLifecycle         string
+	UserKind              string // "person" or "service"; "" when unlinked
 }
 
 func memberFromRow(r OrgMember) Member {
@@ -613,13 +614,14 @@ func memberFromRow(r OrgMember) Member {
 }
 
 func memberFromJoinRow(id, companyID, userID pgtype.UUID, code, displayName string, email *string, isActive bool,
-	userKcSub, userEmail, userPreferredUsername, userLifecycle *string,
+	userKcSub, userEmail, userPreferredUsername, userLifecycle, userKind *string,
 ) Member {
 	return Member{
 		ID: uuidFromPg(id), CompanyID: uuidFromPg(companyID), Code: code, DisplayName: displayName,
 		Email: pgconv.DerefStr(email), UserID: pgconv.UUIDPtrFromPg(userID), IsActive: isActive,
 		UserKcSub: pgconv.DerefStr(userKcSub), UserEmail: pgconv.DerefStr(userEmail),
 		UserPreferredUsername: pgconv.DerefStr(userPreferredUsername), UserLifecycle: pgconv.DerefStr(userLifecycle),
+		UserKind: pgconv.DerefStr(userKind),
 	}
 }
 
@@ -724,7 +726,7 @@ func (s *Store) GetMember(ctx context.Context, id uuid.UUID) (Member, error) {
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
 	return memberFromJoinRow(row.ID, row.CompanyID, row.UserID, row.Code, row.DisplayName, row.Email, row.IsActive,
-		row.UserKcSub, row.UserEmail, row.UserPreferredUsername, row.UserLifecycle), nil
+		row.UserKcSub, row.UserEmail, row.UserPreferredUsername, row.UserLifecycle, row.UserKind), nil
 }
 
 // ListMembers returns companyID's member directory, page/pageSize (default 1/25, clamp 1..100),
@@ -747,7 +749,7 @@ func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, page
 	out := make([]Member, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, memberFromJoinRow(r.ID, r.CompanyID, r.UserID, r.Code, r.DisplayName, r.Email, r.IsActive,
-			r.UserKcSub, r.UserEmail, r.UserPreferredUsername, r.UserLifecycle))
+			r.UserKcSub, r.UserEmail, r.UserPreferredUsername, r.UserLifecycle, r.UserKind))
 	}
 	return out, int(total), nil
 }
@@ -885,6 +887,7 @@ func (s *Store) LinkUser(ctx context.Context, actor string, checker IdentityStat
 	after.UserEmail = pgconv.DerefStr(identityUser.Email)
 	after.UserPreferredUsername = pgconv.DerefStr(identityUser.PreferredUsername)
 	after.UserLifecycle = identityUser.Lifecycle
+	after.UserKind = identityUser.Kind
 
 	// The member-bridge tuple: grant
 	// `member:<memberId>#mapped_user @ user:<kcSub>` in the SAME transaction as the link row
@@ -925,7 +928,7 @@ func (s *Store) UnlinkUser(ctx context.Context, actor string, memberID uuid.UUID
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
 	before := memberFromJoinRow(beforeRow.ID, beforeRow.CompanyID, beforeRow.UserID, beforeRow.Code, beforeRow.DisplayName,
-		beforeRow.Email, beforeRow.IsActive, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle)
+		beforeRow.Email, beforeRow.IsActive, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle, beforeRow.UserKind)
 
 	row, err := q.UnlinkMemberUser(ctx, pgFromUUID(memberID))
 	if err != nil {
@@ -1398,6 +1401,7 @@ type MemberDirectoryEntry struct {
 	DisplayName   string
 	Email         string
 	HasLinkedUser bool
+	Kind          string // "person", or "service" when the linked user is a client's service account
 }
 
 // MemberDirectory returns companyID's ACTIVE member directory (the share-with/assign-to picker
@@ -1431,7 +1435,7 @@ func (s *Store) MemberDirectory(ctx context.Context, companyID uuid.UUID, q stri
 		if r.Email != nil {
 			email = *r.Email
 		}
-		out = append(out, MemberDirectoryEntry{ID: uuidFromPg(r.ID), DisplayName: r.DisplayName, Email: email, HasLinkedUser: r.HasLinkedUser})
+		out = append(out, MemberDirectoryEntry{ID: uuidFromPg(r.ID), DisplayName: r.DisplayName, Email: email, HasLinkedUser: r.HasLinkedUser, Kind: r.Kind})
 	}
 	return out, int(total), nil
 }

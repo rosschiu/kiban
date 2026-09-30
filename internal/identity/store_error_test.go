@@ -41,7 +41,7 @@ func TestStoreQueryMethods_PropagateContextError(t *testing.T) {
 		name string
 		call func() error
 	}{
-		{"ResolveOrCreate", func() error { _, err := store.ResolveOrCreate(ctx, "x", "x@example.com", "x"); return err }},
+		{"ResolveOrCreate", func() error { _, err := store.ResolveOrCreate(ctx, "x", "x@example.com", "x", ""); return err }},
 		{"GetUserByKcSub", func() error { _, err := store.GetUserByKcSub(ctx, "x"); return err }},
 		{"GetUserByID", func() error { _, err := store.GetUserByID(ctx, userID); return err }},
 		{"EffectivePolicy", func() error { _, err := store.EffectivePolicy(ctx, userID); return err }},
@@ -100,7 +100,7 @@ func TestSetUserPolicy_RequiredWithoutMethodRejected(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-setuser-nomethod", "sn@example.com", "sn")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-setuser-nomethod", "sn@example.com", "sn", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestSetUserPolicy_AuditCallbackErrorRollsBack(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-setuser-audit-fail", "su@example.com", "su")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-setuser-audit-fail", "su@example.com", "su", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestClearUserPolicy_AuditCallbackErrorRollsBack(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-clearuser-audit-fail", "cu@example.com", "cu")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-clearuser-audit-fail", "cu@example.com", "cu", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}

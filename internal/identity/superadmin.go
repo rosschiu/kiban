@@ -17,7 +17,7 @@ import (
 // upsert as ResolveOrCreate).
 func SeedSuperadmin(ctx context.Context, db DBTX, kcSub, email, preferredUsername string) (User, error) {
 	row, err := New(db).UpsertUserAccount(ctx, UpsertUserAccountParams{
-		KcSub: kcSub, Email: pgconv.StrOrNil(email), PreferredUsername: pgconv.StrOrNil(preferredUsername),
+		KcSub: kcSub, Email: pgconv.StrOrNil(email), PreferredUsername: pgconv.StrOrNil(preferredUsername), Kind: UserKindPerson,
 	})
 	if err != nil {
 		return User{}, fmt.Errorf("identity: seed superadmin: resolve-or-create: %w", err)
