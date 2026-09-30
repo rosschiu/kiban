@@ -8,7 +8,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Authz debug check answers an engine refusal as `422` `VALIDATION_FAILED` (was the `VALIDATION_ERROR` shape code)
 - Quickstart "What to try first" points at the admin routes instead of a removed section
 - The discovery document's `issuer` equals the `iss` every token carries (`<origin>/realms/<realm>`) at both `/auth/realms/…` and `/realms/…`, so a standard OpenID Connect library accepts Kiban's tokens; the `/realms/` mount forwards Keycloak untouched, so a login started there completes
-- An object carries one company anchor: the grants route refuses a second anchor with `422` and migration `authz/0012` adds the unique index behind it; a repeated tuple is still a no-op, a swallowed anchor conflict no longer ledgers a phantom grant
+- An object carries one company anchor: the grants route refuses a second anchor with `422` and migration `authz/0012` adds the unique index behind it; a repeated tuple is still a no-op; the grant ledger records changes only (a duplicate grant or a revoke of a missing tuple no longer writes a phantom row)
 - Zero-clone quickstart serves a real origin: `deploy/quickstart/compose.public.yaml` (generated from the source overlay) sets the public issuer, Keycloak hostname, `KIBAN_DOMAIN` and `KIBAN_TRUSTED_PROXY` from one `KIBAN_PUBLIC_HOST`
 
 ## [0.1.0] — 2026-09-25

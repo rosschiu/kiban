@@ -180,11 +180,13 @@ func writeTuples(ctx context.Context, tx pgx.Tx, actor, correlationID, op string
 		if tp.ObjectType == "" || tp.ObjectID == "" || tp.Relation == "" || tp.SubjectType == "" || tp.SubjectID == "" {
 			return fmt.Errorf("authz/store: %s: tuple has an empty required field: %+v", op, tp)
 		}
+		var tag pgconn.CommandTag
+		var err error
 		switch op {
 		case "grant":
-			if _, err := tx.Exec(ctx, insertTupleSQL,
-				tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation,
-			); err != nil {
+			tag, err = tx.Exec(ctx, insertTupleSQL,
+				tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation)
+			if err != nil {
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "tuple_one_anchor_per_object" {
 					return &AnchorConflictError{Tuple: tp}
@@ -192,11 +194,17 @@ func writeTuples(ctx context.Context, tx pgx.Tx, actor, correlationID, op string
 				return fmt.Errorf("authz/store: insert tuple: %w", err)
 			}
 		case "revoke":
-			if _, err := tx.Exec(ctx, deleteTupleSQL,
-				tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation,
-			); err != nil {
+			tag, err = tx.Exec(ctx, deleteTupleSQL,
+				tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation)
+			if err != nil {
 				return fmt.Errorf("authz/store: delete tuple: %w", err)
 			}
+		}
+		// The ledger records changes, not requests: a grant of a tuple that already exists and a
+		// revoke of one that does not are no-ops (idempotent by design) and leave no row. The
+		// only silent path is therefore the exact duplicate; any other conflict raised above.
+		if tag.RowsAffected() == 0 {
+			continue
 		}
 		if _, err := tx.Exec(ctx, insertLedgerSQL,
 			actor, tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation, op, corrID,

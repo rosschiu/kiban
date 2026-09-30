@@ -66,6 +66,57 @@ func TestGrantBasic(t *testing.T) {
 	}
 }
 
+func TestGrantLedgerRecordsChangesOnly(t *testing.T) {
+	pool := authzPool(t)
+	ctx := context.Background()
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id LIKE 'grant-noop-%'`)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.grant_ledger WHERE object_id LIKE 'grant-noop-%'`)
+	})
+	tp := store.Tuple{ObjectType: "company", ObjectID: "grant-noop-c1", Relation: "admin", SubjectType: "user", SubjectID: "grant-u1"}
+	run := func(op string) {
+		t.Helper()
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if op == "grant" {
+			err = store.Grant(ctx, tx, "test-actor", "", tp)
+		} else {
+			err = store.Revoke(ctx, tx, "test-actor", "", tp)
+		}
+		if err != nil {
+			tx.Rollback(ctx) //nolint:errcheck
+			t.Fatalf("%s: %v", op, err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	ledger := func(op string) int {
+		t.Helper()
+		var n int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM authz.grant_ledger WHERE object_id = 'grant-noop-c1' AND op = $1`, op).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	run("revoke") // nothing to revoke: no ledger row
+	if n := ledger("revoke"); n != 0 {
+		t.Fatalf("revoke of a missing tuple ledgered %d row(s), want 0", n)
+	}
+	run("grant")
+	run("grant") // duplicate: tuple unchanged, no second ledger row
+	if n := ledger("grant"); n != 1 {
+		t.Fatalf("grant twice ledgered %d row(s), want 1", n)
+	}
+	run("revoke")
+	run("revoke")
+	if n := ledger("revoke"); n != 1 {
+		t.Fatalf("revoke twice ledgered %d row(s), want 1", n)
+	}
+}
+
 func TestGrantRevoke(t *testing.T) {
 	pool := authzPool(t)
 	ctx := context.Background()
