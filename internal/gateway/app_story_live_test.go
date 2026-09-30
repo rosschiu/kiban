@@ -98,8 +98,12 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	userSub := platformKCFindUser(t, plainHTTP, adminBase, kcAdmin, plainUsername)
 
 	adminPool := platformLivePool(t, "kiban", platformLiveEnv(t, "KIBAN_DB_PASSWORD"))
-	var companyID string
+	var companyID, companyBID string
 	t.Cleanup(func() {
+		if companyBID != "" {
+			_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id LIKE $1 OR subject_id LIKE $1`, companyBID+"%")
+			_, _ = adminPool.Exec(ctx, `DELETE FROM org.org_unit WHERE id = $1`, companyBID)
+		}
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.grant_ledger WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.default_grant WHERE module_key = $1`, appKey)
@@ -165,6 +169,20 @@ func TestLive_AppBesideKiban(t *testing.T) {
 		sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: "viewer", SubjectType: "user", SubjectID: userSub},
 	); err != nil {
 		t.Fatalf("Grant as the app: %v", err)
+	}
+	// K25: an object carries one anchor. A second company cannot claim t-1, even from the
+	// owning app, and the first company's view of it is unchanged.
+	companyB := step("createCompanyB", http.MethodPost, "/api/org/admin/units", adminBearer, map[string]any{
+		"typeKey": "company", "parentId": nil, "code": "storyb" + platformRandString(t, 5), "name": "Story Co B",
+	}, http.StatusCreated)
+	companyBID, _ = companyB["id"].(string)
+	err = app.Grant(ctx, companyBID,
+		sdk.AnchorTuple(appKey, "livestory_ticket", "t-1", companyBID),
+		sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: "viewer", SubjectType: "user", SubjectID: userSub},
+	)
+	var anchorErr *sdk.APIError
+	if !asAPIError(err, &anchorErr) || anchorErr.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("second anchor from another company: err = %v, want 422", err)
 	}
 	fact, err := app.MemberBySubject(ctx, companyID, userSub)
 	if err != nil || !fact.IsMember || !fact.IsActive {

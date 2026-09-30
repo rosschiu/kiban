@@ -9,9 +9,11 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // The platform role has exactly one record: the tuple `system:platform#superadmin @ user:<kcSub>`
@@ -60,7 +62,11 @@ type Tuple struct {
 const insertTupleSQL = `
 INSERT INTO authz.tuple (object_type, object_id, relation, subject_type, subject_id, subject_relation)
 VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT DO NOTHING`
+ON CONFLICT (object_type, object_id, relation, subject_type, subject_id, subject_relation) DO NOTHING`
+
+// The conflict target is the primary key ONLY: a repeated identical tuple is a no-op, but a
+// violation of tuple_one_anchor_per_object (0012, a second company anchor) must raise, not
+// be swallowed — a bare ON CONFLICT DO NOTHING would skip the row and still ledger a grant.
 
 const deleteTupleSQL = `
 DELETE FROM authz.tuple
@@ -86,6 +92,33 @@ func Grant(ctx context.Context, tx pgx.Tx, actor, correlationID string, tuples .
 // still ledgered.
 func Revoke(ctx context.Context, tx pgx.Tx, actor, correlationID string, tuples ...Tuple) error {
 	return writeTuples(ctx, tx, actor, correlationID, "revoke", tuples)
+}
+
+// AnchorConflictError is returned by Grant when a tuple would give an object a second company
+// anchor (authz.tuple's tuple_one_anchor_per_object index, migrations/authz/0012). Callers map
+// it to a client error; it is never an internal failure.
+type AnchorConflictError struct{ Tuple Tuple }
+
+func (e *AnchorConflictError) Error() string {
+	return "authz/store: object " + e.Tuple.ObjectType + ":" + e.Tuple.ObjectID + " already carries a company anchor"
+}
+
+const anchorOfSQL = `
+SELECT subject_id FROM authz.tuple
+WHERE object_type = $1 AND object_id = $2 AND relation = 'company_module' AND subject_type = 'company_module'`
+
+// AnchorOf returns the company_module anchor (`<companyId>/<module>`) an object carries, or ""
+// when it has none. At most one exists (0012's unique index).
+func AnchorOf(ctx context.Context, q Rower, objectType, objectID string) (string, error) {
+	var anchor string
+	err := q.QueryRow(ctx, anchorOfSQL, objectType, objectID).Scan(&anchor)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("authz/store: anchor of %s:%s: %w", objectType, objectID, err)
+	}
+	return anchor, nil
 }
 
 // Queryer is the minimal read interface ListDirectTuplesForSubject needs — satisfied by both
@@ -152,6 +185,10 @@ func writeTuples(ctx context.Context, tx pgx.Tx, actor, correlationID, op string
 			if _, err := tx.Exec(ctx, insertTupleSQL,
 				tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation,
 			); err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "tuple_one_anchor_per_object" {
+					return &AnchorConflictError{Tuple: tp}
+				}
 				return fmt.Errorf("authz/store: insert tuple: %w", err)
 			}
 		case "revoke":

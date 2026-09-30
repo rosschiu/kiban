@@ -873,6 +873,53 @@ func TestHandleGrants(t *testing.T) {
 			t.Fatal("nothing may be written on a refused request")
 		}
 	})
+	t.Run("K25: in-request anchor on an object anchored elsewhere: 422, nothing written", func(t *testing.T) {
+		before := tupleCount(t, "hg-doc-other")
+		rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
+			tuple("hg_doc", "hg-doc-other", "company_module", "company_module", anchor),
+			tuple("hg_doc", "hg-doc-other", "viewer", "user", "hg-u1"),
+		}})
+		expect(t, rec, http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+		if !strings.Contains(rec.Body.String(), "already anchored to company_module:"+otherCompany+"/"+mod) {
+			t.Fatalf("body must name the existing anchor, body=%s", rec.Body.String())
+		}
+		if tupleCount(t, "hg-doc-other") != before {
+			t.Fatal("a refused second anchor must write nothing")
+		}
+		if got, err := store.AnchorOf(context.Background(), pool, "hg_doc", "hg-doc-other"); err != nil || got != otherCompany+"/"+mod {
+			t.Fatalf("AnchorOf = %q, %v; want the original anchor", got, err)
+		}
+	})
+	t.Run("K25: the same anchor repeated is idempotent", func(t *testing.T) {
+		body := map[string]any{"op": "grant", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}
+		expect(t, post(t, adminSub, body), http.StatusOK, "")
+		expect(t, post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
+			tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor),
+			tuple("hg_doc", "hg-doc-same", "viewer", "user", "hg-u1"),
+		}}), http.StatusOK, "")
+		if tupleCount(t, "hg-doc-same") != 2 {
+			t.Fatalf("tuples on hg-doc-same = %d, want 2", tupleCount(t, "hg-doc-same"))
+		}
+	})
+	t.Run("K25: re-anchoring is revoke then grant", func(t *testing.T) {
+		expect(t, post(t, adminSub, map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}), http.StatusOK, "")
+		if got, _ := store.AnchorOf(context.Background(), pool, "hg_doc", "hg-doc-same"); got != "" {
+			t.Fatalf("AnchorOf after revoke = %q, want none", got)
+		}
+	})
+	t.Run("K25: the unique index refuses a second anchor on any write path", func(t *testing.T) {
+		ctx := context.Background()
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx) //nolint:errcheck
+		err = store.Grant(ctx, tx, "test-fixture", "", store.Tuple{ObjectType: "hg_doc", ObjectID: "hg-doc-other", Relation: "company_module", SubjectType: "company_module", SubjectID: anchor})
+		var conflict *store.AnchorConflictError
+		if !errors.As(err, &conflict) || conflict.Tuple.ObjectID != "hg-doc-other" {
+			t.Fatalf("Grant of a second anchor: err = %v, want *store.AnchorConflictError", err)
+		}
+	})
 	t.Run("non-member bearer: 403 COMPANY_MEMBERSHIP_REQUIRED, audited", func(t *testing.T) {
 		corr := fmt.Sprintf("hg-outsider-%d", time.Now().UnixNano())
 		rec := post(t, outsideSub, map[string]any{"op": "grant", "correlationId": corr, "tuples": []map[string]string{cmTuple}})
