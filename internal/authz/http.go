@@ -190,6 +190,20 @@ func (c fragmentEngineChecker) Defines(objType, rel string) bool {
 // bearer, business eligibility is not wired, and a global-scope check must name the platform
 // role it requires (an empty role can never be held, so a request
 // without one is malformed, not a denial). Writes the 400 and returns false on failure.
+// moduleOrFeaturePrefix fills a missing moduleKey from the feature key's first segment: feature
+// keys are `<module>.<feature>`, so a caller that names no module is asking about that module,
+// never about "no module" (which would let a company-scope check skip the module gate). The
+// platform's own `auth.*` keys resolve to decision.FoundationModuleKey, which is always enabled.
+func moduleOrFeaturePrefix(moduleKey, featureKey string) string {
+	if moduleKey != "" {
+		return moduleKey
+	}
+	if i := strings.IndexByte(featureKey, '.'); i > 0 {
+		return featureKey[:i]
+	}
+	return moduleKey
+}
+
 func validateCanRequest(w http.ResponseWriter, sub string, req canRequestWire) bool {
 	if req.ActorOverride != "" && req.ActorOverride != sub {
 		errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "actorId must match the bearer subject, or be omitted"})
@@ -219,6 +233,7 @@ func (svc *Service) handleCan(w http.ResponseWriter, r *http.Request) {
 	if !validateCanRequest(w, sub, req) {
 		return
 	}
+	req.ModuleKey = moduleOrFeaturePrefix(req.ModuleKey, req.FeatureKey)
 	if !svc.featureDeclared(w, r, req.ModuleKey, req.FeatureKey) {
 		return
 	}
@@ -265,6 +280,7 @@ func (svc *Service) handleBatchCan(w http.ResponseWriter, r *http.Request) {
 	if !validateCanRequest(w, sub, req.canRequestWire) {
 		return
 	}
+	req.ModuleKey = moduleOrFeaturePrefix(req.ModuleKey, req.FeatureKey)
 	if !svc.featureDeclared(w, r, req.ModuleKey, req.FeatureKey) {
 		return
 	}
@@ -392,6 +408,27 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	loaded := checker.(fragmentEngineChecker).loaded
+
+	// Company administrators: `company:<companyId>#admin @ user:<sub>` is the one base-model
+	// tuple this route writes, and only a superadmin (global scope, platform role) may write
+	// it. Every other base-type tuple stays refused by rule 1 below.
+	if isCompanyAdminAppointment(req, tuples) {
+		d := svc.evaluate(r.Context(), decider, decision.Request{
+			SubjectID: sub, FeatureKey: decision.FoundationModuleKey + ".company_administration.appoint", ModuleKey: decision.FoundationModuleKey,
+			Scope: decision.ScopeGlobal, RequiredPlatformRole: summarySuperadminRole, CorrelationID: req.CorrelationID,
+		})
+		if !d.Allowed {
+			svc.auditDenial(r.Context(), sub, decision.FoundationModuleKey+".grants", d)
+			if d.Reason == decision.ReasonDependencyUnavailable {
+				writeDecision(w, d)
+				return
+			}
+			errenv.WriteError(w, http.StatusForbidden, errenv.APIError{Code: errenv.CodeAuthorizationDenied, Message: "appointing a company administrator requires superadmin access", Details: map[string]any{"reason": string(d.Reason)}})
+			return
+		}
+		svc.writeGrants(w, r, sub, decision.FoundationModuleKey, req, tuples)
+		return
+	}
 
 	// Rule 1 — every object resolves to one module M; one M per request.
 	moduleKey := ""
@@ -527,6 +564,12 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	svc.writeGrants(w, r, sub, moduleKey, req, tuples)
+}
+
+// writeGrants applies an already-authorized grant or revoke in one transaction with its audit
+// row and answers the count.
+func (svc *Service) writeGrants(w http.ResponseWriter, r *http.Request, sub, moduleKey string, req grantsRequestWire, tuples []store.Tuple) {
 	tx, err := svc.Pool.Begin(r.Context())
 	if err != nil {
 		writeInternalError(w, err)
@@ -556,6 +599,18 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	errenv.WriteData(w, http.StatusOK, map[string]any{"status": "ok", "count": len(tuples)})
+}
+
+// isCompanyAdminAppointment reports whether every tuple of the request is
+// `company:<companyId>#admin @ user:<sub>`: the one base-model tuple the grants route writes,
+// which appoints (or, on revoke, dismisses) an administrator of that company.
+func isCompanyAdminAppointment(req grantsRequestWire, tuples []store.Tuple) bool {
+	for _, t := range tuples {
+		if t.ObjectType != "company" || t.ObjectID != req.CompanyID || t.Relation != "admin" || t.SubjectType != "user" || t.SubjectID == "" || t.SubjectRelation != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // --- diagnostics-only raw check (never wired unless Service.DebugCheck) ---

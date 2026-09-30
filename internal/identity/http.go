@@ -104,7 +104,15 @@ func (svc *Service) handleResolve(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	user, err := svc.store.ResolveOrCreate(r.Context(), claims.Sub, claims.Email, claims.PreferredUsername)
+	// Keycloak knows whether the subject is a client's service account (AdminClient.
+	// IsServiceAccount); identity records it so directories can tell people and services apart.
+	// Unreachable Keycloak defaults to person and the next resolve (once per gateway cache
+	// period) corrects it.
+	kind := UserKindPerson
+	if isSA, err := svc.admin.IsServiceAccount(r.Context(), claims.Sub); err == nil && isSA {
+		kind = UserKindService
+	}
+	user, err := svc.store.ResolveOrCreate(r.Context(), claims.Sub, claims.Email, claims.PreferredUsername, kind)
 	if err != nil {
 		httpx.WriteInternalError(w, err)
 		return
@@ -129,6 +137,7 @@ func (svc *Service) handleUserState(w http.ResponseWriter, r *http.Request) {
 	errenv.WriteData(w, http.StatusOK, map[string]string{
 		"lifecycle": state.Lifecycle,
 		"kcEnabled": state.KCEnabled,
+		"kind":      state.Kind,
 	})
 }
 
@@ -370,6 +379,7 @@ func userView(u User) map[string]any {
 		"email":             u.Email,
 		"preferredUsername": u.PreferredUsername,
 		"lifecycle":         u.Lifecycle,
+		"kind":              u.Kind,
 	}
 }
 

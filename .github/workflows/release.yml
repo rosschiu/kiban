@@ -245,9 +245,87 @@ jobs:
             echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION"
           fi
 
+      # The public npm registry, so `npm i @rosschiu/kiban-sdk` needs no .npmrc and no token.
+      # Runs only when the repository holds NPM_TOKEN (an npm automation token for the
+      # @rosschiu scope); without it the step says so and the release still succeeds.
+      - name: Publish to registry.npmjs.org (when NPM_TOKEN is set; idempotent)
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "sdk: NPM_TOKEN not set — not publishing to registry.npmjs.org (GitHub Packages only)"
+            exit 0
+          fi
+          cd web/sdk
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if npm view "@rosschiu/kiban-sdk@$PKG_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "sdk: @rosschiu/kiban-sdk@$PKG_VERSION already on registry.npmjs.org — skipping"
+          else
+            printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
+            npm publish --registry=https://registry.npmjs.org --access public --userconfig "$RUNNER_TEMP/.npmrc"
+            rm -f "$RUNNER_TEMP/.npmrc"
+            echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION to registry.npmjs.org"
+          fi
+
+  sdk-python:
+    name: sdk-python (publish kiban-sdk to PyPI)
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # GUARD: pyproject version must equal the tag, same rule as the npm package.
+      - name: Guard — pyproject.toml version must equal the tag (v stripped)
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(python3 -c 'import tomllib;print(tomllib.load(open("sdk/python/pyproject.toml","rb"))["project"]["version"])')"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::sdk/python/pyproject.toml version ($PKG_VERSION) does not match tag ${GITHUB_REF_NAME} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            exit 1
+          fi
+          echo "guard: pyproject version $PKG_VERSION matches tag ${GITHUB_REF_NAME}"
+
+      - name: Build sdist and wheel
+        run: |
+          python3 -m pip install --quiet build
+          python3 -m build --outdir dist sdk/python
+          ls -l dist
+
+      - name: Upload the built package as a workflow artifact (always, token or not)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiban-sdk-python
+          path: dist/*
+
+      # Runs only when the repository holds PYPI_API_TOKEN (a PyPI API token scoped to the
+      # kiban-sdk project); without it the step says so and the release still succeeds.
+      - name: Publish to PyPI (when PYPI_API_TOKEN is set; idempotent)
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$PYPI_API_TOKEN" ]; then
+            echo "sdk-python: PYPI_API_TOKEN not set — not publishing to PyPI (artifact only)"
+            exit 0
+          fi
+          PKG_VERSION="${GITHUB_REF_NAME#v}"
+          if curl -fsS "https://pypi.org/pypi/kiban-sdk/$PKG_VERSION/json" >/dev/null 2>&1; then
+            echo "sdk-python: kiban-sdk $PKG_VERSION already on PyPI — skipping"
+            exit 0
+          fi
+          python3 -m pip install --quiet twine
+          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_API_TOKEN" python3 -m twine upload --non-interactive dist/*
+          echo "sdk-python: published kiban-sdk $PKG_VERSION to PyPI"
+
   release:
     name: GitHub Release
-    needs: [images, sdk]
+    needs: [images, sdk, sdk-python]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -15,11 +15,11 @@ func TestResolveOrCreate_Idempotent(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	first, err := store.ResolveOrCreate(ctx, "kc-sub-1", "a@example.com", "alice")
+	first, err := store.ResolveOrCreate(ctx, "kc-sub-1", "a@example.com", "alice", "")
 	if err != nil {
 		t.Fatalf("first resolve: %v", err)
 	}
-	second, err := store.ResolveOrCreate(ctx, "kc-sub-1", "a@example.com", "alice")
+	second, err := store.ResolveOrCreate(ctx, "kc-sub-1", "a@example.com", "alice", "")
 	if err != nil {
 		t.Fatalf("second resolve: %v", err)
 	}
@@ -44,11 +44,11 @@ func TestResolveOrCreate_RefreshesClaims(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	first, err := store.ResolveOrCreate(ctx, "kc-sub-2", "old@example.com", "old-name")
+	first, err := store.ResolveOrCreate(ctx, "kc-sub-2", "old@example.com", "old-name", "")
 	if err != nil {
 		t.Fatalf("first resolve: %v", err)
 	}
-	second, err := store.ResolveOrCreate(ctx, "kc-sub-2", "new@example.com", "new-name")
+	second, err := store.ResolveOrCreate(ctx, "kc-sub-2", "new@example.com", "new-name", "")
 	if err != nil {
 		t.Fatalf("second resolve: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestResolveOrCreate_DoesNotTouchLoginObservation(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-3", "c@example.com", "carol")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-3", "c@example.com", "carol", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}

@@ -96,6 +96,11 @@ describe("createAppClient", () => {
       calls.push({ url, auth: headers.Authorization ?? "", body: init?.body ? JSON.parse(String(init.body)) : undefined });
       if (url.endsWith("/effective-access/can")) return json(200, { data: { allowed: true, reason: "ALLOWED" } });
       if (url.includes("/members/by-subject/")) return json(200, { data: { isMember: true, isActive: true, memberId: "m-1" } });
+      if (url.endsWith("/effective-access/batch-can")) return json(200, { data: [{ object: { type: "ticket", id: "t-1" }, relation: "viewer", decision: { allowed: true, reason: "ALLOWED" } }] });
+      if (url.endsWith("/api/org/me/companies")) return json(200, { data: [{ id: "co-1", code: "ACME", name: "Acme", isActive: true }] });
+      if (url.includes("/holder?date=")) return json(200, { data: { id: "a-1", positionId: "p-1", memberId: "m-1", validFrom: "2026-01-01", validTo: null } });
+      if (url.endsWith("/groups/g-1/members")) return json(200, { data: [{ groupId: "g-1", memberId: "m-1", memberDisplayName: "Alice" }] });
+      if (url.includes("/members?")) return json(200, { data: { items: [{ id: "m-1", displayName: "Alice", email: "", hasLinkedUser: true, kind: "person" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } });
       return json(200, { data: { status: "ok" } });
     });
     const credentials = { getAccessToken: async () => "svc-token" };
@@ -114,5 +119,21 @@ describe("createAppClient", () => {
     expect((calls[2]?.body as { op: string }).op).toBe("revoke");
     expect(calls[3]?.url).toBe(`${ORIGIN}/api/org/companies/co-1/members/by-subject/alice`);
     expect(calls[4]?.url).toBe(`${ORIGIN}/api/platform/admin/apps`);
+
+    // The reads and the batch check, and which bearer each one carries.
+    const batch = await app.batchCan("user-token", { featureKey: "tokidesk.ticket.view", moduleKey: "tokidesk", scope: "company", companyId: "co-1" }, [{ object: { type: "ticket", id: "t-1" }, relation: "viewer" }]);
+    expect(batch[0]?.decision.allowed).toBe(true);
+    expect((calls[5]?.body as { items: unknown[] }).items).toHaveLength(1);
+    const companies = await app.meCompanies("user-token");
+    expect(companies[0]?.code).toBe("ACME");
+    const page = await app.memberDirectory("co-1", "ali", 1, 25);
+    expect(page.items[0]?.kind).toBe("person");
+    expect(calls[7]?.url).toBe(`${ORIGIN}/api/org/companies/co-1/members?q=ali&page=1&pageSize=25`);
+    const holder = await app.positionHolder("co-1", "p-1", "2026-09-28");
+    expect(holder.memberId).toBe("m-1");
+    expect(calls[8]?.url).toBe(`${ORIGIN}/api/org/companies/co-1/positions/p-1/holder?date=2026-09-28`);
+    const members = await app.groupMembers("co-1", "g-1");
+    expect(members[0]?.memberDisplayName).toBe("Alice");
+    expect(calls.slice(5).map((c) => c.auth)).toEqual(["Bearer user-token", "Bearer user-token", "Bearer svc-token", "Bearer svc-token", "Bearer svc-token"]);
   });
 });

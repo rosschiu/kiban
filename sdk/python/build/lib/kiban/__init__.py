@@ -5,7 +5,7 @@ from .client import (
     Decision,
     KibanApiError,
     KibanClient,
-    MemberFact,
+    BatchResult, MemberFact,
     VerifiedToken,
 )
 

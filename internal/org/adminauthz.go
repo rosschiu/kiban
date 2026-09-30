@@ -31,6 +31,18 @@ type engineAdminAuthorizer struct {
 func (a engineAdminAuthorizer) Can(ctx context.Context, authCtx AuthContext, action string) (bool, error) {
 	correlationID, _ := obs.CorrelationFromContext(ctx)
 	d, err := a.inner.Decide(ctx, authCtx.RawBearer, action, correlationID)
+	return mapDecision(d, err)
+}
+
+// CanInCompany is the company-scope leg: superadmin by the operator exception, or the
+// company's admin relation (authzclient.AdminAuthorizer.DecideInCompany).
+func (a engineAdminAuthorizer) CanInCompany(ctx context.Context, authCtx AuthContext, action, companyID string) (bool, error) {
+	correlationID, _ := obs.CorrelationFromContext(ctx)
+	d, err := a.inner.DecideInCompany(ctx, authCtx.RawBearer, action, companyID, correlationID)
+	return mapDecision(d, err)
+}
+
+func mapDecision(d authzclient.Decision, err error) (bool, error) {
 	if err != nil {
 		return false, ErrAuthorizationUnavailable
 	}

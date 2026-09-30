@@ -24,15 +24,15 @@ func fakeAuthzServer(t *testing.T, status int, body string) *httptest.Server {
 		if r.Header.Get("Authorization") == "" {
 			t.Error("expected Authorization header to be forwarded")
 		}
-		var req struct{ FeatureKey, Scope string }
+		var req struct{ FeatureKey, Scope, CompanyID string }
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
 		if req.FeatureKey != authzclient.AdminFeatureKey {
 			t.Errorf("featureKey = %q, want %q", req.FeatureKey, authzclient.AdminFeatureKey)
 		}
-		if req.Scope != "global" {
-			t.Errorf("scope = %q, want global", req.Scope)
+		if req.Scope != "global" && !(req.Scope == "company" && req.CompanyID != "") {
+			t.Errorf("scope = %q companyId = %q, want global, or company with a company id", req.Scope, req.CompanyID)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(status)

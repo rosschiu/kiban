@@ -59,7 +59,17 @@ type canRequestWire struct {
 	RequiredPlatformRole string `json:"requiredPlatformRole"`
 	Action               string `json:"action"`
 	CorrelationID        string `json:"correlationId,omitempty"`
+
+	// Company scope only (DecideInCompany): the company, the operator exception and the
+	// company role the subject must hold there.
+	CompanyID                         string `json:"companyId,omitempty"`
+	AllowPlatformOperatorCompanyScope bool   `json:"allowPlatformOperatorCompanyScope,omitempty"`
+	RequiredCompanyRole               string `json:"requiredCompanyRole,omitempty"`
 }
+
+// CompanyAdminRole is the company-scope role an administrator of a company holds: the base
+// model's `company:<id>#admin` relation, the same tuple the grants route calls the admin relation.
+const CompanyAdminRole = "admin"
 
 type canResponseWire struct {
 	Data struct {
@@ -89,6 +99,11 @@ var knownDenialReasons = map[string]bool{
 	"KEYCLOAK_DISABLED":       true,
 	"USER_LIFECYCLE_DISABLED": true,
 	"PLATFORM_ROLE_REQUIRED":  true,
+	// Company scope (DecideInCompany): steps 4-5 of the company leg, all definite.
+	"COMPANY_INACTIVE":            true,
+	"COMPANY_MEMBERSHIP_REQUIRED": true,
+	"COMPANY_ACCESS_BLOCKED":      true,
+	"COMPANY_ROLE_REQUIRED":       true,
 }
 
 // Denied reports a CONFIRMED denial: authz answered, and the reason is one it produces for
@@ -112,17 +127,52 @@ func (d Decision) Denied() bool {
 // DEPENDENCY_UNAVAILABLE => 503 mapping (internal/authz/http.go's writeDecision) along with every
 // other transport-level failure (401, 500, ...).
 func (a *AdminAuthorizer) Decide(ctx context.Context, rawBearer, action, correlationID string) (Decision, error) {
-	if rawBearer == "" {
-		return Decision{}, ErrAuthorizationUnavailable
-	}
-
-	body, err := json.Marshal(canRequestWire{
+	return a.decide(ctx, rawBearer, canRequestWire{
 		FeatureKey:           AdminFeatureKey,
 		Scope:                "global",
 		RequiredPlatformRole: AdminRequiredRole,
 		Action:               action,
 		CorrelationID:        correlationID,
 	})
+}
+
+// DecideInCompany asks authz whether the bearer may perform action in companyID as the
+// superadmin OR as an administrator of that company: one company-scope decision with the
+// platform-operator exception on and RequiredCompanyRole = CompanyAdminRole. A superadmin
+// passes without membership; anyone else must be an active member holding the admin relation.
+func (a *AdminAuthorizer) DecideInCompany(ctx context.Context, rawBearer, action, companyID, correlationID string) (Decision, error) {
+	return a.decideInCompany(ctx, rawBearer, action, companyID, CompanyAdminRole, correlationID)
+}
+
+// DecideMemberInCompany is DecideInCompany without the role: the superadmin, or any active,
+// unblocked member of the company. The read guard for a company's own facts.
+func (a *AdminAuthorizer) DecideMemberInCompany(ctx context.Context, rawBearer, action, companyID, correlationID string) (Decision, error) {
+	return a.decideInCompany(ctx, rawBearer, action, companyID, "", correlationID)
+}
+
+func (a *AdminAuthorizer) decideInCompany(ctx context.Context, rawBearer, action, companyID, role, correlationID string) (Decision, error) {
+	if companyID == "" {
+		return Decision{}, ErrAuthorizationUnavailable
+	}
+	return a.decide(ctx, rawBearer, canRequestWire{
+		FeatureKey:                        AdminFeatureKey,
+		Scope:                             "company",
+		CompanyID:                         companyID,
+		RequiredPlatformRole:              AdminRequiredRole,
+		AllowPlatformOperatorCompanyScope: true,
+		RequiredCompanyRole:               role,
+		Action:                            action,
+		CorrelationID:                     correlationID,
+	})
+}
+
+func (a *AdminAuthorizer) decide(ctx context.Context, rawBearer string, wire canRequestWire) (Decision, error) {
+	if rawBearer == "" {
+		return Decision{}, ErrAuthorizationUnavailable
+	}
+	correlationID := wire.CorrelationID
+
+	body, err := json.Marshal(wire)
 	if err != nil {
 		return Decision{}, ErrAuthorizationUnavailable
 	}

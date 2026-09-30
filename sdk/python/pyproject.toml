@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kiban-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Kiban SDK for a Python backend beside Kiban: service token, user token verification, access decisions, relation tuples, members."
 readme = "README.md"
 license = { text = "Apache-2.0" }

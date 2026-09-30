@@ -100,13 +100,12 @@ updates the app in place; a bad manifest is a `422` naming the field. No restart
     ```
 
     The backend entry is `@rosschiu/kiban-sdk/server` (ESM, Node 20 or later, no runtime
-    dependencies). GitHub Packages needs an authenticated read; see the
-    [SDK guide](sdk-guide.md#install).
+    dependencies). Published to the public npm registry; see the [SDK guide](sdk-guide.md#install).
 
 === "Python"
 
     ```
-    pip install ./sdk/python        # from a checkout; kiban-sdk on an index when published
+    pip install kiban-sdk           # or, from a checkout: pip install ./sdk/python
     ```
 
     Python 3.10 or later; depends on PyJWT with its cryptography extra.
@@ -290,8 +289,28 @@ position), ask org whether the subject is an active member of the company.
 
 ### 10. Background jobs
 
-A worker, a connector or a mailer has no user. It asks for itself, with the service token, and
-is authorized by whatever an administrator granted the app's service account.
+A worker, a connector or a mailer has no user. It asks for itself, with the service token. The
+service account is a user like any other, only its sign-in differs, so it is authorized the same
+way: it must be a member of the company it acts in, and it gets what was granted to it. Until an
+administrator makes it a member, every check for it in that company answers
+`COMPANY_MEMBERSHIP_REQUIRED`. Enabling the app in a company means "this app exists here";
+membership means "this app's service account may act here". Both are deliberate.
+
+Make the service account a member once per company, with the two admin calls from
+[Administration](#administration): create a member for it, then link the member to the service
+account's subject (the `sub` of a service token; the account must have made one request
+through the gateway first, which any check does). The directory then lists it with
+`kind: "service"`, so a staff list can leave it out.
+
+```
+curl -X POST $KIBAN/api/org/admin/members -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+  -d '{"companyId":"<company>","code":"TOKIDESK","displayName":"TokiDesk (reminders)"}'
+curl -X POST $KIBAN/api/org/admin/members/<memberId>/link-user -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+  -d '{"kcSub":"<service account sub>"}'
+```
+
+Writing tuples on the app's own types needs no membership (the owner rule in step 8): that is
+the app defining its own model, not acting in the company.
 
 === "Node"
 
@@ -310,6 +329,41 @@ is authorized by whatever an administrator granted the app's service account.
     ```go
     d, err := kiban.CanService(ctx, sdk.CanRequest{FeatureKey: "tokidesk.reminders.run", ModuleKey: "tokidesk", CompanyID: companyID})
     ```
+
+### 11. Read the org
+
+Four reads cover most approval and routing needs. The app's service account must be a member of
+the company for the last three (step 10).
+
+=== "Node"
+
+    ```ts
+    const companies = await kiban.meCompanies(userBearer);                 // what this user may see
+    const page      = await kiban.memberDirectory(companyId, "ali");       // active members, kind person|service
+    const holder    = await kiban.positionHolder(companyId, positionId, "2026-10-01");
+    const members   = await kiban.groupMembers(companyId, groupId);
+    ```
+
+=== "Python"
+
+    ```python
+    companies = kiban.me_companies(user_bearer)
+    page      = kiban.member_directory(company_id, q="ali")
+    holder    = kiban.position_holder(company_id, position_id, "2026-10-01")   # KibanApiError 404: nobody that day
+    members   = kiban.group_members(company_id, group_id)
+    ```
+
+=== "Go"
+
+    ```go
+    companies, err := kiban.MeCompanies(ctx, userBearer)
+    page, err      := kiban.MemberDirectory(ctx, companyID, "ali", 1, 25)
+    holder, err    := kiban.PositionHolder(ctx, companyID, positionID, time.Now())
+    members, err   := kiban.GroupMembers(ctx, companyID, groupID)
+    ```
+
+For a page with many permission-driven controls, ask once: `batchCan` / `batch_can` / `BatchCan`
+take up to 100 object-relation pairs with the user's bearer and answer one decision each.
 
 ## Where the user's token lives
 
@@ -561,9 +615,12 @@ For the full API and the recipes, see the [SDK guide](sdk-guide.md).
 
 ## Administration
 
-A superadmin creates companies, org units and members through the gateway, with the token from
-[Getting a token for the shell](#getting-a-token-for-the-shell). The sample shell's
-administration pages do the same for positions and groups.
+A superadmin creates companies and org units through the gateway, with the token from
+[Getting a token for the shell](#getting-a-token-for-the-shell). Members, positions,
+assignments and groups of a company are managed by the superadmin or by an administrator of
+that company: a member who holds the company's `admin` relation (`company:<id>#admin`, granted
+with `POST /api/auth/grants` by a superadmin). The sample shell's administration pages use the
+same routes for positions and groups.
 
 Create the company. A company has no parent; `typeKey` is `company`:
 
