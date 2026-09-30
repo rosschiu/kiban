@@ -4,9 +4,12 @@
 # `deploy/k8s/gen-secrets.sh` — the K8s equivalent of `infra/setup.sh`'s .env
 # scaffolding: write-once, never regenerates a value that's already there, generates a fresh
 # strong value for every field `base/secret.example.yaml` ships as `REPLACE_ME`. Produces
-# `deploy/k8s/base/secret.yaml` (gitignored — never commit it; `base/kustomization.yaml`
-# references it by that exact filename, so `kubectl apply -k` fails loudly if this script hasn't
-# been run yet, by design).
+# `deploy/k8s/overlays/<overlay>/secret.yaml` (gitignored — never commit it; the overlay's
+# kustomization references it by that exact filename, so `kubectl apply -k` fails loudly if this
+# script hasn't been run yet, by design). The base itself carries no Secret, so it can be used as
+# a remote Kustomize base from another repository (K23).
+#
+# Usage: deploy/k8s/gen-secrets.sh <kind|production>
 #
 # Same hex-not-base64 reasoning infra/setup.sh's own comment documents: every service
 # builds its Postgres DSN as a plain `fmt.Sprintf("postgres://%s:%s@host:port/db", ...)` with no
@@ -14,15 +17,26 @@
 # parsing outright. `openssl rand -hex 24` output is never URL-meaningful.
 set -euo pipefail
 
+overlay="${1:?usage: gen-secrets.sh <kind|production>}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 example_file="$script_dir/base/secret.example.yaml"
-out_file="$script_dir/base/secret.yaml"
+overlay_dir="$script_dir/overlays/$overlay"
+out_file="$overlay_dir/secret.yaml"
+legacy_file="$script_dir/base/secret.yaml"
 
 log() { echo "[gen-secrets] $*" >&2; }
 
 if [ ! -f "$example_file" ]; then
   echo "[gen-secrets] FAIL: $example_file not found" >&2
   exit 1
+fi
+
+[ -d "$overlay_dir" ] || { echo "[gen-secrets] FAIL: no such overlay: $overlay_dir" >&2; exit 1; }
+
+# 0.1.0 wrote the file into base/. Same Secret name, same values: move it, never regenerate.
+if [ -f "$legacy_file" ] && [ ! -f "$out_file" ]; then
+  mv "$legacy_file" "$out_file"
+  log "moved 0.1.0's $legacy_file to $out_file (values unchanged; the base no longer lists it)"
 fi
 
 if [ -f "$out_file" ]; then
@@ -52,4 +66,4 @@ log "generating $out_file from $example_file's field list"
 } > "$out_file"
 
 chmod 600 "$out_file"
-log "done — $out_file written (0600). Apply with: kubectl apply -k deploy/k8s/overlays/<kind|production>"
+log "done — $out_file written (0600). Apply with: deploy/k8s/apply.sh $overlay"
