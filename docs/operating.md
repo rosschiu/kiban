@@ -53,7 +53,8 @@ Key settings:
   clients with a service account and the `kiban-api` audience, for backends that need their own
   token. See [Getting a token for a service](integrate.md#getting-a-token-for-a-service).
 - `KIBAN_DOMAIN`: read by `bootstrap` and by the gateway from their own environment, not from
-  `.env`. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
+  `.env`. A host name with an optional `:port`, no scheme and no path; the value is not
+  validated, and a scheme or path yields redirect URIs and a CORS origin that never match. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
   origins to exactly `https://<domain>/*` on every run, and the gateway allows that one origin
   for CORS; when unset, bootstrap registers the fixed dev origins (`http://localhost`,
   `http://localhost:3000`, `http://localhost:5173`, `https://127.0.0.1:8443`,
