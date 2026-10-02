@@ -28,5 +28,6 @@ kiban.grant(company_id, [kiban.anchor_tuple("tokidesk", "ticket", ticket_id, com
                           "subjectType": "user", "subjectId": user.subject}])
 ```
 
-Install: `pip install kiban-sdk` (from this directory: `pip install .`). Depends on PyJWT with
+Install from a checkout: `pip install ./sdk/python` (from this directory: `pip install .`); the
+package is not on an index yet. Depends on PyJWT with
 its cryptography extra. Licence: Apache-2.0.

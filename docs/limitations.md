@@ -12,8 +12,20 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **No field-level or row-level policy on member data.** Every active member of a company can
   read the directory, including email addresses.
 - **Keycloak's own container holds two secrets as environment variables**: its database
-  password and its bootstrap admin password. Keycloak reads neither from a file. Every Kiban
-  service reads its secrets from files.
+  password and its bootstrap admin password. Keycloak reads neither from a file. Kiban's
+  services read the superadmin's initial password, the identity client secret and the Keycloak
+  admin password from files; each service's own database role password is an environment
+  variable.
+- **An app's backend can write tuples outside its own types once its service account is a
+  company member.** The owner rule covers the app's own types. For any other enabled app's or
+  module's types the grants route applies the membership rule, and a service account that was
+  made a member of a company (which background jobs and the org reads need) passes it there.
+  Module-tier tuples still need the company-module administrator relation.
+- **A manifest without the `company_module` anchor is accepted at registration.** Every object
+  type must declare `"company_module": { "this": true }`, but registering an app does not check
+  it. Once such an app is enabled the authorization service cannot load the model and answers
+  every check in the deployment with an error until the app is disabled or the manifest is
+  registered again, corrected.
 - **The org service's internal member-fact reads take no bearer.** Inside the Compose network,
   `GET /internal/org/companies/{id}/members/by-kcsub/{kcSub}` answers any caller; every write
   checks the bearer. Never publish a module container, or any internal service, on a host port.
@@ -33,7 +45,8 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A new user has no company until an administrator adds them.** The gateway provisions the
   account on the first request; membership is an explicit administrator action (there is no
   invite flow).
-- **The "archived" user state cannot be set.** The lifecycle has the state; no API writes it.
+- **The user lifecycle cannot be changed.** The column allows `active` and `disabled`; no API
+  writes either, and there is no `archived` state. Disable the login in Keycloak instead.
 - **Passkey login needs a real hostname.** WebAuthn refuses an IP-literal origin such as
   `https://127.0.0.1:8443`; use a DNS name.
 - **A deep link is lost after 30 minutes idle.** A session whose access token has expired but
@@ -76,8 +89,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.
 - **Dependency resolution between modules is declared but not enforced.** The validator checks
-  that declared dependencies exist, are acyclic and are marked required; nothing at runtime
-  checks that a dependency is enabled before the dependent module is.
+  that declared dependencies exist, are acyclic and are marked required. The gateway refuses a
+  module whose dependency is not enabled (`MODULE_DEPENDENCY_MISSING`), but nothing loads a
+  manifest's dependencies into the registry, so the check never fires.
 - **Entitlement and licensing state exist in the contract but are not enforced.**
 
 ## The differential harness
@@ -102,19 +116,25 @@ deliberately:
 - **Timesheet.** An approved week can be reopened by adding an entry. `view=all` on the
   submissions list is visible to any member, and a submission is readable by id. Entries can be
   recorded on inactive projects, and a day's total is unbounded. Re-assigning an approver does
-  not revoke the previous approver's grants. The sample shell's approvals page can render an
-  empty list while the API returns rows.
-- **Helpdesk.** A `closed` ticket still accepts comments and reassignment. Agent and approver
-  assignment accept member ids from another company (the foreign user still cannot act: every
-  decision requires membership). Position- and group-based agent bindings are not reconciled
-  when the organization unit is deleted.
-- **DocShare.** A share can be revoked while the member is unlinked from a login.
+  not revoke the previous approver's grants. The sample shell's approvals page has no loading
+  state: it shows its empty state until the first response arrives, and when the request fails.
+  Approver assignment accepts member ids from another company.
+- **Helpdesk.** A `closed` ticket still accepts comments and reassignment. Agent creation and
+  ticket assignment by member id accept a member id from another company (the foreign user
+  still cannot act: every decision requires membership). Helpdesk does not reconcile its
+  position and group bindings itself; org refuses to delete a position that is still bound
+  (`409`), and a group cannot be deleted at all in 0.1.
+- **DocShare.** Revoking a share while the member is unlinked from a login removes the share row
+  but not the grant, so the old login keeps access.
 - **Notification.** A subscriber email address is not validated. The webhook target policy
   blocks private and loopback ranges but allows carrier-grade NAT and other special-purpose
   ranges.
-- **All four.** Ticket descriptions, document bodies and similar text fields have no size cap
-  below the gateway's request limit, and list endpoints return bodies inline. Two concurrent
-  requests with the same idempotency key can both be answered `409` instead of one winning.
-  Audit rows carry no correlation id and are written for no-op mutations. `/health` is a
+- **All four.** Ticket descriptions, document bodies and notification message bodies have no
+  size cap below the gateway's 32 MB module request limit (helpdesk comments are capped at
+  10,000 characters), and the helpdesk, DocShare and notification lists return those bodies
+  inline; the helpdesk and DocShare lists are not paged. Of two concurrent requests with the
+  same idempotency key, one wins and the other is answered `409` (timesheet: `422`) instead of
+  the winner's response.
+  Audit rows are written for no-op mutations. `/health` is a
   constant `200` (use `/ready` for the database check). The sample OpenAPI files omit some
   status codes the handlers emit.

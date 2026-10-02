@@ -21,8 +21,8 @@ full detail.
 One call over `effectiveAccess.can()` that collapses the wire decision into a plain
 `{allowed, reason}` result, for the common "should I show/allow this" question a component asks
 before rendering a gated action or nav entry. A denial is a normal result and does not throw;
-`KibanApiError` is thrown only for a transport or envelope failure. Global-scope (omit
-`companyId`) covers superadministration-style checks; company-scope (`companyId` set) covers
+`KibanApiError` is thrown for a non-2xx answer (400, 401, 422, 5xx). Global-scope (omit
+`companyId`, set `requiredPlatformRole`) covers superadministration-style checks; company-scope (`companyId` set) covers
 membership/company-role-gated features.
 
 - Pattern + snippet: [`docs/recipes/canI.md`](docs/recipes/canI.md)
@@ -32,11 +32,12 @@ membership/company-role-gated features.
 
 ## `grantObjectAccess` / `revokeObjectAccess`: "share object X with subject Y as `<relation>`"
 
-One call over the gateway's superadmin-guarded `POST /api/auth/grants`
+One call over the gateway's guarded `POST /api/auth/grants`
 (`internal/gateway/foundation_routes.go`, forwarding to authz's `handleGrants`) that grants (or,
 via the inverse `revokeObjectAccess`, revokes) one authz tuple: a plain user, or a userset subject
-(set `subjectRelation` to grant to a position's holder or a group's members). Only a caller
-holding `auth.platform_administration.access` may call either; every other caller gets `403`.
+(set `subjectRelation` to grant to a position's holder or a group's members). Only a
+superadmin (a caller holding `auth.platform_administration.access`) or a registered app's
+backend may call either; every other caller gets `403`.
 
 - Pattern + snippet: [`docs/recipes/grantObjectAccess.md`](docs/recipes/grantObjectAccess.md)
 - Unit test: `web/sdk/test/recipes/grantObjectAccess.test.ts`

@@ -87,7 +87,7 @@ export async function canIChecks(api: ApiClient, companyId: string): Promise<{ a
     requiredPlatformRole: "kiban-superadmin"
   });
 
-  const view = await canI({ featureKey: "core.company.view", companyId });
+  const view = await canI({ featureKey: "notification.inbox.view", moduleKey: "notification", companyId });
   return { admin: admin.allowed, view: view.allowed, reason: view.reason };
 }
 

@@ -5,7 +5,7 @@ Module key: `helpdesk`.
 The helpdesk module shows role tiers and assignment. Any active company member (the reporter)
 can raise a ticket. An agent works it and an admin administers the module: three role tiers, one
 workflow. It uses a different authz idiom from DocShare's per-file model. `helpdesk.tickets.work`
-and `helpdesk.manage` are plain company_module tier checks (member/editor/admin), never per-ticket
+and `helpdesk.manage` are plain company_module tier checks (editor/admin), never per-ticket
 tuples. Who can see a ticket, and who can change its status, is decided by service-logic
 comparisons against the ticket's reporter and assignee (see the header comment in
 `service/store.go`).
@@ -36,7 +36,9 @@ A ticket, or the company-wide agent tier, can be bound to one of three targets:
 Two authorization idioms:
 
 1. **Tier checks** (`helpdesk.tickets.create`/`helpdesk.tickets.work`/`helpdesk.manage`):
-   `company_module#member`/`#editor`/`#admin` on the caller, via `AuthzClient.Can`. The
+   `helpdesk.tickets.create` is gated on company membership alone (no relation leg);
+   `helpdesk.tickets.work` and `helpdesk.manage` check `company_module#editor` and `#admin` on
+   the caller, via `AuthzClient.Can`. The
    `#editor` (agent) tier can be held three ways. It can be held directly (`@ user:<kcSub>`, the
    member path). It can be held through a bound position's current holder
    (`@ position:<id>#holder`), so a successor inherits the position's access with zero permission
@@ -53,8 +55,8 @@ Two authorization idioms:
 A ticket has at most one of `assignee_member_id`, `assignee_position_id` and `assignee_group_id`
 (enforced by migrations 0005 and 0007). A position or group must already be bound as a helpdesk
 agent (`POST /agents` with `{positionId}` or `{groupId}`) before a ticket can be assigned to it.
-Otherwise the request fails with 422; assigning one ticket never binds the target as a side
-effect.
+Otherwise the request fails with 422; assigning to a position or group never binds it as a
+side effect. Assigning to a member who is not yet an agent grants that member the agent tier.
 
 `GET .../assignable-positions` and `GET .../assignable-groups` are both gated on
 `helpdesk.manage`. They are the module's own reads of its agent-bound positions and groups that
@@ -68,9 +70,11 @@ position, where only the single holder is notified.
 
 ## Running it
 
-Run `make migrate-helpdesk` after `make migrate-registry` (which creates the `kiban_helpdesk`
-role). Then `make dev` or `make test-stack-up` starts the `helpdesk` compose service with the rest
-of the stack.
+`make test-stack-up` always starts the `helpdesk` service. `make dev` starts it only when `.env` has
+`COMPOSE_PROFILES=samples` and `KIBAN_INSTALLED_MODULES` lists `helpdesk` before the stack's first
+boot. Both apply the migrations themselves. `make migrate-registry` (which creates the
+`kiban_helpdesk` role) and then `make migrate-helpdesk` are for a host-run service against the
+published Postgres port.
 
 ## Testing
 
@@ -80,5 +84,5 @@ of the stack.
 - `npm run -w shell test`: frontend unit tests in `web/shell/test/modules/helpdesk/`.
 - `npm run -w shell e2e`: the full journeys. `web/shell/e2e/helpdesk.spec.ts` runs the
   three-user workflow, and `web/shell/e2e/walkthrough.spec.ts` rehearses the demo script,
-  including a position-assignment handover. Nothing exercises group assignment through the real
-  UI yet.
+  including a position-assignment handover. `web/shell/e2e/groups.spec.ts` runs group binding
+  and group assignment through the real UI.

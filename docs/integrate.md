@@ -17,8 +17,9 @@ should see.
 
 Three things 0.1 does not do. They shape the steps below.
 
-1. **Registering an app, enabling it, and creating companies and members are superadmin
-   work.** There is no self-service registration and no company-administrator delegation yet.
+1. **Registering an app, enabling it, and creating companies and org units are superadmin
+   work.** Members, positions and groups of a company can also be managed by an administrator
+   of that company, whom a superadmin appoints. There is no self-service registration.
 2. **Checks answer for the bearer only.** Your backend asks with the user's own token ("may
    this user") or its service token ("may I"). There is no "list every object this user may
    see" API yet.
@@ -52,7 +53,8 @@ You should see `service client tokidesk-backend: applied` in bootstrap's log on 
 
 One JSON document: the app key, the service client, the feature keys your code will ask about,
 and the object types and relations your app owns. Every object type declares `company_module`
-(the anchor that binds an object to a company) plus its own relations.
+(the anchor that binds an object to a company) plus its own relations. Registration does not
+check for the anchor; see [limitations](limitations.md).
 
 ```json
 {
@@ -71,7 +73,8 @@ and the object types and relations your app owns. Every object type declares `co
 }
 ```
 
-Relations follow the base model's grammar (`this`, `computedUserset`, `tupleToUserset`); the
+Relations follow the base model's grammar (`this`, `computedUserset`, `tupleToUserset`,
+`union`); the
 [Building](building.md#authorization-fragment-authzfragmentjson) page documents it. A type the
 base model or another app already declares is refused.
 
@@ -88,8 +91,11 @@ curl -sk -X POST https://127.0.0.1:8443/api/platform/admin/modules/tokidesk/enab
 ```
 
 You should see `{"data":{"module":"tokidesk","installed":true,"enabled":false,...}}` from the
-first call and `"enabled":true` from the second. Registering again with a higher `version`
-updates the app in place; a bad manifest is a `422` naming the field. No restart happens.
+first call and `"enabled":true` from the second. Registering again updates the app in place
+(the `version` is stored, not compared); a bad manifest is a `422` naming the field. No restart
+happens; the gateway recognises the app's service client within about five seconds. Each
+backend SDK also has the registration call (`registerApp`, `register_app`, `RegisterApp`),
+which takes a superadmin's bearer and the manifest.
 
 ### 4. Install the SDK
 
@@ -147,6 +153,11 @@ updates the app in place; a bad manifest is a `422` naming the field. No restart
 You should see no network call yet in Node and Python; the Go client fetches the realm's
 signing keys at construction and fails loudly if the gateway is unreachable.
 
+The `make dev` gateway serves a self-signed certificate, which Node, Python and Go reject until
+your backend trusts it (`NODE_EXTRA_CA_CERTS` for Node, `SSL_CERT_FILE` for Python and Go, or
+your own `sdk.Config.HTTPClient` in Go). The image quickstart's `http://localhost:3000` has no
+certificate to trust.
+
 ### 6. Verify the user's token on every request
 
 Your frontend sends the user's Kiban access token as `Authorization: Bearer`. Verify it before
@@ -171,7 +182,7 @@ back is who the user is and nothing more; never read a role from the token.
         bearer = (authorization or "").removeprefix("Bearer ")
         if not bearer:
             raise PermissionError("login required")
-        return kiban.verify_user_token(bearer).subject   # raises jwt.InvalidTokenError otherwise
+        return kiban.verify_user_token(bearer).subject   # raises jwt.PyJWTError otherwise
     ```
 
 === "Go"
@@ -224,7 +235,9 @@ never an exception.
     ```
 
 You should see `allowed: true` for a member of the company who holds `viewer` on the ticket,
-`COMPANY_MEMBERSHIP_REQUIRED` for anyone else, `MODULE_DISABLED` while the app is not enabled,
+`COMPANY_MEMBERSHIP_REQUIRED` for someone who is not a member of the company, `ENGINE_DENIED`
+for a member who does not hold `viewer` (or when the ticket has no anchor), `MODULE_DISABLED`
+while the app is not enabled,
 and a `422` for a feature key your manifest does not declare.
 
 ### 8. Write tuples when things happen
@@ -261,14 +274,21 @@ company; without it every check on the object is denied.
     ```
 
 `revoke` removes what `grant` wrote. You should see `403 AUTHORIZATION_DENIED` if you name
-another app's object type and `422 VALIDATION_FAILED` for a base type such as `company`: an app
-owns its own types and nothing else. A subject can also be a position (`subjectType:
-"position"`) or a group, so access follows the chair or the membership.
+another enabled app's or module's object type while your service account is not a member of
+that company, and `422 VALIDATION_FAILED` for a base type such as `company` or a type no enabled
+app declares. Outside its own types an app's backend is treated like any other caller: the
+membership rule applies, so a service account that is a member of the company (step 10) may
+write tuples on another enabled app's or module's objects there; see
+[limitations](limitations.md). A subject can also be a position (`subjectType:
+"position"`, `subjectRelation: "holder"`) or a group (`subjectType: "group"`, `subjectRelation:
+"member"`), so access follows the chair or the membership. Without the `subjectRelation` the
+tuple is stored and never matches.
 
 ### 9. Look the member up
 
-The subject is enough for tuples. When your app needs the member record (a display name, a
-position), ask org whether the subject is an active member of the company.
+The subject is enough for tuples. When your app needs the member id (to store beside its own
+rows), ask org whether the subject is an active member of the company. The answer carries the
+id only; names come from the member directory (step 11).
 
 === "Node"
 
@@ -294,7 +314,7 @@ A worker, a connector or a mailer has no user. It asks for itself, with the serv
 service account is a user like any other, only its sign-in differs, so it is authorized the same
 way: it must be a member of the company it acts in, and it gets what was granted to it. Until an
 administrator makes it a member, every check for it in that company answers
-`COMPANY_MEMBERSHIP_REQUIRED`. Enabling the app in a company means "this app exists here";
+`COMPANY_MEMBERSHIP_REQUIRED`. Enabling the app means "this app exists in this deployment";
 membership means "this app's service account may act here". Both are deliberate.
 
 Make the service account a member once per company, with the two admin calls from
@@ -304,9 +324,9 @@ through the gateway first, which any check does). The directory then lists it wi
 `kind: "service"`, so a staff list can leave it out.
 
 ```
-curl -X POST $KIBAN/api/org/admin/members -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+curl -sk https://127.0.0.1:8443/api/org/admin/members -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"companyId":"<company>","code":"TOKIDESK","displayName":"TokiDesk (reminders)"}'
-curl -X POST $KIBAN/api/org/admin/members/<memberId>/link-user -H "Authorization: Bearer $SUPERADMIN" -H 'Content-Type: application/json' \
+curl -sk https://127.0.0.1:8443/api/org/admin/members/<memberId>/link-user -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"kcSub":"<service account sub>"}'
 ```
 
@@ -378,8 +398,9 @@ Two shapes work with Kiban as shipped; the choice is the app's, not a Kiban sett
   it server-side, and gives the browser its own httpOnly cookie for the session, the shape an app
   with an existing cookie session already has. The browser never sees a Kiban token; your backend
   calls Kiban with the SDK and the token it holds, and your existing CSRF protection stays as it
-  is. Register your backend's callback URL as the login's redirect URI (`KIBAN_EXTRA_ORIGINS`) and
-  exchange the code there.
+  is. Add your backend's origin (for example `https://app.example.com`) to `KIBAN_EXTRA_ORIGINS`;
+  every path under it, your callback included, is then a valid redirect URI. Exchange the code
+  there.
 
 ## Frontend track
 
@@ -503,14 +524,14 @@ const api = createApiClient({
 
 You should see: `await createOrgClient(api).meCompanies()` returns the companies the user is an
 active member of. For a freshly bootstrapped stack that is `[]` even for the superadmin: nobody
-is a member of anything until a company and a member exist (see the REST-only track's escape
-hatch, or the finding "Read this before you start", point 2).
+is a member of anything until a company and a member exist (see
+[Administration](#administration)).
 
 ### 6. Ask before showing a feature
 
 `canI` answers "may this user use this feature, in this company?". A denial is a normal
-`{ allowed: false, reason }`, never an exception. For a module feature, pass the module key; the
-decision then also checks that the module is enabled for the company.
+`{ allowed: false, reason }`, never an exception. `moduleKey` is optional: when omitted it is taken from the
+feature key's first segment, and the decision always checks that this module is enabled.
 
 ```ts
 export async function canSeeInbox(api: ApiClient, companyId: string): Promise<boolean> {
@@ -521,10 +542,11 @@ export async function canSeeInbox(api: ApiClient, companyId: string): Promise<bo
 ```
 
 You should see `true` for an active member of `companyId` when the notification module is
-enabled there, and `false` with a reason such as `COMPANY_MEMBERSHIP_REQUIRED` otherwise. The
+enabled, and `false` with a reason such as `COMPANY_MEMBERSHIP_REQUIRED` otherwise. The
 request on the wire is `POST /api/auth/effective-access/can` with
 `{ "featureKey": "notification.inbox.view", "moduleKey": "notification", "scope": "company", "companyId": "..." }`.
-The gateway answers for the bearer only; a body naming another subject is rejected.
+Kiban answers for the bearer only: a body `actorId` naming anyone else is a `400 BAD_REQUEST`,
+and no other subject field exists.
 
 ### 7. Call a module endpoint
 
@@ -565,13 +587,13 @@ the error code:
 
 ```ts
 try {
-  await org.adminCreateGroup(summary.companyId, { code: "sales", name: "Sales" });
+  await createOrgClient(api).adminCreateGroup(companyId, { code: "sales", name: "Sales" });
 } catch (err) {
   if (!(err instanceof KibanApiError)) throw err;
   switch (err.code) {
     case ApiErrorCode.AuthTokenMissing:
     case ApiErrorCode.AuthTokenInvalid:
-      session.login(); // refresh already failed; start over
+      void session.login(); // refresh already failed; start over
       break;
     case ApiErrorCode.Forbidden:
     case ApiErrorCode.AuthorizationDenied:
@@ -581,7 +603,8 @@ try {
     case ApiErrorCode.ModuleNotInstalled:
       // the module is off for this deployment
       break;
-    case ApiErrorCode.ValidationFailed:
+    case ApiErrorCode.ValidationError: // org and the platform routes
+    case ApiErrorCode.ValidationFailed: // the authorization service
     case ApiErrorCode.Conflict:
       // show err.message and err.details to the user
       break;
@@ -594,8 +617,8 @@ try {
 }
 ```
 
-You should see: an access token lives 300 seconds and the refresh token 30 minutes idle (the
-realm's defaults). Within those limits the user never sees a login page again; past them the
+You should see: an access token lives 300 seconds and the refresh token 30 minutes idle, 10
+hours in total (the realm's defaults). Within those limits the user never sees a login page again; past them the
 `AuthTokenInvalid` branch starts a new login.
 
 ### 9. Log out
@@ -635,8 +658,9 @@ curl -sk https://127.0.0.1:8443/api/org/admin/units \
 { "data": { "id": "<companyId>", "typeKey": "company", "parentId": null, "code": "ACME", "name": "Acme Ltd", "isActive": true } }
 ```
 
-Creating an active company also grants every enabled app's and module's administrator relation
-for it in the same transaction, so the company is never without an accountable administrator. An
+Creating an active company also links every enabled app and module to the platform for that
+company in the same transaction (`company_module:<companyId>/<key>#system`), so superadmins
+administer it from the start. An
 org unit below the company is the same call with `"typeKey": "business_unit"` or `"territory"`
 (the shipped taxonomy) and `"parentId": "<companyId>"`. Codes are normalised to upper case.
 
@@ -675,17 +699,18 @@ All on the gateway origin. The full contract is the [Platform API](api/platform.
 
 | Family | What it is | Who may call it |
 |---|---|---|
-| `POST /api/auth/effective-access/can`, `.../batch-can` | The access decision for the bearer, one or many objects | Any bearer, for itself only |
+| `POST /api/auth/effective-access/can`, `.../batch-can` | The access decision for the bearer, one or many objects (at most 100 per batch) | Any bearer, for itself only |
 | `GET /api/auth/effective-access/summary?companyId=` | Feature keys, role bindings and object grants the bearer holds | Any bearer, for itself only |
-| `POST /api/auth/grants` | Write or remove relation tuples, bound to one company and one app or module | A registered app's backend, on its own object types; or a superadmin |
+| `POST /api/auth/grants` | Write or remove relation tuples, bound to one company and one app or module | A registered app's backend, on its own object types; or a superadmin (who also appoints a company administrator with it) |
 | `GET /api/org/companies/{id}/members/by-subject/{sub}` | Is this subject an active member, and which member | A registered app's backend, or a superadmin |
 | `GET /api/org/me/companies` | Companies the bearer is an active member of | Any bearer |
 | `GET /api/org/companies/{id}/members?q=&page=&pageSize=` | Member directory of one company | Active members of that company, or a superadmin |
-| `/api/org/admin/units`, `/api/org/admin/members` | Company, org-unit and member administration | Superadmin |
-| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin |
+| `/api/org/admin/units`, `/api/org/admin/units/{id}`, `.../subtree` | Company and org-unit administration | Superadmin |
+| `/api/org/admin/members`, `/api/org/admin/members/{id}`, `.../link-user` | Member administration | Superadmin, or an administrator of that company |
+| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
 | `POST /api/platform/admin/apps` | Register an app from its manifest | Superadmin |
 | `GET /api/platform/capabilities[/{module}]`, `GET /api/platform/catalog` | What is registered, installed and enabled | Any bearer |
-| `POST /api/platform/admin/modules/{key}/enable`, `.../disable`; `/api/platform/admin/platform-roles` | App and module enablement, the superadmin role | Superadmin |
+| `POST /api/platform/admin/modules/{key}/enable`, `.../disable`; `POST /api/platform/admin/platform-roles`, `DELETE .../platform-roles/{role}/{subjectId}` | App and module enablement, the superadmin role | Superadmin |
 | `/api/<module>/v1/...` | A built-in module's own API, forwarded unchanged | Whatever the module decides |
 
 A minimal call:
@@ -693,12 +718,13 @@ A minimal call:
 ```
 curl -sk https://127.0.0.1:8443/api/auth/effective-access/can \
   -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" \
-  -d '{"featureKey":"core.company.view","scope":"company","companyId":"'"$COMPANY"'"}'
+  -d '{"featureKey":"tokidesk.ticket.view","moduleKey":"tokidesk","scope":"company","companyId":"'"$COMPANY"'"}'
 ```
 
-You should see `{"data":{"allowed":true,"reason":"ALLOWED","evidence":[...]}}` for a member and
-`allowed: false` with `COMPANY_MEMBERSHIP_REQUIRED` for anyone else. The gateway ignores any
-subject named in the body and answers for the bearer.
+You should see `{"data":{"allowed":true,"reason":"ALLOWED","evidence":[...]}}` for a member once
+the app is enabled and `allowed: false` with `COMPANY_MEMBERSHIP_REQUIRED` for someone who is
+not a member. Kiban answers for the bearer: a body `actorId` naming anyone else is a
+`400 BAD_REQUEST`.
 
 ### Getting a token for the shell
 
