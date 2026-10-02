@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 const createSession = vi.fn((_config: Record<string, unknown>) => ({ getAccessToken: () => null, refresh: vi.fn() }));
 const createApiClient = vi.fn((_config: Record<string, unknown>) => ({ baseUrl: "https://gateway.invalid", request: vi.fn() }));
 
-vi.mock("@rosschiu/kiban-sdk", () => ({
+vi.mock("@rossbsol/kiban-sdk", () => ({
   createSession: (config: Record<string, unknown>) => createSession(config),
   createApiClient: (config: Record<string, unknown>) => createApiClient(config),
 }));

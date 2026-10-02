@@ -4,7 +4,7 @@
 // fixed "you may not have access" string, so an authz outage (503), a server bug (500) and a lost
 // connection all read as a permissions problem. `fallback` is the page's own copy for the plain
 // 4xx cases (404, 409, validation...), where the page knows better than a generic mapper.
-import { KibanApiError } from "@rosschiu/kiban-sdk";
+import { KibanApiError } from "@rossbsol/kiban-sdk";
 
 export function describeApiError(err: unknown, fallback: string): string {
   if (err instanceof KibanApiError) {

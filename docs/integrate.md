@@ -96,10 +96,10 @@ updates the app in place; a bad manifest is a `422` naming the field. No restart
 === "Node"
 
     ```
-    npm i @rosschiu/kiban-sdk
+    npm i @rossbsol/kiban-sdk
     ```
 
-    The backend entry is `@rosschiu/kiban-sdk/server` (ESM, Node 20 or later, no runtime
+    The backend entry is `@rossbsol/kiban-sdk/server` (ESM, Node 20 or later, no runtime
     dependencies). Published to the public npm registry; see the [SDK guide](sdk-guide.md#install).
 
 === "Python"
@@ -121,7 +121,7 @@ updates the app in place; a bad manifest is a `422` naming the field. No restart
 === "Node"
 
     ```ts
-    import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rosschiu/kiban-sdk/server";
+    import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rossbsol/kiban-sdk/server";
 
     const gatewayOrigin = "https://127.0.0.1:8443";
     const credentials = createServiceCredentials({ gatewayOrigin, clientId: "tokidesk-backend", clientSecret });
@@ -411,20 +411,13 @@ route instead of Keycloak's "Invalid parameter: redirect_uri" page.
 
 ### 2. Install the SDK
 
-The package is on GitHub Packages, which needs an authenticated read even for public packages:
-a personal access token with the `read:packages` scope.
+The package is on the public npm registry; no `.npmrc` and no token.
 
 ```
-# .npmrc, next to your package.json
-@rosschiu:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+npm i @rossbsol/kiban-sdk
 ```
 
-```
-npm i @rosschiu/kiban-sdk
-```
-
-You should see `@rosschiu/kiban-sdk` in `package.json`. The package is ESM only and has no
+You should see `@rossbsol/kiban-sdk` in `package.json`. The package is ESM only and has no
 runtime dependencies; it needs `fetch` and `crypto.subtle`, which every current browser has.
 
 ### 3. Create the session
@@ -433,7 +426,7 @@ One session object per application, created once at startup. `authOrigin` is the
 SDK never talks to Keycloak directly.
 
 ```ts
-import { createSession } from "@rosschiu/kiban-sdk";
+import { createSession } from "@rossbsol/kiban-sdk";
 
 const gatewayOrigin = "https://127.0.0.1:8443";
 
@@ -490,7 +483,7 @@ Every request goes through one client that attaches the bearer and a correlation
 the `{ data }` envelope and turns `{ error }` into a `KibanApiError`.
 
 ```ts
-import { createApiClient } from "@rosschiu/kiban-sdk";
+import { createApiClient } from "@rossbsol/kiban-sdk";
 
 const api = createApiClient({
   baseUrl: gatewayOrigin,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Capability, CatalogEntry, EffectiveAccessSummary, OrgMeCompany } from "@rosschiu/kiban-sdk";
+import type { Capability, CatalogEntry, EffectiveAccessSummary, OrgMeCompany } from "@rossbsol/kiban-sdk";
 import { describe, expect, it } from "vitest";
 import type { RegisteredModule } from "../../src/modules/registry";
 import { computeModuleAccess, computeNavEntries, emptyModuleAccess, type PlatformComposition } from "../../src/nav/compose";

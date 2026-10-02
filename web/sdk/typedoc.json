@@ -6,7 +6,7 @@
   ],
   "tsconfig": "tsconfig.json",
   "out": "../../docs/sdk",
-  "name": "@rosschiu/kiban-sdk",
+  "name": "@rossbsol/kiban-sdk",
   "readme": "none",
   "excludePrivate": true,
   "excludeInternal": true,

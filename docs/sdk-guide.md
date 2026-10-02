@@ -1,6 +1,6 @@
 # SDK guide
 
-`@rosschiu/kiban-sdk` is the TypeScript package a web application or a module frontend uses to
+`@rossbsol/kiban-sdk` is the TypeScript package a web application or a module frontend uses to
 talk to a Kiban deployment: the login flow, the tokens, typed calls to the platform API and the
 error envelope. It has no runtime dependencies (native `fetch` and `crypto` only) and talks to
 the gateway origin alone, never to Keycloak or to a module's service directly. The sample shell
@@ -12,13 +12,10 @@ Every sample on this page compiles against the package as shipped: the same code
 ## Install
 
 ```
-npm i @rosschiu/kiban-sdk
+npm i @rossbsol/kiban-sdk
 ```
 
 Every release is published to the public npm registry, so no `.npmrc` and no token are needed.
-The same version is also on GitHub Packages; to read from there instead, point the `@rosschiu`
-scope at `https://npm.pkg.github.com` in `.npmrc` with a token that has the `read:packages`
-scope.
 
 The package ships ESM only (`dist/index.js` and `dist/index.d.ts`). Node 20 or a modern browser
 gives you the `fetch` and `crypto.subtle` it relies on.
@@ -30,7 +27,7 @@ gateway's Keycloak proxy, validates `state` and `nonce`, and refreshes tokens on
 time.
 
 ```ts
-import { createSession } from "@rosschiu/kiban-sdk";
+import { createSession } from "@rossbsol/kiban-sdk";
 
 const gatewayOrigin = "https://127.0.0.1:8443"; // your gateway; self-signed TLS in `make dev`
 
@@ -72,7 +69,7 @@ is dropped and the user logs in again.
 To keep tokens out of browser storage entirely, pass a memory adapter:
 
 ```ts
-import { createMemoryStorage, createSession } from "@rosschiu/kiban-sdk";
+import { createMemoryStorage, createSession } from "@rossbsol/kiban-sdk";
 
 const session = createSession({
   authOrigin: gatewayOrigin,
@@ -97,7 +94,7 @@ and an `x-correlation-id`, JSON-encodes the body, unwraps the `{ data }` envelop
 `{ error }` envelope into a `KibanApiError`.
 
 ```ts
-import { createApiClient } from "@rosschiu/kiban-sdk";
+import { createApiClient } from "@rossbsol/kiban-sdk";
 
 const api = createApiClient({
   baseUrl: gatewayOrigin,
@@ -130,7 +127,7 @@ direct object grants the caller holds, globally or in one company; it is a displ
 for navigation, while `can` and `batchCan` are the gate a component asks before acting.
 
 ```ts
-import { createEffectiveAccessClient, createOrgClient } from "@rosschiu/kiban-sdk";
+import { createEffectiveAccessClient, createOrgClient } from "@rossbsol/kiban-sdk";
 
 const effectiveAccess = createEffectiveAccessClient(api);
 const org = createOrgClient(api);
@@ -168,7 +165,7 @@ a live end-to-end test in the repository.
 ### `canI`: "can I use this feature, here?"
 
 ```ts
-import { createCanI } from "@rosschiu/kiban-sdk";
+import { createCanI } from "@rossbsol/kiban-sdk";
 
 const canI = createCanI(effectiveAccess);
 
@@ -190,7 +187,7 @@ transport or envelope failure.
 ### `grantObjectAccess`: "share this object with that subject"
 
 ```ts
-import { createGrantObjectAccess } from "@rosschiu/kiban-sdk";
+import { createGrantObjectAccess } from "@rossbsol/kiban-sdk";
 
 const { grantObjectAccess, revokeObjectAccess } = createGrantObjectAccess(api);
 
@@ -232,7 +229,7 @@ rows. `ApiErrorCode` holds the canonical codes as constants; the ones a frontend
 branches on:
 
 ```ts
-import { ApiErrorCode, KibanApiError } from "@rosschiu/kiban-sdk";
+import { ApiErrorCode, KibanApiError } from "@rossbsol/kiban-sdk";
 
 try {
   await org.adminCreateGroup(summary.companyId, { code: "sales", name: "Sales" });
@@ -267,13 +264,13 @@ try {
 `code` is `"UNKNOWN_ERROR"` when the response carried no envelope (a proxy error page, a network
 failure midway). Do not parse `message`; it is for people.
 
-## The backend entry: `@rosschiu/kiban-sdk/server`
+## The backend entry: `@rossbsol/kiban-sdk/server`
 
 The same package has a second entry for a Node backend that runs beside Kiban. It needs no
 browser: `fetch` and `crypto.subtle` from Node 20 or later.
 
 ```ts
-import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rosschiu/kiban-sdk/server";
+import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rossbsol/kiban-sdk/server";
 
 const gatewayOrigin = "https://127.0.0.1:8443";
 const credentials = createServiceCredentials({ gatewayOrigin, clientId: "tokidesk-backend", clientSecret });

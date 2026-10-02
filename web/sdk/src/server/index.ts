@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * `@rosschiu/kiban-sdk/server`: the app's backend beside Kiban. Authenticate as the app's
+ * `@rossbsol/kiban-sdk/server`: the app's backend beside Kiban. Authenticate as the app's
  * service client, verify the user tokens Kiban's login issued, ask for decisions, write tuples
  * on the app's own object types, look members up.
  *

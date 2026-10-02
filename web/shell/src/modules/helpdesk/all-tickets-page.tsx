@@ -7,7 +7,7 @@
 // an explicit access-denied state, never the list.
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { createOrgClient, type MemberDirectoryEntry } from "@rosschiu/kiban-sdk";
+import { createOrgClient, type MemberDirectoryEntry } from "@rossbsol/kiban-sdk";
 import { getShellSdk } from "../../auth/sdk";
 import type { ModulePageContext } from "../../resolver/resolver";
 import { Button } from "../../ui/button";

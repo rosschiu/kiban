@@ -1,6 +1,6 @@
 # Release automation. Triggered by pushing a tag matching `v*` (or by hand, for an existing
 # tag's SDKs only: see workflow_dispatch below). Publishes the release
-# artifacts: the 9 app-service images to GHCR, the SDK to GitHub Packages, and a GitHub Release
+# artifacts: the 9 app-service images to GHCR, the SDKs to npm and PyPI, and a GitHub Release
 # with notes assembled from CHANGELOG.md. This workflow only reacts to a tag that already exists
 # on origin; it never creates one.
 #
@@ -20,7 +20,7 @@
 #             locally to `ghcr.io/rosschiu/kiban-<service>:<tag>`. A `:latest` alias is pushed
 #             ONLY for a stable tag (`vX.Y.Z`, no suffix) — never for -rc/-alpha/-beta/-citest, so
 #             `latest` never points at a pre-release or a throwaway CI-proof build.
-#   sdk     — publishes `@rosschiu/kiban-sdk` at its package.json version to GitHub Packages.
+#   sdk     — publishes `@rossbsol/kiban-sdk` at its package.json version to the public npm registry.
 #             GUARDED: fails loudly (before ever running `npm publish`) if package.json's version
 #             does not literally match the tag with its leading `v` stripped — version/tag drift
 #             must break the release, not ship a mismatched artifact. Idempotent: if the exact
@@ -31,8 +31,8 @@
 #             changelog and the documentation site's limitations page. Idempotent: re-running
 #             on an existing release edits it in place rather than failing.
 #
-# Auth: the built-in GITHUB_TOKEN only (packages:write + contents:write below) — no PATs, no new
-# secrets.
+# Auth: the built-in GITHUB_TOKEN for GHCR and the Release; NPM_TOKEN and PYPI_APIKEY repository
+# secrets for the two package registries (each publish step skips when its secret is absent).
 #
 # No CI-only logic: `make images` and `make check` are the exact targets a human runs by hand;
 # this workflow automates running them, not what they do.
@@ -209,7 +209,7 @@ jobs:
           fi
 
   sdk:
-    name: sdk (publish @rosschiu/kiban-sdk to GitHub Packages)
+    name: sdk (publish @rossbsol/kiban-sdk to npm)
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -220,12 +220,10 @@ jobs:
           ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
-      - name: Set up Node (scoped to GitHub Packages for @rosschiu)
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@rosschiu"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -247,39 +245,33 @@ jobs:
       - name: Build SDK (npm run -w sdk build — regenerates dist/ from the version being published)
         run: cd web && npm run -w sdk build
 
-      - name: Publish (skip if this exact version is already published — idempotent re-runs)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd web/sdk
-          PKG_VERSION="$(node -p "require('./package.json').version")"
-          if npm view "@rosschiu/kiban-sdk@$PKG_VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
-            echo "sdk: @rosschiu/kiban-sdk@$PKG_VERSION already published — skipping (idempotent re-run)"
-          else
-            npm publish
-            echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION"
-          fi
+      - name: Upload the built package as a workflow artifact (always, token or not)
+        run: cd web/sdk && npm pack --pack-destination "$RUNNER_TEMP/npm-dist"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kiban-sdk-npm
+          path: ${{ runner.temp }}/npm-dist/*.tgz
 
-      # The public npm registry, so `npm i @rosschiu/kiban-sdk` needs no .npmrc and no token.
-      # Runs only when the repository holds NPM_TOKEN (an npm automation token for the
-      # @rosschiu scope); without it the step says so and the release still succeeds.
+      # The public npm registry, so `npm i @rossbsol/kiban-sdk` needs no .npmrc and no token.
+      # Runs only when the repository holds NPM_TOKEN (an npm token that may publish under the
+      # @rossbsol scope); without it the step says so and the release still succeeds.
       - name: Publish to registry.npmjs.org (when NPM_TOKEN is set; idempotent)
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NPM_TOKEN" ]; then
-            echo "sdk: NPM_TOKEN not set — not publishing to registry.npmjs.org (GitHub Packages only)"
+            echo "sdk: NPM_TOKEN not set — not publishing to registry.npmjs.org (artifact only)"
             exit 0
           fi
           cd web/sdk
           PKG_VERSION="$(node -p "require('./package.json').version")"
-          if npm view "@rosschiu/kiban-sdk@$PKG_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
-            echo "sdk: @rosschiu/kiban-sdk@$PKG_VERSION already on registry.npmjs.org — skipping"
+          if npm view "@rossbsol/kiban-sdk@$PKG_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "sdk: @rossbsol/kiban-sdk@$PKG_VERSION already on registry.npmjs.org — skipping"
           else
             printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
             npm publish --registry=https://registry.npmjs.org --access public --userconfig "$RUNNER_TEMP/.npmrc"
             rm -f "$RUNNER_TEMP/.npmrc"
-            echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION to registry.npmjs.org"
+            echo "sdk: published @rossbsol/kiban-sdk@$PKG_VERSION to registry.npmjs.org"
           fi
 
   sdk-python:

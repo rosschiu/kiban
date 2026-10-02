@@ -16,14 +16,14 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Two company reads for apps and members: a position's holder on a date (`GET /api/org/companies/{id}/positions/{positionId}/holder?date=`) and a group's members, for any active member of the company or a superadmin, never across companies
 - SDK parity: batch checks, companies the user may see, member directory, position holder and group members in the Go, Node (`server`) and Python SDKs; Python gains `batch_can`
 - Each sample module has its own Compose profile beside `samples`: `COMPOSE_PROFILES=docs` starts one container, not four
-- Releases publish `kiban-sdk` to PyPI and `@rosschiu/kiban-sdk` to the public npm registry (besides GitHub Packages), when the repository holds `PYPI_API_TOKEN` and `NPM_TOKEN`; the Python package is also attached to the workflow run as an artifact
+- Releases publish `kiban-sdk` to PyPI and `@rossbsol/kiban-sdk` to the public npm registry when the repository holds `PYPI_APIKEY` and `NPM_TOKEN`; both packages are also attached to the workflow run as artifacts. The npm package is renamed from `@rosschiu/kiban-sdk` (never published publicly) and GitHub Packages is no longer used
 
 ## [0.1.0] — 2026-09-25
 
 First public release, Apache-2.0. Kiban runs beside your app: the app registers its model and
 serves its own API; the sample modules are examples, off by default.
 
-- Backend SDKs: `@rosschiu/kiban-sdk/server` (Node), `kiban-sdk` (Python), `github.com/rosschiu/kiban/sdk` (Go): service token, user token verification, decisions, tuples, member lookup, app registration
+- Backend SDKs: `@rossbsol/kiban-sdk/server` (Node), `kiban-sdk` (Python), `github.com/rosschiu/kiban/sdk` (Go): service token, user token verification, decisions, tuples, member lookup, app registration
 - Kiban repositioned as a service beside your app (OpenFGA-style): the app registers its model and serves its own API; the module runtime is the sample modules' in-tree path
 - `KIBAN_EXTRA_ORIGINS`: extra web origins and native (custom-scheme) redirect URIs for `kiban-frontend`, also on the gateway's CORS allow-list; a Flutter or second web app can log in
 - Apps register at runtime (`POST /api/platform/admin/apps`, manifest with fragment, features and service client); an app's backend writes tuples on its own types and looks up members; a check names only a feature its module declares (one string, one feature)
@@ -38,7 +38,7 @@ serves its own API; the sample modules are examples, off by default.
 - Module runtime: manifest, fragment, OpenAPI file, checksummed migrations; validated by `make validate-modules`, routed by a version-blind gateway
 - Gateway: single origin, bearer-only `/api/*`, CORS, security headers, request limits, `/ready` health
 - Sample modules: notification, docs (DocShare), helpdesk, timesheet
-- SDK `@rosschiu/kiban-sdk`: session with PKCE and refresh, API client, org and effective-access clients, `canI` and grant recipes
+- SDK `@rossbsol/kiban-sdk`: session with PKCE and refresh, API client, org and effective-access clients, `canI` and grant recipes
 - Sample shell: React, CSP enforced, company switcher, administration pages
 - Platform role is one tuple (`system:platform#superadmin`) with grant and revoke routes
 - `GET /api/platform/metrics` aggregates every service's metrics for one scrape target
