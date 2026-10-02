@@ -3,7 +3,7 @@
 // The shell's one instance of the SDK session + API client (all API access goes through the SDK,
 // never direct fetch). Built once at module load from readShellEnv() so every consumer (session
 // context, route loaders, nav composition) shares the same session/refresh state.
-import { createApiClient, createSession, type ApiClient, type Session } from "@rosschiu/kiban-sdk";
+import { createApiClient, createSession, type ApiClient, type Session } from "@rossbsol/kiban-sdk";
 import { readShellEnv } from "../lib/env";
 
 let cached: { session: Session; apiClient: ApiClient } | null = null;

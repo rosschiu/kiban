@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { defaultLocalStorage, type StorageAdapter } from "@rosschiu/kiban-sdk";
+import { defaultLocalStorage, type StorageAdapter } from "@rossbsol/kiban-sdk";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "./button";

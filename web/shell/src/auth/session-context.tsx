@@ -5,7 +5,7 @@
 // synchronous-getter API) — this context supplies the "re-render on
 // auth change" piece a React host needs, via a version counter bumped after every state-changing
 // call.
-import type { ApiClient, Session } from "@rosschiu/kiban-sdk";
+import type { ApiClient, Session } from "@rossbsol/kiban-sdk";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCompanySessionContext } from "../nav/company-context";
 import { invalidatePlatformComposition } from "../nav/module-access";

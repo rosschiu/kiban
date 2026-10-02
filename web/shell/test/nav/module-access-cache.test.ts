@@ -12,8 +12,8 @@ vi.mock("../../src/auth/sdk", () => ({
     session: { isAuthenticated: () => true },
   }),
 }));
-vi.mock("@rosschiu/kiban-sdk", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@rosschiu/kiban-sdk")>()),
+vi.mock("@rossbsol/kiban-sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@rossbsol/kiban-sdk")>()),
   createCapabilitiesClient: () => ({ list: vi.fn(async () => []) }),
   createSuperadminClient: () => ({ catalog: vi.fn(async () => []) }),
   createEffectiveAccessClient: () => ({ summary: vi.fn(async () => null) }),

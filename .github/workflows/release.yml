@@ -1,5 +1,6 @@
-# Release automation. Triggered by pushing a tag matching `v*`. Publishes the release
-# artifacts: the 9 app-service images to GHCR, the SDK to GitHub Packages, and a GitHub Release
+# Release automation. Triggered by pushing a tag matching `v*` (or by hand, for an existing
+# tag's SDKs only: see workflow_dispatch below). Publishes the release
+# artifacts: the 9 app-service images to GHCR, the SDKs to npm and PyPI, and a GitHub Release
 # with notes assembled from CHANGELOG.md. This workflow only reacts to a tag that already exists
 # on origin; it never creates one.
 #
@@ -19,7 +20,7 @@
 #             locally to `ghcr.io/rosschiu/kiban-<service>:<tag>`. A `:latest` alias is pushed
 #             ONLY for a stable tag (`vX.Y.Z`, no suffix) — never for -rc/-alpha/-beta/-citest, so
 #             `latest` never points at a pre-release or a throwaway CI-proof build.
-#   sdk     — publishes `@rosschiu/kiban-sdk` at its package.json version to GitHub Packages.
+#   sdk     — publishes `@rossbsol/kiban-sdk` at its package.json version to the public npm registry.
 #             GUARDED: fails loudly (before ever running `npm publish`) if package.json's version
 #             does not literally match the tag with its leading `v` stripped — version/tag drift
 #             must break the release, not ship a mismatched artifact. Idempotent: if the exact
@@ -30,8 +31,8 @@
 #             changelog and the documentation site's limitations page. Idempotent: re-running
 #             on an existing release edits it in place rather than failing.
 #
-# Auth: the built-in GITHUB_TOKEN only (packages:write + contents:write below) — no PATs, no new
-# secrets.
+# Auth: the built-in GITHUB_TOKEN for GHCR and the Release; NPM_TOKEN and PYPI_APIKEY repository
+# secrets for the two package registries (each publish step skips when its secret is absent).
 #
 # No CI-only logic: `make images` and `make check` are the exact targets a human runs by hand;
 # this workflow automates running them, not what they do.
@@ -42,6 +43,14 @@ on:
   push:
     tags:
       - "v*"
+  # Manual: publish the SDKs of an EXISTING tag (first publish to a registry, or a re-publish
+  # after a registry-side fix). Images and the GitHub Release are not touched.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag whose SDKs to publish (e.g. v0.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -56,6 +65,8 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: rosschiu
+  # The tag being released: the pushed tag, or the one named by a manual run.
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   gate:
@@ -66,6 +77,7 @@ jobs:
       - name: Checkout tag (full history — secret-scan + ratchet-guard need it)
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Set up Go (version from go.mod)
@@ -100,18 +112,20 @@ jobs:
   images:
     name: images (build + push to GHCR)
     needs: gate
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Classify tag (stable vX.Y.Z vs prerelease/test)
         id: classify
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "stable=true" >> "$GITHUB_OUTPUT"
           else
@@ -195,7 +209,7 @@ jobs:
           fi
 
   sdk:
-    name: sdk (publish @rosschiu/kiban-sdk to GitHub Packages)
+    name: sdk (publish @rossbsol/kiban-sdk to npm)
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -203,14 +217,13 @@ jobs:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
-      - name: Set up Node (scoped to GitHub Packages for @rosschiu)
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@rosschiu"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -218,13 +231,13 @@ jobs:
       # a mismatched artifact. Runs BEFORE any build/publish step.
       - name: Guard — package.json version must equal the tag (v stripped)
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RELEASE_TAG#v}"
           PKG_VERSION="$(node -p "require('./web/sdk/package.json').version")"
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::web/sdk/package.json version ($PKG_VERSION) does not match tag ${GITHUB_REF_NAME} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            echo "::error::web/sdk/package.json version ($PKG_VERSION) does not match tag ${RELEASE_TAG} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
             exit 1
           fi
-          echo "guard: package.json version $PKG_VERSION matches tag ${GITHUB_REF_NAME}"
+          echo "guard: package.json version $PKG_VERSION matches tag ${RELEASE_TAG}"
 
       - name: web/ npm ci
         run: cd web && npm ci
@@ -232,34 +245,110 @@ jobs:
       - name: Build SDK (npm run -w sdk build — regenerates dist/ from the version being published)
         run: cd web && npm run -w sdk build
 
-      - name: Publish (skip if this exact version is already published — idempotent re-runs)
+      - name: Upload the built package as a workflow artifact (always, token or not)
+        run: cd web/sdk && npm pack --pack-destination "$RUNNER_TEMP/npm-dist"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kiban-sdk-npm
+          path: ${{ runner.temp }}/npm-dist/*.tgz
+
+      # The public npm registry, so `npm i @rossbsol/kiban-sdk` needs no .npmrc and no token.
+      # Runs only when the repository holds NPM_TOKEN (an npm token that may publish under the
+      # @rossbsol scope); without it the step says so and the release still succeeds.
+      - name: Publish to registry.npmjs.org (when NPM_TOKEN is set; idempotent)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "sdk: NPM_TOKEN not set — not publishing to registry.npmjs.org (artifact only)"
+            exit 0
+          fi
           cd web/sdk
           PKG_VERSION="$(node -p "require('./package.json').version")"
-          if npm view "@rosschiu/kiban-sdk@$PKG_VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
-            echo "sdk: @rosschiu/kiban-sdk@$PKG_VERSION already published — skipping (idempotent re-run)"
+          if npm view "@rossbsol/kiban-sdk@$PKG_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "sdk: @rossbsol/kiban-sdk@$PKG_VERSION already on registry.npmjs.org — skipping"
           else
-            npm publish
-            echo "sdk: published @rosschiu/kiban-sdk@$PKG_VERSION"
+            printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
+            npm publish --registry=https://registry.npmjs.org --access public --userconfig "$RUNNER_TEMP/.npmrc"
+            rm -f "$RUNNER_TEMP/.npmrc"
+            echo "sdk: published @rossbsol/kiban-sdk@$PKG_VERSION to registry.npmjs.org"
           fi
+
+  sdk-python:
+    name: sdk-python (publish kiban-sdk to PyPI)
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # GUARD: pyproject version must equal the tag, same rule as the npm package.
+      - name: Guard — pyproject.toml version must equal the tag (v stripped)
+        run: |
+          TAG_VERSION="${RELEASE_TAG#v}"
+          PKG_VERSION="$(python3 -c 'import tomllib;print(tomllib.load(open("sdk/python/pyproject.toml","rb"))["project"]["version"])')"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::sdk/python/pyproject.toml version ($PKG_VERSION) does not match tag ${RELEASE_TAG} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            exit 1
+          fi
+          echo "guard: pyproject version $PKG_VERSION matches tag ${RELEASE_TAG}"
+
+      - name: Build sdist and wheel
+        run: |
+          python3 -m pip install --quiet build
+          python3 -m build --outdir dist sdk/python
+          ls -l dist
+
+      - name: Upload the built package as a workflow artifact (always, token or not)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiban-sdk-python
+          path: dist/*
+
+      # Runs only when the repository holds PYPI_APIKEY (a PyPI API token scoped to the
+      # kiban-sdk project); without it the step says so and the release still succeeds.
+      - name: Publish to PyPI (when PYPI_APIKEY is set; idempotent)
+        env:
+          PYPI_APIKEY: ${{ secrets.PYPI_APIKEY }}
+        run: |
+          if [ -z "$PYPI_APIKEY" ]; then
+            echo "sdk-python: PYPI_APIKEY not set — not publishing to PyPI (artifact only)"
+            exit 0
+          fi
+          PKG_VERSION="${RELEASE_TAG#v}"
+          if curl -fsS "https://pypi.org/pypi/kiban-sdk/$PKG_VERSION/json" >/dev/null 2>&1; then
+            echo "sdk-python: kiban-sdk $PKG_VERSION already on PyPI — skipping"
+            exit 0
+          fi
+          python3 -m pip install --quiet twine
+          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_APIKEY" python3 -m twine upload --non-interactive dist/*
+          echo "sdk-python: published kiban-sdk $PKG_VERSION to PyPI"
 
   release:
     name: GitHub Release
-    needs: [images, sdk]
+    needs: [images, sdk, sdk-python]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Assemble release notes (CHANGELOG.md section + reference doc links)
         id: notes
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           VER="${TAG#v}"
           # Extract the CHANGELOG.md section between "## [<VER>]" and the next "## [" header.
           awk -v ver="$VER" '
@@ -294,7 +383,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           PRERELEASE_FLAG=""
           if [ "${{ steps.notes.outputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"

@@ -5,7 +5,7 @@
 // is enough to prove the real wiring (org.meCompanies -> options, activeCompanyId -> selection,
 // onSwitch -> sdk session-context + path-preserve navigation) without adding a new shadcn
 // primitive.
-import type { OrgMeCompany } from "@rosschiu/kiban-sdk";
+import type { OrgMeCompany } from "@rossbsol/kiban-sdk";
 
 export interface CompanySwitcherProps {
   companies: readonly OrgMeCompany[];

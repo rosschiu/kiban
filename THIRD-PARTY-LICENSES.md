@@ -169,7 +169,7 @@ this scan.
 | `@redocly/openapi-core@1.34.19` | MIT |
 | `@rolldown/pluginutils@1.0.0-rc.3` | MIT |
 | `@rollup/rollup-linux-x64-gnu@4.62.4` | MIT |
-| `@rosschiu/kiban-sdk@0.1.0` | Apache-2.0 |
+| `@rossbsol/kiban-sdk@0.1.0` | Apache-2.0 |
 | `@shikijs/engine-oniguruma@3.23.0` | MIT |
 | `@shikijs/langs@3.23.0` | MIT |
 | `@shikijs/themes@3.23.0` | MIT |

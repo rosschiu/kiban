@@ -8,7 +8,7 @@ Named use-case recipe: one call over the gateway's superadmin-guarded grant rout
 ## Pattern
 
 ```ts
-import { createApiClient, createGrantObjectAccess } from "@rosschiu/kiban-sdk";
+import { createApiClient, createGrantObjectAccess } from "@rossbsol/kiban-sdk";
 
 const apiClient = createApiClient({
   baseUrl: "https://127.0.0.1:8443", // always the gateway origin
