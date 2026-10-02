@@ -1,4 +1,5 @@
-# Release automation. Triggered by pushing a tag matching `v*`. Publishes the release
+# Release automation. Triggered by pushing a tag matching `v*` (or by hand, for an existing
+# tag's SDKs only: see workflow_dispatch below). Publishes the release
 # artifacts: the 9 app-service images to GHCR, the SDK to GitHub Packages, and a GitHub Release
 # with notes assembled from CHANGELOG.md. This workflow only reacts to a tag that already exists
 # on origin; it never creates one.
@@ -42,6 +43,14 @@ on:
   push:
     tags:
       - "v*"
+  # Manual: publish the SDKs of an EXISTING tag (first publish to a registry, or a re-publish
+  # after a registry-side fix). Images and the GitHub Release are not touched.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag whose SDKs to publish (e.g. v0.1.0)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -56,6 +65,8 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAMESPACE: rosschiu
+  # The tag being released: the pushed tag, or the one named by a manual run.
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   gate:
@@ -66,6 +77,7 @@ jobs:
       - name: Checkout tag (full history — secret-scan + ratchet-guard need it)
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Set up Go (version from go.mod)
@@ -100,18 +112,20 @@ jobs:
   images:
     name: images (build + push to GHCR)
     needs: gate
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Classify tag (stable vX.Y.Z vs prerelease/test)
         id: classify
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "stable=true" >> "$GITHUB_OUTPUT"
           else
@@ -203,6 +217,7 @@ jobs:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Set up Node (scoped to GitHub Packages for @rosschiu)
@@ -218,13 +233,13 @@ jobs:
       # a mismatched artifact. Runs BEFORE any build/publish step.
       - name: Guard — package.json version must equal the tag (v stripped)
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RELEASE_TAG#v}"
           PKG_VERSION="$(node -p "require('./web/sdk/package.json').version")"
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::web/sdk/package.json version ($PKG_VERSION) does not match tag ${GITHUB_REF_NAME} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            echo "::error::web/sdk/package.json version ($PKG_VERSION) does not match tag ${RELEASE_TAG} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
             exit 1
           fi
-          echo "guard: package.json version $PKG_VERSION matches tag ${GITHUB_REF_NAME}"
+          echo "guard: package.json version $PKG_VERSION matches tag ${RELEASE_TAG}"
 
       - name: web/ npm ci
         run: cd web && npm ci
@@ -275,6 +290,8 @@ jobs:
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -284,13 +301,13 @@ jobs:
       # GUARD: pyproject version must equal the tag, same rule as the npm package.
       - name: Guard — pyproject.toml version must equal the tag (v stripped)
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RELEASE_TAG#v}"
           PKG_VERSION="$(python3 -c 'import tomllib;print(tomllib.load(open("sdk/python/pyproject.toml","rb"))["project"]["version"])')"
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::sdk/python/pyproject.toml version ($PKG_VERSION) does not match tag ${GITHUB_REF_NAME} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
+            echo "::error::sdk/python/pyproject.toml version ($PKG_VERSION) does not match tag ${RELEASE_TAG} (expected $TAG_VERSION) — release aborted, no publish attempted" >&2
             exit 1
           fi
-          echo "guard: pyproject version $PKG_VERSION matches tag ${GITHUB_REF_NAME}"
+          echo "guard: pyproject version $PKG_VERSION matches tag ${RELEASE_TAG}"
 
       - name: Build sdist and wheel
         run: |
@@ -314,7 +331,7 @@ jobs:
             echo "sdk-python: PYPI_APIKEY not set — not publishing to PyPI (artifact only)"
             exit 0
           fi
-          PKG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="${RELEASE_TAG#v}"
           if curl -fsS "https://pypi.org/pypi/kiban-sdk/$PKG_VERSION/json" >/dev/null 2>&1; then
             echo "sdk-python: kiban-sdk $PKG_VERSION already on PyPI — skipping"
             exit 0
@@ -326,18 +343,20 @@ jobs:
   release:
     name: GitHub Release
     needs: [images, sdk, sdk-python]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 0
 
       - name: Assemble release notes (CHANGELOG.md section + reference doc links)
         id: notes
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           VER="${TAG#v}"
           # Extract the CHANGELOG.md section between "## [<VER>]" and the next "## [" header.
           awk -v ver="$VER" '
@@ -372,7 +391,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${RELEASE_TAG}"
           PRERELEASE_FLAG=""
           if [ "${{ steps.notes.outputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
