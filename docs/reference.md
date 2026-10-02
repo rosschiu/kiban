@@ -34,6 +34,8 @@ Every route family, in one place. Everything under `/api/` needs a bearer unless
 | `/api/org/me/companies` | `GET` | Any user |
 | `/api/org/companies/{id}/members` | `GET ?q=&page=&pageSize=` | Active members of the company, or a superadmin |
 | `/api/org/companies/{id}/members/by-subject/{subject}` | `GET` | Superadmin, or a registered app's backend |
+| `/api/org/companies/{id}/positions/{positionId}/holder` | `GET ?date=YYYY-MM-DD` | Active members of the company, or a superadmin |
+| `/api/org/companies/{id}/groups/{groupId}/members` | `GET` | Active members of the company, or a superadmin |
 | `/api/org/admin/units*` | `POST units`, `GET units/{id}`, `GET units/{id}/subtree` | Superadmin |
 | `/api/org/admin/*` (members, positions, assignments, groups) | `GET`/`POST members`, `PUT members/{id}`, `POST`/`DELETE members/{id}/link-user`; `GET`/`POST companies/{id}/positions`, `POST positions/{id}/assignments`, `POST assignments/{id}/end`; `GET`/`POST companies/{id}/groups`, `GET`/`POST groups/{id}/members`, `DELETE groups/{id}/members/{memberId}` | Superadmin, or an administrator of that company |
 | `/api/<module>/v1/*` | Forwarded to the module unchanged, once it is installed and enabled | The module decides |

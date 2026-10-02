@@ -18,7 +18,7 @@ import (
 )
 
 // TestLive_MfaPolicyThroughGateway proves the second-factor policy is operable from the public
-// surface alone (TokiDesk spike, K13): the superadmin sets the global policy and syncs it
+// surface alone: the superadmin sets the global policy and syncs it
 // through the gateway, a user without an authenticator is then forced to enrol one at login,
 // the per-user routes read/set/clear an override keyed by subject, and a plain user is refused.
 // The policy is reset (and re-synced) on cleanup so the rest of the suite logs in unchallenged.

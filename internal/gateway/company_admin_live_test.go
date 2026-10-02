@@ -18,7 +18,7 @@ import (
 // TestLive_CompanyAdministrator: a member holding a company's admin relation manages that
 // company's members, positions, assignments and groups through the public admin routes, is
 // refused on another company and on company creation, and the superadmin keeps working
-// (TokiDesk spike, K3 and K4). Real gateway, org and authz.
+// Real gateway, org and authz.
 func TestLive_CompanyAdministrator(t *testing.T) {
 	ctx := context.Background()
 	realm := platformLiveEnv(t, "KEYCLOAK_REALM")

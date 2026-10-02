@@ -422,3 +422,54 @@ func TestFoundationRoutes_PlatformRoles_ForwardToAuthz(t *testing.T) {
 		t.Errorf("revoke forwarded as path=%q auth=%q", call.path, call.authValue)
 	}
 }
+
+// A position's holder and a group's members are readable by a member of the company (an
+// app's service account included), refused to a non-member, and never reach across companies
+// by id.
+func TestFoundationRoutes_CompanyReads(t *testing.T) {
+	memberOf := func(t *testing.T, company string) *AuthzAdminClient {
+		t.Helper()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var req map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			w.Header().Set("Content-Type", "application/json")
+			if _, role := req["requiredCompanyRole"]; role {
+				t.Errorf("a company read must not require a role: %v", req)
+			}
+			if req["scope"] == "company" && req["companyId"] == company {
+				_, _ = w.Write([]byte(`{"data":{"allowed":true,"reason":"ALLOWED","evidence":[]}}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"data":{"allowed":false,"reason":"COMPANY_MEMBERSHIP_REQUIRED","evidence":[]}}`))
+		}))
+		t.Cleanup(srv.Close)
+		return NewAuthzAdminClient(srv.URL)
+	}
+	f := newFoundationTestFixture(t, memberOf(t, "co-1"))
+	bearer := f.bearerFor("dave")
+
+	for _, path := range []string{"/api/org/companies/co-1/positions/pos-1/holder?date=2026-09-28", "/api/org/companies/co-1/groups/grp-1/members"} {
+		rec := doFoundationRequest(t, f.mux, http.MethodGet, path, bearer, "")
+		if rec.Code != http.StatusOK {
+			t.Errorf("member GET %s = %d; body=%s", path, rec.Code, rec.Body.String())
+		}
+	}
+	if call := f.backend.lastCall(); call.path != "/internal/org/groups/grp-1/members" {
+		t.Errorf("forwarded path = %q", call.path)
+	}
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-2/groups/grp-1/members", bearer, ""); rec.Code != http.StatusForbidden {
+		t.Errorf("non-member company = %d, want 403", rec.Code)
+	}
+	// The group belongs to co-2 but the caller names co-1: 404, never the other company's data.
+	f.backend.setResponse("/internal/org/groups/grp-9", http.StatusOK, `{"data":{"id":"grp-9","companyId":"co-2"}}`)
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/groups/grp-9/members", bearer, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("resource of another company = %d, want 404", rec.Code)
+	}
+	f.backend.setResponse("/internal/org/positions/ghost", http.StatusNotFound, `{"error":{"code":"NOT_FOUND"}}`)
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/positions/ghost/holder?date=2026-09-28", bearer, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown position = %d, want 404", rec.Code)
+	}
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/groups/grp-1/members", "", ""); rec.Code != http.StatusUnauthorized {
+		t.Errorf("no bearer = %d, want 401", rec.Code)
+	}
+}

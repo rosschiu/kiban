@@ -14,4 +14,14 @@ export type { TokenVerifier, TokenVerifierConfig, VerifiedToken } from "./verifi
 export { createAppClient } from "./appClient.js";
 export type { AppClient, AppClientConfig, AppManifest, MemberFact, Tuple } from "./appClient.js";
 export { KibanApiError } from "../client.js";
-export type { EffectiveAccessDecision, EffectiveAccessRequest } from "../types.js";
+export type {
+  EffectiveAccessBatchItem,
+  EffectiveAccessBatchResult,
+  EffectiveAccessDecision,
+  EffectiveAccessRequest,
+  MemberDirectoryEntry,
+  OrgAssignment,
+  OrgGroupMember,
+  OrgMeCompany,
+  Page
+} from "../types.js";

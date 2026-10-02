@@ -109,6 +109,10 @@ func TestLive_AppBesideKiban(t *testing.T) {
 		_, _ = adminPool.Exec(ctx, `DELETE FROM platform.module_catalog WHERE module_key = $1`, appKey)
 		if companyID != "" {
 			_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id LIKE $1 OR subject_id LIKE $1`, companyID+"%")
+			_, _ = adminPool.Exec(ctx, `DELETE FROM org.group_member WHERE group_id IN (SELECT id FROM org.group WHERE company_id = $1)`, companyID)
+			_, _ = adminPool.Exec(ctx, `DELETE FROM org.group WHERE company_id = $1`, companyID)
+			_, _ = adminPool.Exec(ctx, `DELETE FROM org.position_assignment WHERE position_id IN (SELECT id FROM org.position WHERE company_id = $1)`, companyID)
+			_, _ = adminPool.Exec(ctx, `DELETE FROM org.position WHERE company_id = $1`, companyID)
 			_, _ = adminPool.Exec(ctx, `DELETE FROM org.member WHERE company_id = $1`, companyID)
 			_, _ = adminPool.Exec(ctx, `DELETE FROM org.org_unit WHERE id = $1`, companyID)
 		}
@@ -216,7 +220,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 
 	// --- 5. the service account is a user: a background job's own check is refused until an
 	// administrator makes the service account a member of the company, and the directory then
-	// shows it as kind "service" (TokiDesk spike, K11 and K12). ---
+	// shows it as kind "service". ---
 	svcCheck := sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}
 	if d, err := app.CanService(ctx, svcCheck); err != nil || d.Allowed || d.Reason != "COMPANY_MEMBERSHIP_REQUIRED" {
 		t.Fatalf("service check before membership = %+v, %v; want denied COMPANY_MEMBERSHIP_REQUIRED", d, err)
@@ -246,6 +250,30 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}
 	if kinds["Live Story (worker)"] != "service" || kinds[member["displayName"].(string)] != "person" {
 		t.Fatalf("directory kinds = %v; want the service account as service and the person as person", kinds)
+	}
+
+	// --- 6. the org reads through the SDK, as the app (a member now) and as the user. ---
+	if page, err := app.MemberDirectory(ctx, companyID, "", 1, 25); err != nil || page.Total != 2 {
+		t.Fatalf("MemberDirectory as the app = %+v, %v; want both members", page, err)
+	}
+	if cos, err := app.MeCompanies(ctx, userBearer); err != nil || len(cos) != 1 || cos[0].ID != companyID {
+		t.Fatalf("MeCompanies for the user = %+v, %v; want the story company", cos, err)
+	}
+	position := step("createPosition", http.MethodPost, "/api/org/admin/companies/"+companyID+"/positions", adminBearer, map[string]any{"code": "CFO", "title": "CFO"}, http.StatusCreated)
+	step("assign", http.MethodPost, "/api/org/admin/positions/"+position["id"].(string)+"/assignments", adminBearer, map[string]any{"memberId": member["id"].(string)}, http.StatusCreated)
+	if holder, err := app.PositionHolder(ctx, companyID, position["id"].(string), time.Now()); err != nil || holder.MemberID != member["id"].(string) {
+		t.Fatalf("PositionHolder = %+v, %v; want the story member", holder, err)
+	}
+	if _, err := app.PositionHolder(ctx, companyID, position["id"].(string), time.Now().AddDate(-1, 0, 0)); !asAPIError(err, &apiErr) || apiErr.Status != http.StatusNotFound {
+		t.Fatalf("PositionHolder a year ago: err = %v, want 404", err)
+	}
+	group := step("createGroup", http.MethodPost, "/api/org/admin/companies/"+companyID+"/groups", adminBearer, map[string]any{"code": "SUPPORT", "name": "Support"}, http.StatusCreated)
+	step("addGroupMember", http.MethodPost, "/api/org/admin/groups/"+group["id"].(string)+"/members", adminBearer, map[string]any{"memberId": member["id"].(string)}, http.StatusCreated)
+	if members, err := app.GroupMembers(ctx, companyID, group["id"].(string)); err != nil || len(members) != 1 || members[0].MemberID != member["id"].(string) {
+		t.Fatalf("GroupMembers = %+v, %v; want the story member", members, err)
+	}
+	if results, err := app.BatchCan(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}, []sdk.BatchItem{sdk.NewBatchItem("livestory_ticket", "t-1", "viewer")}); err != nil || len(results) != 1 || results[0].Decision.Allowed {
+		t.Fatalf("BatchCan after revoke = %+v, %v; want one denied item", results, err)
 	}
 
 }

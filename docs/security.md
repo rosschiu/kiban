@@ -22,8 +22,9 @@ creation. An object from another company is denied.
 A grant names the company and may only write tuples on object types the caller owns: an
 app's backend, identified by the verified `azp` of its service-client token matching the app's
 registered service client id, on the app's own types in any company where the app is enabled;
-a superadmin, or a member who passes the module's company-scope decision, on a built-in module's
-types; module-tier tuples additionally need the company-module administrator relation. Every
+a superadmin, or a caller who passes the module's company-scope decision (membership of the
+company, the module enabled), on any other enabled module's or app's types, which includes
+another app's backend whose service account is a member of that company (see limitations); module-tier tuples additionally need the company-module administrator relation. Every
 object must carry its company anchor. Base-model tuples cannot be written through the grants
 route, with one exception: a superadmin may grant or revoke `company:<id>#admin` for a user to
 appoint a company administrator. A registered app's checks are limited to the feature keys its manifest declares.

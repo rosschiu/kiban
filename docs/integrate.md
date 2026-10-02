@@ -53,7 +53,8 @@ You should see `service client tokidesk-backend: applied` in bootstrap's log on 
 
 One JSON document: the app key, the service client, the feature keys your code will ask about,
 and the object types and relations your app owns. Every object type declares `company_module`
-(the anchor that binds an object to a company) plus its own relations.
+(the anchor that binds an object to a company) plus its own relations. Registration does not
+check for the anchor; see [limitations](limitations.md).
 
 ```json
 {
@@ -273,8 +274,12 @@ company; without it every check on the object is denied.
     ```
 
 `revoke` removes what `grant` wrote. You should see `403 AUTHORIZATION_DENIED` if you name
-another app's object type and `422 VALIDATION_FAILED` for a base type such as `company`: an app
-owns its own types and nothing else. A subject can also be a position (`subjectType:
+another enabled app's or module's object type while your service account is not a member of
+that company, and `422 VALIDATION_FAILED` for a base type such as `company` or a type no enabled
+app declares. Outside its own types an app's backend is treated like any other caller: the
+membership rule applies, so a service account that is a member of the company (step 10) may
+write tuples on another enabled app's or module's objects there; see
+[limitations](limitations.md). A subject can also be a position (`subjectType:
 "position"`, `subjectRelation: "holder"`) or a group (`subjectType: "group"`, `subjectRelation:
 "member"`), so access follows the chair or the membership. Without the `subjectRelation` the
 tuple is stored and never matches.
@@ -283,7 +288,7 @@ tuple is stored and never matches.
 
 The subject is enough for tuples. When your app needs the member id (to store beside its own
 rows), ask org whether the subject is an active member of the company. The answer carries the
-id only; names come from the member directory, called with a member's bearer.
+id only; names come from the member directory (step 11).
 
 === "Node"
 
@@ -345,6 +350,41 @@ the app defining its own model, not acting in the company.
     ```go
     d, err := kiban.CanService(ctx, sdk.CanRequest{FeatureKey: "tokidesk.reminders.run", ModuleKey: "tokidesk", CompanyID: companyID})
     ```
+
+### 11. Read the org
+
+Four reads cover most approval and routing needs. The app's service account must be a member of
+the company for the last three (step 10).
+
+=== "Node"
+
+    ```ts
+    const companies = await kiban.meCompanies(userBearer);                 // what this user may see
+    const page      = await kiban.memberDirectory(companyId, "ali");       // active members, kind person|service
+    const holder    = await kiban.positionHolder(companyId, positionId, "2026-10-01");
+    const members   = await kiban.groupMembers(companyId, groupId);
+    ```
+
+=== "Python"
+
+    ```python
+    companies = kiban.me_companies(user_bearer)
+    page      = kiban.member_directory(company_id, q="ali")
+    holder    = kiban.position_holder(company_id, position_id, "2026-10-01")   # KibanApiError 404: nobody that day
+    members   = kiban.group_members(company_id, group_id)
+    ```
+
+=== "Go"
+
+    ```go
+    companies, err := kiban.MeCompanies(ctx, userBearer)
+    page, err      := kiban.MemberDirectory(ctx, companyID, "ali", 1, 25)
+    holder, err    := kiban.PositionHolder(ctx, companyID, positionID, time.Now())
+    members, err   := kiban.GroupMembers(ctx, companyID, groupID)
+    ```
+
+For a page with many permission-driven controls, ask once: `batchCan` / `batch_can` / `BatchCan`
+take up to 100 object-relation pairs with the user's bearer and answer one decision each.
 
 ## Where the user's token lives
 

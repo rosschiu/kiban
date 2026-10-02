@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -83,6 +84,77 @@ type MemberFact struct {
 	IsMember bool    `json:"isMember"`
 	IsActive bool    `json:"isActive"`
 	MemberID *string `json:"memberId"`
+}
+
+// BatchItem is one object-relation pair of a batch check.
+type BatchItem struct {
+	Object struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	} `json:"object"`
+	Relation string `json:"relation"`
+}
+
+// NewBatchItem builds a BatchItem.
+func NewBatchItem(objectType, objectID, relation string) BatchItem {
+	var it BatchItem
+	it.Object.Type, it.Object.ID, it.Relation = objectType, objectID, relation
+	return it
+}
+
+// BatchResult is one item's decision.
+type BatchResult struct {
+	Object struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	} `json:"object"`
+	Relation string   `json:"relation"`
+	Decision Decision `json:"decision"`
+}
+
+// Company is one company the user may see.
+type Company struct {
+	ID       string `json:"id"`
+	Code     string `json:"code"`
+	Name     string `json:"name"`
+	IsActive bool   `json:"isActive"`
+}
+
+// DirectoryEntry is one member of a company's directory: the least-disclosure view.
+type DirectoryEntry struct {
+	ID            string `json:"id"`
+	DisplayName   string `json:"displayName"`
+	Email         string `json:"email"`
+	HasLinkedUser bool   `json:"hasLinkedUser"`
+	Kind          string `json:"kind"` // "person" or "service"
+}
+
+// DirectoryPage is one page of a company's directory.
+type DirectoryPage struct {
+	Items      []DirectoryEntry `json:"items"`
+	Total      int              `json:"total"`
+	Page       int              `json:"page"`
+	PageSize   int              `json:"pageSize"`
+	TotalPages int              `json:"totalPages"`
+}
+
+// Assignment is a member holding a position for a validity window.
+type Assignment struct {
+	ID         string  `json:"id"`
+	PositionID string  `json:"positionId"`
+	MemberID   string  `json:"memberId"`
+	ValidFrom  string  `json:"validFrom"`
+	ValidTo    *string `json:"validTo"`
+}
+
+// GroupMember is one member of a group.
+type GroupMember struct {
+	GroupID           string `json:"groupId"`
+	MemberID          string `json:"memberId"`
+	MemberDisplayName string `json:"memberDisplayName"`
+	MemberEmail       string `json:"memberEmail"`
+	AddedBy           string `json:"addedBy"`
+	AddedAt           string `json:"addedAt"`
 }
 
 // AppManifest registers the app: its key, service client, feature keys and object types.
@@ -189,6 +261,85 @@ func (c *Client) CanService(ctx context.Context, req CanRequest) (Decision, erro
 		return Decision{}, err
 	}
 	return c.Can(ctx, tok, req)
+}
+
+// BatchCan asks up to 100 object-relation questions for the user in one call; req carries the
+// feature, module and company, items the objects. One round trip for a page of controls.
+func (c *Client) BatchCan(ctx context.Context, userBearer string, req CanRequest, items []BatchItem) ([]BatchResult, error) {
+	body := struct {
+		CanRequest
+		Items []BatchItem `json:"items"`
+	}{req, items}
+	var out []BatchResult
+	err := c.do(ctx, userBearer, http.MethodPost, "/api/auth/effective-access/batch-can", body, &out)
+	return out, err
+}
+
+// BatchCanService is BatchCan for the app's own service account.
+func (c *Client) BatchCanService(ctx context.Context, req CanRequest, items []BatchItem) ([]BatchResult, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return c.BatchCan(ctx, tok, req, items)
+}
+
+// MeCompanies lists the companies the user behind userBearer may see: their active
+// memberships in active companies. The company switcher's source.
+func (c *Client) MeCompanies(ctx context.Context, userBearer string) ([]Company, error) {
+	var out []Company
+	err := c.do(ctx, userBearer, http.MethodGet, "/api/org/me/companies", nil, &out)
+	return out, err
+}
+
+// MemberDirectory reads one page of companyID's active members, optionally filtered by a
+// substring of display name or email, as the app's service account. The service account must
+// be a member of the company.
+func (c *Client) MemberDirectory(ctx context.Context, companyID, q string, page, pageSize int) (DirectoryPage, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return DirectoryPage{}, err
+	}
+	query := url.Values{}
+	if q != "" {
+		query.Set("q", q)
+	}
+	if page > 0 {
+		query.Set("page", strconv.Itoa(page))
+	}
+	if pageSize > 0 {
+		query.Set("pageSize", strconv.Itoa(pageSize))
+	}
+	path := "/api/org/companies/" + url.PathEscape(companyID) + "/members"
+	if len(query) > 0 {
+		path += "?" + query.Encode()
+	}
+	var out DirectoryPage
+	err = c.do(ctx, tok, http.MethodGet, path, nil, &out)
+	return out, err
+}
+
+// PositionHolder answers who holds positionID in companyID on date, as the app's service
+// account. A 404 APIError means nobody holds it that day.
+func (c *Client) PositionHolder(ctx context.Context, companyID, positionID string, date time.Time) (Assignment, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return Assignment{}, err
+	}
+	var out Assignment
+	err = c.do(ctx, tok, http.MethodGet, "/api/org/companies/"+url.PathEscape(companyID)+"/positions/"+url.PathEscape(positionID)+"/holder?date="+date.Format("2006-01-02"), nil, &out)
+	return out, err
+}
+
+// GroupMembers lists the current members of groupID in companyID, as the app's service account.
+func (c *Client) GroupMembers(ctx context.Context, companyID, groupID string) ([]GroupMember, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []GroupMember
+	err = c.do(ctx, tok, http.MethodGet, "/api/org/companies/"+url.PathEscape(companyID)+"/groups/"+url.PathEscape(groupID)+"/members", nil, &out)
+	return out, err
 }
 
 // Grant writes tuples on the app's own object types in companyID. Every module object must

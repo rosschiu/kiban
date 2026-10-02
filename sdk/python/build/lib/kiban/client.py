@@ -34,6 +34,16 @@ class Decision:
 
 
 @dataclass
+class BatchResult:
+    """One item of a batch check: the object, the relation and Kiban's decision."""
+
+    object_type: str
+    object_id: str
+    relation: str
+    decision: Decision
+
+
+@dataclass
 class MemberFact:
     """Whether a subject is an active member of a company, and which member."""
 
@@ -142,6 +152,38 @@ class KibanClient:
         """``can`` for the app's own service account (a background job)."""
         return self.can(self.service_token(), feature_key, **kwargs)
 
+    def batch_can(
+        self,
+        user_bearer: str,
+        feature_key: str,
+        items: list[tuple[str, str, str]],
+        module_key: Optional[str] = None,
+        company_id: Optional[str] = None,
+        scope: str = "company",
+    ) -> list[BatchResult]:
+        """Up to 100 object-relation questions for the user in one call; ``items`` are
+        ``(object_type, object_id, relation)`` triples. One round trip for a page of controls."""
+        body: dict[str, Any] = {
+            "featureKey": feature_key,
+            "scope": scope,
+            "items": [{"object": {"type": t, "id": i}, "relation": r} for t, i, r in items],
+        }
+        if module_key:
+            body["moduleKey"] = module_key
+        if company_id:
+            body["companyId"] = company_id
+        data = self._api("POST", "/api/auth/effective-access/batch-can", user_bearer, body)
+        out: list[BatchResult] = []
+        for it in data if isinstance(data, list) else []:
+            obj = it.get("object") or {}
+            d = it.get("decision") or {}
+            out.append(BatchResult(obj.get("type", ""), obj.get("id", ""), it.get("relation", ""), Decision(bool(d.get("allowed")), str(d.get("reason", "")))))
+        return out
+
+    def batch_can_service(self, feature_key: str, items: list[tuple[str, str, str]], **kwargs: Any) -> list[BatchResult]:
+        """``batch_can`` for the app's own service account."""
+        return self.batch_can(self.service_token(), feature_key, items, **kwargs)
+
     # --- tuples -------------------------------------------------------------------------
 
     @staticmethod
@@ -175,6 +217,40 @@ class KibanClient:
         data = self._api("GET", path, self.service_token())
         return MemberFact(is_member=bool(data.get("isMember")), is_active=bool(data.get("isActive")), member_id=data.get("memberId"))
 
+    def me_companies(self, user_bearer: str) -> list[dict[str, Any]]:
+        """The companies the user behind ``user_bearer`` may see: active memberships in active
+        companies (``id``, ``code``, ``name``, ``isActive``). The company switcher's source."""
+        data = self._api("GET", "/api/org/me/companies", user_bearer)
+        return data if isinstance(data, list) else []
+
+    def member_directory(self, company_id: str, q: Optional[str] = None, page: int = 1, page_size: int = 25) -> dict[str, Any]:
+        """One page of ``company_id``'s active members (``items`` of ``id``, ``displayName``,
+        ``email``, ``hasLinkedUser``, ``kind``; ``total``, ``page``, ``pageSize``,
+        ``totalPages``), as the app's service account, which must be a member of the company.
+        ``q`` filters on a substring of display name or email."""
+        params = {"page": str(page), "pageSize": str(page_size)}
+        if q:
+            params["q"] = q
+        path = f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/members?{urllib.parse.urlencode(params)}"
+        return self._api("GET", path, self.service_token())
+
+    def position_holder(self, company_id: str, position_id: str, date: Optional[str] = None) -> dict[str, Any]:
+        """Who holds ``position_id`` in ``company_id`` on ``date`` (``YYYY-MM-DD``, default
+        today): the assignment (``memberId``, ``validFrom``, ``validTo``). A 404
+        ``KibanApiError`` means nobody holds it that day."""
+        from datetime import date as _date
+
+        day = date or _date.today().isoformat()
+        path = f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/positions/{urllib.parse.quote(position_id, safe='')}/holder?date={day}"
+        return self._api("GET", path, self.service_token())
+
+    def group_members(self, company_id: str, group_id: str) -> list[dict[str, Any]]:
+        """The current members of ``group_id`` in ``company_id`` (``memberId``,
+        ``memberDisplayName``, ``memberEmail``, ...), as the app's service account."""
+        path = f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/groups/{urllib.parse.quote(group_id, safe='')}/members"
+        data = self._api("GET", path, self.service_token())
+        return data if isinstance(data, list) else []
+
     # --- registration -------------------------------------------------------------------
 
     def register_app(self, superadmin_bearer: str, manifest: dict[str, Any]) -> dict[str, Any]:
@@ -183,7 +259,7 @@ class KibanClient:
 
     # --- plumbing -----------------------------------------------------------------------
 
-    def _api(self, method: str, path: str, bearer: str, body: Any = None) -> dict[str, Any]:
+    def _api(self, method: str, path: str, bearer: str, body: Any = None) -> Any:
         data = json.dumps(body).encode() if body is not None else None
         headers = {"Authorization": f"Bearer {bearer}"}
         if data is not None:
@@ -197,7 +273,8 @@ class KibanClient:
         if status >= 400:
             err = envelope.get("error") or {}
             raise KibanApiError(status, err.get("code", f"HTTP_{status}"), err.get("message", raw.decode(errors="replace")), err.get("details"))
-        return envelope.get("data") or {}
+        data = envelope.get("data")
+        return {} if data is None else data
 
     def _send(self, req: urllib.request.Request) -> tuple[int, bytes]:
         try:
