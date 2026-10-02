@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// The published-image quickstart must be able to serve a real origin (TokiDesk spike, K9):
+// The published-image quickstart must be able to serve a real origin:
 // deploy/quickstart/compose.public.yaml, generated from infra/compose.public.yaml, carries the
 // origin-dependent settings for every service the quickstart runs, and nothing tied to the
 // source tree's shared-Traefik topology.

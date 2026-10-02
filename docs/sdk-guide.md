@@ -303,11 +303,12 @@ samples are compiled and run by this package's test suite.
 
 ## Python and Go
 
-The Python client (`kiban-sdk`, `sdk/python/` in the repository, PyJWT for token verification,
-standard-library HTTP) and the Go client (`github.com/rosschiu/kiban/sdk`) have the same shape:
-a service token by client credentials, `verify_user_token` / `VerifyUserToken`, `can` and
-`can_service`, `grant` and `revoke` with an anchor helper, `member_by_subject`, `register_app`.
-The [Integrate your app](integrate.md#backend-track) page shows each step in all three.
+`kiban-sdk` (Python, `sdk/python`) and `github.com/rosschiu/kiban/sdk` (Go) are the backend entry
+for those languages, with the same surface as the Node `server` entry: the service token, user
+token verification, `can` and `batch_can` (for the user, or for the service account), tuple
+grant and revoke with the anchor helper, member lookup by subject, the org reads (companies the
+user may see, member directory, position holder on a date, group members) and app registration.
+The [Integrate page](integrate.md) shows every call in all three languages.
 
 ## Wire types
 

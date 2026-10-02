@@ -51,10 +51,60 @@ func (c *AuthzAdminClient) DecideAdminInCompany(ctx context.Context, authorizati
 	return adminUncertain
 }
 
+// DecideMemberInCompany: superadmin or any active member of the company (reads of a
+// company's own facts).
+func (c *AuthzAdminClient) DecideMemberInCompany(ctx context.Context, authorizationHeader, action, companyID, correlationID string) adminResult {
+	d, err := c.inner.DecideMemberInCompany(ctx, authorizationHeader, action, companyID, correlationID)
+	if err != nil {
+		return adminUncertain
+	}
+	if d.Allowed && d.Reason == "ALLOWED" {
+		return adminAllowed
+	}
+	if d.Denied() {
+		return adminDenied
+	}
+	return adminUncertain
+}
+
 // RequireSuperadminOrCompanyAdmin guards a route whose subject is one company: allowed for the
 // superadmin and for an administrator of that company, 403 for everyone else, 503 whenever the
 // company or the decision cannot be established.
 func RequireSuperadminOrCompanyAdmin(client *AuthzAdminClient, action string, companyOf companyOfFunc) func(http.Handler) http.Handler {
+	return requireInCompany(client, action, companyOf, (*AuthzAdminClient).DecideAdminInCompany, "requires superadmin access or administrator access to this company")
+}
+
+// RequireSuperadminOrCompanyMember guards a read of a company's own facts (a position's
+// holder, a group's members): the superadmin or any active member of that company, which
+// includes an app's service account once it is a member there.
+func RequireSuperadminOrCompanyMember(client *AuthzAdminClient, action string, companyOf companyOfFunc) func(http.Handler) http.Handler {
+	return requireInCompany(client, action, companyOf, (*AuthzAdminClient).DecideMemberInCompany, "requires membership of this company")
+}
+
+// requireResourceInCompany answers 404 when the resource named by pathParam does not belong
+// to the company named by the companyId path value, so a company-scoped read cannot reach into
+// another company's positions or groups by id.
+func requireResourceInCompany(orgTarget *url.URL, kind, pathParam string) func(http.Handler) http.Handler {
+	lookup := companyFromOrg(orgTarget, kind, pathParam)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			owner, err := lookup(r)
+			switch {
+			case errors.Is(err, errCompanyNotFound), err == nil && owner != r.PathValue("companyId"):
+				errenv.WriteError(w, http.StatusNotFound, errenv.APIError{Code: errenv.CodeNotFound, Message: "not found"})
+				return
+			case err != nil:
+				writeAdminUnavailable(w)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+type decideInCompanyFunc func(c *AuthzAdminClient, ctx context.Context, authorizationHeader, action, companyID, correlationID string) adminResult
+
+func requireInCompany(client *AuthzAdminClient, action string, companyOf companyOfFunc, decide decideInCompanyFunc, deniedMessage string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, hasAuth := AuthFromContext(r.Context())
@@ -76,13 +126,13 @@ func RequireSuperadminOrCompanyAdmin(client *AuthzAdminClient, action string, co
 				return
 			}
 			correlationID, _ := obs.CorrelationFromContext(r.Context())
-			switch client.DecideAdminInCompany(r.Context(), bearerHeader, action, companyID, correlationID) {
+			switch decide(client, r.Context(), bearerHeader, action, companyID, correlationID) {
 			case adminAllowed:
 				next.ServeHTTP(w, r)
 			case adminDenied:
 				errenv.WriteError(w, http.StatusForbidden, errenv.APIError{
 					Code:    errenv.CodeForbidden,
-					Message: "requires superadmin access or administrator access to this company",
+					Message: deniedMessage,
 				})
 			default:
 				writeAdminUnavailable(w)

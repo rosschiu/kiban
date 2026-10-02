@@ -223,3 +223,23 @@ func TestAdminAuthorizer_DecideInCompany_WireAndReasons(t *testing.T) {
 		t.Error("an empty company id must be unavailable, never a call")
 	}
 }
+
+func TestAdminAuthorizer_DecideMemberInCompany_NoRole(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"allowed":true,"reason":"ALLOWED"}}`))
+	}))
+	defer srv.Close()
+	d, err := New(srv.URL, nil).DecideMemberInCompany(context.Background(), "Bearer t", "org.positions.holder", "co-1", "")
+	if err != nil || !d.Allowed {
+		t.Fatalf("= %+v, %v", d, err)
+	}
+	if _, has := got["requiredCompanyRole"]; has {
+		t.Fatalf("membership decision must name no company role: %v", got)
+	}
+	if got["scope"] != "company" || got["companyId"] != "co-1" || got["allowPlatformOperatorCompanyScope"] != true {
+		t.Fatalf("wire = %v", got)
+	}
+}

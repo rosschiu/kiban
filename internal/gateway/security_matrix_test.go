@@ -68,6 +68,8 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "admin_group_members_add", Pattern: "POST /api/org/admin/groups/{id}/members", Method: http.MethodPost, Path: "/api/org/admin/groups/grp-1/members", Body: `{"memberId":"mem-1"}`},
 	{Name: "admin_group_members_remove", Pattern: "DELETE /api/org/admin/groups/{id}/members/{memberId}", Method: http.MethodDelete, Path: "/api/org/admin/groups/grp-1/members/mem-1"},
 	{Name: "foundation_member_by_subject", Pattern: "GET /api/org/companies/{companyId}/members/by-subject/{subject}", Method: http.MethodGet, Path: "/api/org/companies/co-1/members/by-subject/sub-1"},
+	{Name: "foundation_position_holder", Pattern: "GET /api/org/companies/{companyId}/positions/{id}/holder", Method: http.MethodGet, Path: "/api/org/companies/co-1/positions/pos-1/holder?date=2026-09-28"},
+	{Name: "foundation_group_members", Pattern: "GET /api/org/companies/{companyId}/groups/{id}/members", Method: http.MethodGet, Path: "/api/org/companies/co-1/groups/grp-1/members"},
 	{Name: "foundation_grants", Pattern: "POST /api/auth/grants", Method: http.MethodPost, Path: "/api/auth/grants", Body: `{"type":"user","typeId":"u-1","relation":"admin","objectType":"company","objectId":"co-1"}`},
 	{Name: "platform_role_grant", Pattern: "POST /api/platform/admin/platform-roles", Method: http.MethodPost, Path: "/api/platform/admin/platform-roles", Body: `{"subjectId":"u-1","role":"kiban-superadmin"}`},
 	{Name: "platform_role_revoke", Pattern: "DELETE /api/platform/admin/platform-roles/{role}/{subjectId}", Method: http.MethodDelete, Path: "/api/platform/admin/platform-roles/kiban-superadmin/u-1"},

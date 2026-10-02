@@ -141,6 +141,16 @@ func (a *AdminAuthorizer) Decide(ctx context.Context, rawBearer, action, correla
 // platform-operator exception on and RequiredCompanyRole = CompanyAdminRole. A superadmin
 // passes without membership; anyone else must be an active member holding the admin relation.
 func (a *AdminAuthorizer) DecideInCompany(ctx context.Context, rawBearer, action, companyID, correlationID string) (Decision, error) {
+	return a.decideInCompany(ctx, rawBearer, action, companyID, CompanyAdminRole, correlationID)
+}
+
+// DecideMemberInCompany is DecideInCompany without the role: the superadmin, or any active,
+// unblocked member of the company. The read guard for a company's own facts.
+func (a *AdminAuthorizer) DecideMemberInCompany(ctx context.Context, rawBearer, action, companyID, correlationID string) (Decision, error) {
+	return a.decideInCompany(ctx, rawBearer, action, companyID, "", correlationID)
+}
+
+func (a *AdminAuthorizer) decideInCompany(ctx context.Context, rawBearer, action, companyID, role, correlationID string) (Decision, error) {
 	if companyID == "" {
 		return Decision{}, ErrAuthorizationUnavailable
 	}
@@ -150,7 +160,7 @@ func (a *AdminAuthorizer) DecideInCompany(ctx context.Context, rawBearer, action
 		CompanyID:                         companyID,
 		RequiredPlatformRole:              AdminRequiredRole,
 		AllowPlatformOperatorCompanyScope: true,
-		RequiredCompanyRole:               CompanyAdminRole,
+		RequiredCompanyRole:               role,
 		Action:                            action,
 		CorrelationID:                     correlationID,
 	})

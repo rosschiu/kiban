@@ -331,6 +331,41 @@ the app defining its own model, not acting in the company.
     d, err := kiban.CanService(ctx, sdk.CanRequest{FeatureKey: "tokidesk.reminders.run", ModuleKey: "tokidesk", CompanyID: companyID})
     ```
 
+### 11. Read the org
+
+Four reads cover most approval and routing needs. The app's service account must be a member of
+the company for the last three (step 10).
+
+=== "Node"
+
+    ```ts
+    const companies = await kiban.meCompanies(userBearer);                 // what this user may see
+    const page      = await kiban.memberDirectory(companyId, "ali");       // active members, kind person|service
+    const holder    = await kiban.positionHolder(companyId, positionId, "2026-10-01");
+    const members   = await kiban.groupMembers(companyId, groupId);
+    ```
+
+=== "Python"
+
+    ```python
+    companies = kiban.me_companies(user_bearer)
+    page      = kiban.member_directory(company_id, q="ali")
+    holder    = kiban.position_holder(company_id, position_id, "2026-10-01")   # KibanApiError 404: nobody that day
+    members   = kiban.group_members(company_id, group_id)
+    ```
+
+=== "Go"
+
+    ```go
+    companies, err := kiban.MeCompanies(ctx, userBearer)
+    page, err      := kiban.MemberDirectory(ctx, companyID, "ali", 1, 25)
+    holder, err    := kiban.PositionHolder(ctx, companyID, positionID, time.Now())
+    members, err   := kiban.GroupMembers(ctx, companyID, groupID)
+    ```
+
+For a page with many permission-driven controls, ask once: `batchCan` / `batch_can` / `BatchCan`
+take up to 100 object-relation pairs with the user's bearer and answer one decision each.
+
 ## Where the user's token lives
 
 Two shapes work with Kiban as shipped; the choice is the app's, not a Kiban setting.
