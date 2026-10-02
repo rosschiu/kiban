@@ -28,13 +28,14 @@ complete list of what 0.1 does not do; read it before promising anything.
 
 ```
 make setup && make dev        # the stack, at https://127.0.0.1:8443
+make test-stack-up            # once: the isolated test stack the next gates run against
 make validate-modules         # manifests, fragments, OpenAPI, migrations of every module
 make check                    # formatting, vet, tests, coverage, licences, docs, secrets
 make test                     # race detector and the authorization harness
 make docs-site                # the documentation, strict
 ```
 
-`make check` and `make test` need Docker; they start an isolated test stack. Run them in the
+`make check` and `make test` need Docker and the isolated test stack (`make test-stack-up`). Run them in the
 foreground and read the last lines.
 
 ## Rules of the tree

@@ -107,7 +107,7 @@ class KibanClient:
 
     def verify_user_token(self, bearer: str) -> VerifiedToken:
         """Verifies a bearer a user presented to the app: signature against the realm's keys,
-        issuer, audience and time claims. Raises ``jwt.InvalidTokenError`` otherwise."""
+        issuer, audience and time claims. Raises ``jwt.PyJWTError`` otherwise."""
         key = self._jwks.get_signing_key_from_jwt(bearer)
         claims = jwt.decode(bearer, key.key, algorithms=["RS256"], audience=self.audience, issuer=self.issuer, leeway=30)
         return VerifiedToken(subject=claims["sub"], client_id=claims.get("azp"), claims=claims)

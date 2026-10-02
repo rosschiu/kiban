@@ -12,8 +12,10 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **No field-level or row-level policy on member data.** Every active member of a company can
   read the directory, including email addresses.
 - **Keycloak's own container holds two secrets as environment variables**: its database
-  password and its bootstrap admin password. Keycloak reads neither from a file. Every Kiban
-  service reads its secrets from files.
+  password and its bootstrap admin password. Keycloak reads neither from a file. Kiban's
+  services read the superadmin's initial password, the identity client secret and the Keycloak
+  admin password from files; each service's own database role password is an environment
+  variable.
 - **The org service's internal member-fact reads take no bearer.** Inside the Compose network,
   `GET /internal/org/companies/{id}/members/by-kcsub/{kcSub}` answers any caller; every write
   checks the bearer. Never publish a module container, or any internal service, on a host port.
@@ -33,7 +35,8 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A new user has no company until an administrator adds them.** The gateway provisions the
   account on the first request; membership is an explicit administrator action (there is no
   invite flow).
-- **The "archived" user state cannot be set.** The lifecycle has the state; no API writes it.
+- **The user lifecycle cannot be changed.** The column allows `active` and `disabled`; no API
+  writes either, and there is no `archived` state. Disable the login in Keycloak instead.
 - **Passkey login needs a real hostname.** WebAuthn refuses an IP-literal origin such as
   `https://127.0.0.1:8443`; use a DNS name.
 - **A deep link is lost after 30 minutes idle.** A session whose access token has expired but
@@ -76,8 +79,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.
 - **Dependency resolution between modules is declared but not enforced.** The validator checks
-  that declared dependencies exist, are acyclic and are marked required; nothing at runtime
-  checks that a dependency is enabled before the dependent module is.
+  that declared dependencies exist, are acyclic and are marked required. The gateway refuses a
+  module whose dependency is not enabled (`MODULE_DEPENDENCY_MISSING`), but nothing loads a
+  manifest's dependencies into the registry, so the check never fires.
 - **Entitlement and licensing state exist in the contract but are not enforced.**
 
 ## The differential harness
@@ -115,6 +119,6 @@ deliberately:
 - **All four.** Ticket descriptions, document bodies and similar text fields have no size cap
   below the gateway's request limit, and list endpoints return bodies inline. Two concurrent
   requests with the same idempotency key can both be answered `409` instead of one winning.
-  Audit rows carry no correlation id and are written for no-op mutations. `/health` is a
+  Audit rows are written for no-op mutations. `/health` is a
   constant `200` (use `/ready` for the database check). The sample OpenAPI files omit some
   status codes the handlers emit.

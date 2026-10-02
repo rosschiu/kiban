@@ -32,13 +32,13 @@ serves its own API; the sample modules are examples, off by default.
 - Position- and group-based access: rights follow the position holder or group membership with zero permission edits
 - Audit: every mutation writes an append-only audit row in the same transaction
 - Module runtime: manifest, fragment, OpenAPI file, checksummed migrations; validated by `make validate-modules`, routed by a version-blind gateway
-- Gateway: single origin, bearer-only `/api/*`, CORS, security headers, request limits, `/ready` health
+- Gateway: single origin, bearer-only `/api/*`, CORS, security headers, request limits; every service behind it answers `/ready`
 - Sample modules: notification, docs (DocShare), helpdesk, timesheet
 - SDK `@rosschiu/kiban-sdk`: session with PKCE and refresh, API client, org and effective-access clients, `canI` and grant recipes
 - Sample shell: React, CSP enforced, company switcher, administration pages
 - Platform role is one tuple (`system:platform#superadmin`) with grant and revoke routes
 - `GET /api/platform/metrics` aggregates every service's metrics for one scrape target
-- Postgres roles: non-superuser owner `kiban`, per-service roles, secrets read from files
+- Postgres roles: non-superuser owner `kiban`, per-service roles; the superadmin password, identity client secret and Keycloak admin password read from files
 - Containers run as uid 65532, read-only root, no capabilities; base images digest-pinned
 - Compose is the supported deployment; Kubernetes manifests proven on kind only
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`

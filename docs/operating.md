@@ -16,7 +16,8 @@ supported path for 0.1.
 | `registry`, `identity`, `org`, `authz` | The foundation services. Internal network only. |
 | one container per sample module | `notification`, `docs`, `helpdesk`, `timesheet`, only with the `samples` profile; off by default. |
 
-Every host-published port binds to `127.0.0.1`: the gateway (8443 TLS, 8090 plain), Keycloak
+Every host-published port binds to `127.0.0.1`: the gateway (8443 in TLS mode, 8090 in plain-HTTP mode; both are published, only the active
+mode's port answers), Keycloak
 (8081) and Postgres (5434). Put your own reverse proxy or firewall in front for public exposure.
 Application containers run as a non-root user with a read-only root filesystem.
 
@@ -24,9 +25,11 @@ Application containers run as a non-root user with a read-only root filesystem.
 
 `.env` is the environment contract (`.env.example` documents every variable).
 `make setup` writes it once with generated secrets and never rewrites it. Secrets that must not
-be visible in a process environment, such as the superadmin's initial password and the identity
-service's client secret, are files under `infra/secrets-in/` with mode 0600; services read them
-through `_FILE` variables. The superadmin password is never printed to a log.
+be visible in a process environment are files read through `_FILE` variables: the superadmin's
+initial password is a 0600 file under `infra/secrets-in/`, the identity service's client secret
+is written by `bootstrap` onto the `kiban-bootstrap-secrets` volume, and the Keycloak admin
+password reaches `bootstrap` as a Compose secret. The `keycloak` container itself still receives
+its admin password and that client secret as environment variables. The superadmin password is never printed to a log.
 
 Key settings:
 
@@ -38,7 +41,8 @@ Key settings:
 - `KIBAN_<SERVICE>_DB_PASSWORD`: every service connects with its own least-privilege role.
 - `KIBAN_INSTALLED_MODULES`: which modules the registry installs at first boot.
 - `KIBAN_SUPERADMIN_USERNAME` / `_EMAIL`: the seeded operator account.
-- `KEYCLOAK_REALM`: the realm name (default `kiban`).
+- `KEYCLOAK_REALM`: the realm name. Leave it `kiban`: the imported realm definition names the
+  realm by literal.
 - `KIBAN_IDENTITY_BASE_URL`: required by the gateway, which provisions users through it.
 - `KIBAN_PUBLIC_HOST`: required in public mode (`make public-up`), the hostname the edge serves.
 - `KIBAN_EXTRA_ORIGINS`: read by `bootstrap` and by the gateway. Comma-separated extra
@@ -51,8 +55,10 @@ Key settings:
 - `KIBAN_DOMAIN`: read by `bootstrap` and by the gateway from their own environment, not from
   `.env`. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
   origins to exactly `https://<domain>/*` on every run, and the gateway allows that one origin
-  for CORS; when unset, both use the fixed localhost set. `make public-up` sets it on
-  `bootstrap` from `KIBAN_PUBLIC_HOST`; `make dev` leaves it unset, and the image quickstart sets it through its `compose.public.yaml` overlay.
+  for CORS; when unset, bootstrap registers the fixed dev origins (`http://localhost`,
+  `http://localhost:3000`, `http://localhost:5173`, `https://127.0.0.1:8443`,
+  `https://127.0.0.1:18543`) and the gateway allows the three `localhost` ones for CORS.
+  `make public-up` sets it on `bootstrap` and the gateway from `KIBAN_PUBLIC_HOST`; `make dev` leaves it unset, and the image quickstart sets it through its `compose.public.yaml` overlay.
   `KIBAN_EXTRA_ORIGINS` adds to the list.
 - `KEYCLOAK_AUDIENCE` (default `kiban-api`): the audience every service requires in a bearer.
   The realm's audience mapper on `kiban-frontend` writes `kiban-api`, and the Compose files do
@@ -67,7 +73,9 @@ Key settings:
 `infra/compose.yaml` names its Compose project `kiban`. To run an independent instance from a
 second checkout, give that checkout's `.env` its own `COMPOSE_PROJECT_NAME` and a free port set
 (`POSTGRES_HOST_PORT`, `KEYCLOAK_HOST_PORT`, `KIBAN_GATEWAY_TLS_HOST_PORT`,
-`KIBAN_GATEWAY_HTTP_HOST_PORT`; `docker ps` and `ss -ltn` show what is taken). A second
+`KIBAN_GATEWAY_HTTP_HOST_PORT`; `docker ps` and `ss -ltn` show what is taken), and
+`KIBAN_EXTRA_ORIGINS=https://127.0.0.1:<its TLS port>`, without which Keycloak rejects the
+browser login on the new port as an invalid redirect URI. A second
 instance is a second Postgres container, never a second database name: `POSTGRES_DB` must stay
 `kiban`. `make test-stack-up` does exactly this for the `kiban-test` project.
 
@@ -89,10 +97,16 @@ edge. They are reachable only on Keycloak's own host port, `http://127.0.0.1:<KE
 The gateway has two modes, chosen by environment:
 
 1. **Operator certificates**: `KIBAN_TLS_CERT_FILE` and `KIBAN_TLS_KEY_FILE`. Use this for
-   air-gapped or internally-signed deployments. `make dev` generates a self-signed pair.
+   air-gapped or internally-signed deployments. `make dev` generates a self-signed pair. Both
+   variables are set on the `gateway` service in `infra/compose.yaml`, not read from `.env`:
+   mount your pair and point them at it.
 2. **Plain HTTP behind your own TLS-terminating reverse proxy**: `KIBAN_INSECURE_HTTP=true` with
-   `KIBAN_TRUSTED_PROXY=true` and `KC_HOSTNAME` pinned to the public origin. This is how
-   `make public-up` runs behind a shared Traefik.
+   `KIBAN_TRUSTED_PROXY=true` and `KC_HOSTNAME` pinned to the public origin, and both
+   certificate variables empty (a configured certificate always wins). This is how
+   `make public-up` runs behind a shared Traefik: it expects a Traefik on the existing external
+   Docker network `KIBAN_PUBLIC_NETWORK` (default `kiban-public`) with entrypoints `web` and
+   `websecure` and a `letsencrypt` certificate resolver, and it turns on the public-demo banner
+   (`KIBAN_DEMO_MODE=true`). For another proxy, or without the banner, write your own overlay.
 
 The gateway does not obtain certificates itself. `KIBAN_DOMAIN` only names the public origin
 (redirect URIs, CORS); it does not select a TLS mode.
@@ -143,12 +157,16 @@ restore that removes users (see limitations: provisioning cache).
 ## Upgrading
 
 1. Take and verify a backup.
-2. Build or pull the new images (`make images-all VERSION=vX.Y.Z` builds all 13, or set
-   `KIBAN_IMAGE_TAG`). `make pin-images` refreshes the digest pins on third-party base images.
+2. Build the new images: `make images-all VERSION=vX.Y.Z` builds all 13. To run released
+   images instead, pull each `ghcr.io/rosschiu/kiban-<service>:vX.Y.Z` and `docker tag` it
+   `kiban-<service>:vX.Y.Z`; `KIBAN_IMAGE_TAG` only selects images already present locally
+   under that name. `make pin-images` refreshes the digest pins on third-party base images.
 3. Start with the tag: `KIBAN_IMAGE_TAG=vX.Y.Z make dev` (or `make public-up`). Migrations are
    forward-only and applied automatically before the services start; shipped migrations are
-   checksummed (`make validate-migrations`) and refuse to run if altered.
-4. Check `docker compose ps` and the audit tables for the bootstrap run.
+   checksummed, and `make validate-migrations` (part of `make check`) fails if one was altered;
+   nothing checks this at deploy time.
+4. Check `docker compose --env-file .env --project-directory infra ps` and the `bootstrap`
+   container's log: one `bootstrap: step result` line per step.
 
 Rollback is a restore of the backup and a redeploy of the previous tag, never a downward
 migration.
@@ -173,8 +191,8 @@ psql "postgres://kiban:${KIBAN_DB_PASSWORD}@127.0.0.1:${POSTGRES_HOST_PORT:-5434
 ```
 
 `KIBAN_DB_PASSWORD` and `POSTGRES_HOST_PORT` are in `.env`. The tables refuse `UPDATE` and
-`DELETE` at the database level; a `correlation_id` matches the `x-correlation-id` the gateway
-logged for the request, so a request can be followed from the gateway log into every table it
+`DELETE` at the database level; a `correlation_id` matches the `correlationId` field the gateway
+logged for the request (its `x-correlation-id` header), so a request can be followed from the gateway log into every table it
 touched.
 
 ## Observability
@@ -182,9 +200,9 @@ touched.
 The platform is one Prometheus scrape target: `GET /api/platform/metrics` on the gateway, with
 a superadmin bearer, returns every service's and enabled module's metrics in one exposition,
 each series labeled `service`, plus `kiban_metrics_scrape_up{service}` per target (`0` when a
-service did not answer; the response itself is always `200`). Each service also keeps its own
+service did not answer; the response itself is always `200`). Each service except the gateway also keeps its own
 `/metrics` on its internal listener for a Prometheus inside the network. See
-[Metrics](metrics.md). Logs are JSON on stdout with a correlation id per request.
+[Metrics](metrics.md). Logs are JSON on stderr with a `correlationId` field per request.
 `kiban_build_info{version,commit}` tells you exactly what is running.
 
 ## Health
