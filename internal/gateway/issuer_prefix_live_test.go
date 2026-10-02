@@ -15,7 +15,7 @@ import (
 )
 
 // TestLive_IssuerAndPrefixes pins two contracts a standard OIDC client depends on, against the
-// real kiban-test gateway (TokiDesk spike findings K14 and K15):
+// real kiban-test gateway:
 //
 //  1. the discovery document at EITHER prefix (`/auth/realms/…` and `/realms/…`) advertises an
 //     `issuer` equal to the `iss` inside a token the realm actually minted;

@@ -220,7 +220,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 
 	// --- 5. the service account is a user: a background job's own check is refused until an
 	// administrator makes the service account a member of the company, and the directory then
-	// shows it as kind "service" (TokiDesk spike, K11 and K12). ---
+	// shows it as kind "service". ---
 	svcCheck := sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}
 	if d, err := app.CanService(ctx, svcCheck); err != nil || d.Allowed || d.Reason != "COMPANY_MEMBERSHIP_REQUIRED" {
 		t.Fatalf("service check before membership = %+v, %v; want denied COMPANY_MEMBERSHIP_REQUIRED", d, err)
