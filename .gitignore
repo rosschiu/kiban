@@ -19,6 +19,7 @@ infra/keycloak-build/authenticator/target/
 docs-site-build/
 # Real credentials written by deploy/k8s/gen-secrets.sh. secret.example.yaml (placeholders) is committed.
 deploy/k8s/base/secret.yaml
+deploy/k8s/overlays/*/secret.yaml
 .venv-docs/
 .venv-sdk/
 docs/changelog.md
