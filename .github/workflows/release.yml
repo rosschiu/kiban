@@ -304,14 +304,14 @@ jobs:
           name: kiban-sdk-python
           path: dist/*
 
-      # Runs only when the repository holds PYPI_API_TOKEN (a PyPI API token scoped to the
+      # Runs only when the repository holds PYPI_APIKEY (a PyPI API token scoped to the
       # kiban-sdk project); without it the step says so and the release still succeeds.
-      - name: Publish to PyPI (when PYPI_API_TOKEN is set; idempotent)
+      - name: Publish to PyPI (when PYPI_APIKEY is set; idempotent)
         env:
-          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          PYPI_APIKEY: ${{ secrets.PYPI_APIKEY }}
         run: |
-          if [ -z "$PYPI_API_TOKEN" ]; then
-            echo "sdk-python: PYPI_API_TOKEN not set — not publishing to PyPI (artifact only)"
+          if [ -z "$PYPI_APIKEY" ]; then
+            echo "sdk-python: PYPI_APIKEY not set — not publishing to PyPI (artifact only)"
             exit 0
           fi
           PKG_VERSION="${GITHUB_REF_NAME#v}"
@@ -320,7 +320,7 @@ jobs:
             exit 0
           fi
           python3 -m pip install --quiet twine
-          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_API_TOKEN" python3 -m twine upload --non-interactive dist/*
+          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_APIKEY" python3 -m twine upload --non-interactive dist/*
           echo "sdk-python: published kiban-sdk $PKG_VERSION to PyPI"
 
   release:
