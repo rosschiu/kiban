@@ -197,9 +197,15 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if !asAPIError(err, &apiErr) || apiErr.Status != http.StatusForbidden {
 		t.Fatalf("grant on another module's type: err = %v, want 403", err)
 	}
-	err = app.Grant(ctx, companyID, sdk.Tuple{ObjectType: "company", ObjectID: companyID, Relation: "admin", SubjectType: "user", SubjectID: userSub})
+	err = app.Grant(ctx, companyID, sdk.Tuple{ObjectType: "company", ObjectID: companyID, Relation: "member", SubjectType: "user", SubjectID: userSub})
 	if !asAPIError(err, &apiErr) || apiErr.Status != http.StatusUnprocessableEntity {
 		t.Fatalf("grant on a base type: err = %v, want 422", err)
+	}
+	// The one base-model tuple the route knows, company#admin, is a superadmin's appointment:
+	// an app is refused, not told the type is unknown.
+	err = app.Grant(ctx, companyID, sdk.Tuple{ObjectType: "company", ObjectID: companyID, Relation: "admin", SubjectType: "user", SubjectID: userSub})
+	if !asAPIError(err, &apiErr) || apiErr.Status != http.StatusForbidden {
+		t.Fatalf("app appointing a company administrator: err = %v, want 403", err)
 	}
 	if err := app.Revoke(ctx, companyID, sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: "viewer", SubjectType: "user", SubjectID: userSub}); err != nil {
 		t.Fatalf("Revoke: %v", err)

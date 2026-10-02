@@ -16,6 +16,9 @@ type AdminAuthorizer interface {
 	// authorizer could not reach a definite answer — callers must treat both as deny, never as
 	// allow, and only the first as a 403.
 	Can(ctx context.Context, authCtx AuthContext, action string) (bool, error)
+	// CanInCompany reports whether authCtx may perform action in companyID: the superadmin, or
+	// an active member holding the company's admin relation. Same error contract as Can.
+	CanInCompany(ctx context.Context, authCtx AuthContext, action, companyID string) (bool, error)
 }
 
 // DeniedError is Can's confirmed denial: authz's own decision reason (e.g.
@@ -62,6 +65,10 @@ func NewDenyAllAuthorizer() AdminAuthorizer {
 }
 
 func (denyAllAuthorizer) Can(ctx context.Context, authCtx AuthContext, action string) (bool, error) {
+	return false, ErrAuthorizationUnavailable
+}
+
+func (denyAllAuthorizer) CanInCompany(ctx context.Context, authCtx AuthContext, action, companyID string) (bool, error) {
 	return false, ErrAuthorizationUnavailable
 }
 

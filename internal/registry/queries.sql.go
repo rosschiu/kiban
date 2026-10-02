@@ -10,7 +10,7 @@ import (
 )
 
 const getModuleCatalogEntry = `-- name: GetModuleCatalogEntry :one
-SELECT module_key, display_name, scope_type, mandatory, base_path, health_path, port, license_class, manifest_version, is_active FROM platform.module_catalog WHERE module_key = $1
+SELECT module_key, display_name, scope_type, mandatory, base_path, health_path, port, license_class, manifest_version, is_active, features FROM platform.module_catalog WHERE module_key = $1
 `
 
 func (q *Queries) GetModuleCatalogEntry(ctx context.Context, moduleKey string) (PlatformModuleCatalog, error) {
@@ -27,6 +27,7 @@ func (q *Queries) GetModuleCatalogEntry(ctx context.Context, moduleKey string) (
 		&i.LicenseClass,
 		&i.ManifestVersion,
 		&i.IsActive,
+		&i.Features,
 	)
 	return i, err
 }
@@ -67,7 +68,7 @@ func (q *Queries) ListInstallationStatusForKeys(ctx context.Context, moduleKeys 
 }
 
 const listModuleCatalog = `-- name: ListModuleCatalog :many
-SELECT c.module_key, c.display_name, c.scope_type, c.mandatory, c.base_path, c.health_path, c.port, c.license_class, c.manifest_version, c.is_active, COALESCE(i.installed, false) AS installed, COALESCE(i.enabled, false) AS enabled
+SELECT c.module_key, c.display_name, c.scope_type, c.mandatory, c.base_path, c.health_path, c.port, c.license_class, c.manifest_version, c.is_active, c.features, COALESCE(i.installed, false) AS installed, COALESCE(i.enabled, false) AS enabled
 FROM platform.module_catalog c
 LEFT JOIN platform.module_installation i ON i.module_key = c.module_key
 ORDER BY c.module_key
@@ -84,6 +85,7 @@ type ListModuleCatalogRow struct {
 	LicenseClass    string `json:"license_class"`
 	ManifestVersion string `json:"manifest_version"`
 	IsActive        bool   `json:"is_active"`
+	Features        []byte `json:"features"`
 	Installed       bool   `json:"installed"`
 	Enabled         bool   `json:"enabled"`
 }
@@ -108,6 +110,7 @@ func (q *Queries) ListModuleCatalog(ctx context.Context) ([]ListModuleCatalogRow
 			&i.LicenseClass,
 			&i.ManifestVersion,
 			&i.IsActive,
+			&i.Features,
 			&i.Installed,
 			&i.Enabled,
 		); err != nil {

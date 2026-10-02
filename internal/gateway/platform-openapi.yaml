@@ -693,7 +693,7 @@ paths:
   /api/org/admin/members:
     post:
       operationId: superadminCreateMember
-      summary: Create a member in a company (superadmin only)
+      summary: Create a member in a company (superadmin, or an administrator of the company)
       description: >
         Superadmin-gated fixed proxy to org's `/internal/org/members`. The member has no login
         until it is linked to a subject with the link-user route.
@@ -719,7 +719,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     get:
       operationId: superadminListMembers
-      summary: List a company's members (superadmin only)
+      summary: List a company's members (superadmin, or an administrator of the company)
       parameters:
         - { name: companyId, in: query, required: true, schema: { type: string, format: uuid } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
@@ -750,7 +750,7 @@ paths:
   /api/org/admin/members/{id}:
     put:
       operationId: superadminUpdateMember
-      summary: Update a member (superadmin only)
+      summary: Update a member (superadmin, or an administrator of the company)
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -777,7 +777,7 @@ paths:
   /api/org/admin/members/{id}/link-user:
     post:
       operationId: superadminLinkMemberUser
-      summary: Link a member to a login subject (superadmin only)
+      summary: Link a member to a login subject (superadmin, or an administrator of the company)
       description: >
         `kcSub` is the subject's `sub` claim; the identity record exists once that subject has
         made one request through the gateway. A subject is linked to at most one member per company.
@@ -809,7 +809,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     delete:
       operationId: superadminUnlinkMemberUser
-      summary: Unlink a member from its login subject (superadmin only)
+      summary: Unlink a member from its login subject (superadmin, or an administrator of the company)
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -830,7 +830,7 @@ paths:
   /api/org/admin/companies/{companyId}/positions:
     get:
       operationId: adminListPositions
-      summary: List a company's positions, each with its current holder (superadmin only)
+      summary: List a company's positions, each with its current holder (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -866,7 +866,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminCreatePosition
-      summary: Create a position (superadmin only)
+      summary: Create a position (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -901,7 +901,7 @@ paths:
   /api/org/admin/positions/{id}/assignments:
     post:
       operationId: adminAssignPositionNow
-      summary: Assign a member to a position, effective now (superadmin only)
+      summary: Assign a member to a position, effective now (superadmin, or an administrator of the company)
       parameters:
         - name: id
           in: path
@@ -934,7 +934,7 @@ paths:
   /api/org/admin/assignments/{id}/end:
     post:
       operationId: adminEndAssignmentNow
-      summary: End a position assignment, effective now (superadmin only, no body, server-dated)
+      summary: End a position assignment, effective now (superadmin, or an administrator of the company, no body, server-dated)
       parameters:
         - name: id
           in: path
@@ -961,7 +961,7 @@ paths:
   /api/org/admin/companies/{companyId}/groups:
     get:
       operationId: adminListGroups
-      summary: List a company's groups, each with its current member count (superadmin only)
+      summary: List a company's groups, each with its current member count (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -997,7 +997,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminCreateGroup
-      summary: Create a group (superadmin only; source is always "kiban" through this route)
+      summary: Create a group (superadmin, or an administrator of the company; source is always "kiban" through this route)
       parameters:
         - name: companyId
           in: path
@@ -1030,7 +1030,7 @@ paths:
   /api/org/admin/groups/{id}/members:
     get:
       operationId: adminListGroupMembers
-      summary: List a group's current members (superadmin only)
+      summary: List a group's current members (superadmin, or an administrator of the company)
       parameters:
         - name: id
           in: path
@@ -1052,7 +1052,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminAddGroupMember
-      summary: Add a member to a group (superadmin only; 409 if the group is not source="kiban")
+      summary: Add a member to a group (superadmin, or an administrator of the company; 409 if the group is not source="kiban")
       parameters:
         - name: id
           in: path
@@ -1086,7 +1086,7 @@ paths:
   /api/org/admin/groups/{id}/members/{memberId}:
     delete:
       operationId: adminRemoveGroupMember
-      summary: Remove a member from a group (superadmin only; 409 if the group is not source="kiban")
+      summary: Remove a member from a group (superadmin, or an administrator of the company; 409 if the group is not source="kiban")
       parameters:
         - name: id
           in: path
@@ -1302,9 +1302,11 @@ components:
         Every tuple is bound to `companyId`: its object must be an object type declared by one
         enabled module's fragment (anchored to `company_module:<companyId>/<module>`, an anchor
         tuple in the same grant request counts) or `company_module:<companyId>/<module>` itself;
-        base types (company, system, module, member, position, group) are refused (422). The
-        bearer must pass the effective-access decision's steps 1–6 for that (module, company)
-        (403 otherwise) and, for a `company_module` object, hold its `admin` relation.
+        base types (company, system, module, member, position, group) are refused (422), with
+        one exception: a superadmin may grant or revoke `company:<companyId>#admin` for a user,
+        which appoints or dismisses an administrator of that company. Otherwise the bearer must
+        pass the effective-access decision's steps 1–6 for that (module, company) (403
+        otherwise) and, for a `company_module` object, hold its `admin` relation.
       properties:
         op: { type: string, enum: [grant, revoke] }
         companyId: { type: string, format: uuid }

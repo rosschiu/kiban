@@ -581,9 +581,12 @@ For the full API and the recipes, see the [SDK guide](sdk-guide.md).
 
 ## Administration
 
-A superadmin creates companies, org units and members through the gateway, with the token from
-[Getting a token for the shell](#getting-a-token-for-the-shell). The sample shell's
-administration pages do the same for positions and groups.
+A superadmin creates companies and org units through the gateway, with the token from
+[Getting a token for the shell](#getting-a-token-for-the-shell). Members, positions,
+assignments and groups of a company are managed by the superadmin or by an administrator of
+that company: a member who holds the company's `admin` relation (`company:<id>#admin`, granted
+with `POST /api/auth/grants` by a superadmin). The sample shell's administration pages use the
+same routes for positions and groups.
 
 Create the company. A company has no parent; `typeKey` is `company`:
 

@@ -18,6 +18,14 @@ type AuditRegistryEvent struct {
 	CorrelationID *string            `json:"correlation_id"`
 }
 
+type PlatformAppRegistration struct {
+	ModuleKey       string             `json:"module_key"`
+	ServiceClientID string             `json:"service_client_id"`
+	Manifest        []byte             `json:"manifest"`
+	RegisteredBy    string             `json:"registered_by"`
+	RegisteredAt    pgtype.Timestamptz `json:"registered_at"`
+}
+
 type PlatformModuleCatalog struct {
 	ModuleKey       string `json:"module_key"`
 	DisplayName     string `json:"display_name"`
@@ -29,6 +37,7 @@ type PlatformModuleCatalog struct {
 	LicenseClass    string `json:"license_class"`
 	ManifestVersion string `json:"manifest_version"`
 	IsActive        bool   `json:"is_active"`
+	Features        []byte `json:"features"`
 }
 
 type PlatformModuleDependency struct {
