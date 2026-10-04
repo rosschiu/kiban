@@ -17,7 +17,10 @@ reproduction, and the impact you believe it has.
 Authorization fails closed: any error while evaluating a decision is a refusal. Every object
 check is bound to the request's company: companies and company modules by id, positions and
 groups through their company, module objects through the anchor tuple their module writes at
-creation. An object from another company is denied.
+creation. An object from another company is denied. An object carries exactly one anchor: a
+grant that would anchor an already-anchored object to another company is refused (`422`), and
+a unique index on the tuple table holds that rule for every write path; re-anchoring is a
+revoke followed by a grant.
 
 A grant names the company and may only write tuples on object types the caller owns: an
 app's backend, identified by the verified `azp` of its service-client token matching the app's
