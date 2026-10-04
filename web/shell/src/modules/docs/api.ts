@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Thin, hand-written client for the docs module's own HTTP surface (modules/docs/openapi.yaml),
-// built directly on the shared @rosschiu/kiban-sdk `ApiClient` — same pattern as
+// built directly on the shared @rossbsol/kiban-sdk `ApiClient` — same pattern as
 // web/shell/src/modules/notification/api.ts and .../timesheet/api.ts (a
 // module's own API surface is the module's own concern, never added to the shared SDK package).
-import type { ApiClient, Page } from "@rosschiu/kiban-sdk";
+import type { ApiClient, Page } from "@rossbsol/kiban-sdk";
 
 export type DocumentRelation = "owner" | "editor" | "viewer";
 

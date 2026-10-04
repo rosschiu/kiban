@@ -423,8 +423,9 @@ services:
   # with ZERO gateway code changes (catalog.go/proxy.go are registry-driven, module-key-generic).
   notification:
     # Sample module: an example of the module contract, not part of the default stack.
-    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
-    profiles: ["samples"]
+    # `COMPOSE_PROFILES=samples` brings the four samples up; `COMPOSE_PROFILES=notification` this one
+    # alone (KIBAN_INSTALLED_MODULES must list the same modules).
+    profiles: ["samples", "notification"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -480,8 +481,9 @@ services:
   # gateway code changes, same as notification.
   timesheet:
     # Sample module: an example of the module contract, not part of the default stack.
-    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
-    profiles: ["samples"]
+    # `COMPOSE_PROFILES=samples` brings the four samples up; `COMPOSE_PROFILES=timesheet` this one
+    # alone (KIBAN_INSTALLED_MODULES must list the same modules).
+    profiles: ["samples", "timesheet"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -527,8 +529,9 @@ services:
   # `notification` (targeted-events S2S endpoint) reachable, in addition to `authz`.
   docs:
     # Sample module: an example of the module contract, not part of the default stack.
-    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
-    profiles: ["samples"]
+    # `COMPOSE_PROFILES=samples` brings the four samples up; `COMPOSE_PROFILES=docs` this one
+    # alone (KIBAN_INSTALLED_MODULES must list the same modules).
+    profiles: ["samples", "docs"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service
@@ -580,8 +583,9 @@ services:
   # `authz`.
   helpdesk:
     # Sample module: an example of the module contract, not part of the default stack.
-    # `COMPOSE_PROFILES=samples` (plus KIBAN_INSTALLED_MODULES) brings the four samples up.
-    profiles: ["samples"]
+    # `COMPOSE_PROFILES=samples` brings the four samples up; `COMPOSE_PROFILES=helpdesk` this one
+    # alone (KIBAN_INSTALLED_MODULES must list the same modules).
+    profiles: ["samples", "helpdesk"]
     build:
       context: ..
       dockerfile: infra/Dockerfile.service

@@ -1,6 +1,6 @@
 # SDK guide
 
-`@rosschiu/kiban-sdk` is the TypeScript package a web application or a module frontend uses to
+`@rossbsol/kiban-sdk` is the TypeScript package a web application or a module frontend uses to
 talk to a Kiban deployment: the login flow, the tokens, typed calls to the platform API and the
 error envelope. It has no runtime dependencies (native `fetch` and `crypto` only) and talks to
 the gateway origin alone, never to Keycloak or to a module's service directly. The sample shell
@@ -11,19 +11,11 @@ Every sample on this page compiles against the package as shipped: the same code
 
 ## Install
 
-The package is published to GitHub Packages, so npm needs to know where the `@rosschiu` scope
-lives. GitHub Packages requires an authenticated read even for public packages: a token with
-the `read:packages` scope.
-
 ```
-# .npmrc, next to your package.json
-@rosschiu:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+npm i @rossbsol/kiban-sdk
 ```
 
-```
-npm i @rosschiu/kiban-sdk
-```
+Every release is published to the public npm registry, so no `.npmrc` and no token are needed.
 
 The package ships ESM only (`dist/index.js` and `dist/index.d.ts`). Node 20 or a modern browser
 gives you the `fetch` and `crypto.subtle` it relies on.
@@ -35,7 +27,7 @@ gateway's Keycloak proxy, validates `state` and `nonce`, and refreshes tokens on
 time.
 
 ```ts
-import { createSession } from "@rosschiu/kiban-sdk";
+import { createSession } from "@rossbsol/kiban-sdk";
 
 const gatewayOrigin = "https://127.0.0.1:8443"; // your gateway; self-signed TLS in `make dev`
 
@@ -77,7 +69,7 @@ is dropped and the user logs in again.
 To keep tokens out of browser storage entirely, pass a memory adapter:
 
 ```ts
-import { createMemoryStorage, createSession } from "@rosschiu/kiban-sdk";
+import { createMemoryStorage, createSession } from "@rossbsol/kiban-sdk";
 
 const session = createSession({
   authOrigin: gatewayOrigin,
@@ -102,7 +94,7 @@ and an `x-correlation-id`, JSON-encodes the body, unwraps the `{ data }` envelop
 `{ error }` envelope into a `KibanApiError`.
 
 ```ts
-import { createApiClient } from "@rosschiu/kiban-sdk";
+import { createApiClient } from "@rossbsol/kiban-sdk";
 
 const api = createApiClient({
   baseUrl: gatewayOrigin,
@@ -135,7 +127,7 @@ direct object grants the caller holds, globally or in one company; it is a displ
 for navigation, while `can` and `batchCan` are the gate a component asks before acting.
 
 ```ts
-import { createEffectiveAccessClient, createOrgClient } from "@rosschiu/kiban-sdk";
+import { createEffectiveAccessClient, createOrgClient } from "@rossbsol/kiban-sdk";
 
 const effectiveAccess = createEffectiveAccessClient(api);
 const org = createOrgClient(api);
@@ -173,7 +165,7 @@ a live end-to-end test in the repository.
 ### `canI`: "can I use this feature, here?"
 
 ```ts
-import { createCanI } from "@rosschiu/kiban-sdk";
+import { createCanI } from "@rossbsol/kiban-sdk";
 
 const canI = createCanI(effectiveAccess);
 
@@ -195,7 +187,7 @@ transport or envelope failure.
 ### `grantObjectAccess`: "share this object with that subject"
 
 ```ts
-import { createGrantObjectAccess } from "@rosschiu/kiban-sdk";
+import { createGrantObjectAccess } from "@rossbsol/kiban-sdk";
 
 const { grantObjectAccess, revokeObjectAccess } = createGrantObjectAccess(api);
 
@@ -237,7 +229,7 @@ rows. `ApiErrorCode` holds the canonical codes as constants; the ones a frontend
 branches on:
 
 ```ts
-import { ApiErrorCode, KibanApiError } from "@rosschiu/kiban-sdk";
+import { ApiErrorCode, KibanApiError } from "@rossbsol/kiban-sdk";
 
 try {
   await org.adminCreateGroup(summary.companyId, { code: "sales", name: "Sales" });
@@ -272,13 +264,13 @@ try {
 `code` is `"UNKNOWN_ERROR"` when the response carried no envelope (a proxy error page, a network
 failure midway). Do not parse `message`; it is for people.
 
-## The backend entry: `@rosschiu/kiban-sdk/server`
+## The backend entry: `@rossbsol/kiban-sdk/server`
 
 The same package has a second entry for a Node backend that runs beside Kiban. It needs no
 browser: `fetch` and `crypto.subtle` from Node 20 or later.
 
 ```ts
-import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rosschiu/kiban-sdk/server";
+import { createAppClient, createServiceCredentials, createTokenVerifier } from "@rossbsol/kiban-sdk/server";
 
 const gatewayOrigin = "https://127.0.0.1:8443";
 const credentials = createServiceCredentials({ gatewayOrigin, clientId: "tokidesk-backend", clientSecret });
@@ -303,11 +295,12 @@ samples are compiled and run by this package's test suite.
 
 ## Python and Go
 
-The Python client (`kiban-sdk`, `sdk/python/` in the repository, PyJWT for token verification,
-standard-library HTTP) and the Go client (`github.com/rosschiu/kiban/sdk`) have the same shape:
-a service token by client credentials, `verify_user_token` / `VerifyUserToken`, `can` and
-`can_service`, `grant` and `revoke` with an anchor helper, `member_by_subject`, `register_app`.
-The [Integrate your app](integrate.md#backend-track) page shows each step in all three.
+`kiban-sdk` (Python, `sdk/python`) and `github.com/rosschiu/kiban/sdk` (Go) are the backend entry
+for those languages, with the same surface as the Node `server` entry: the service token, user
+token verification, `can` and `batch_can` (for the user, or for the service account), tuple
+grant and revoke with the anchor helper, member lookup by subject, the org reads (companies the
+user may see, member directory, position holder on a date, group members) and app registration.
+The [Integrate page](integrate.md) shows every call in all three languages.
 
 ## Wire types
 

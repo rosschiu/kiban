@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * `@rosschiu/kiban-sdk/server`: the app's backend beside Kiban. Authenticate as the app's
+ * `@rossbsol/kiban-sdk/server`: the app's backend beside Kiban. Authenticate as the app's
  * service client, verify the user tokens Kiban's login issued, ask for decisions, write tuples
  * on the app's own object types, look members up.
  *
@@ -14,4 +14,14 @@ export type { TokenVerifier, TokenVerifierConfig, VerifiedToken } from "./verifi
 export { createAppClient } from "./appClient.js";
 export type { AppClient, AppClientConfig, AppManifest, MemberFact, Tuple } from "./appClient.js";
 export { KibanApiError } from "../client.js";
-export type { EffectiveAccessDecision, EffectiveAccessRequest } from "../types.js";
+export type {
+  EffectiveAccessBatchItem,
+  EffectiveAccessBatchResult,
+  EffectiveAccessDecision,
+  EffectiveAccessRequest,
+  MemberDirectoryEntry,
+  OrgAssignment,
+  OrgGroupMember,
+  OrgMeCompany,
+  Page
+} from "../types.js";

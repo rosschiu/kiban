@@ -14,7 +14,7 @@ supported path for 0.1.
 | `bootstrap` | One-shot: reconciles the realm, seeds the superadmin once, seeds default grants. Safe to re-run; it converges and never overwrites runtime state. |
 | `gateway` | The only public listener: TLS, token validation, the platform API, the identity provider under `/auth`, the web shell; routes to a sample module when one runs, never to your app. |
 | `registry`, `identity`, `org`, `authz` | The foundation services. Internal network only. |
-| one container per sample module | `notification`, `docs`, `helpdesk`, `timesheet`, only with the `samples` profile; off by default. |
+| one container per sample module | `notification`, `docs`, `helpdesk`, `timesheet`; off by default. The `samples` profile starts all four, a module's own profile (`COMPOSE_PROFILES=docs`) starts that one; `KIBAN_INSTALLED_MODULES` must list the same modules. |
 
 Every host-published port binds to `127.0.0.1`: the gateway (8443 TLS, 8090 plain), Keycloak
 (8081) and Postgres (5434). Put your own reverse proxy or firewall in front for public exposure.
@@ -111,6 +111,25 @@ minimum, not the username or email) and locks an account temporarily after ten f
 
 A user created in Keycloak is provisioned in Kiban by the gateway on that user's first
 request. Company membership is a separate administrator action.
+
+## Requiring a second factor
+
+A new realm requires no second factor. The superadmin sets the policy through the gateway and
+then pushes it to Keycloak, where the login flow enforces it:
+
+```
+# every user: password plus authenticator app (otp); passkey and otp_or_passkey also exist
+curl -X PUT $KIBAN/api/platform/admin/mfa-policy/global -H "Authorization: Bearer $SUPERADMIN" \
+  -H 'Content-Type: application/json' -d '{"required":true,"method":"otp"}'
+curl -X POST $KIBAN/api/platform/admin/mfa-policy/sync -H "Authorization: Bearer $SUPERADMIN"
+```
+
+Run the sync after every policy change; it is safe to repeat. A user without the credential is
+made to enrol at their next login; a user who has it is challenged for it. A per-user override
+(`PUT`/`DELETE .../mfa-policy/users/{subject}`, keyed by the user's Keycloak subject) may only
+raise the requirement above the global policy. `GET` on either path reads the effective policy.
+A passkey policy enrols a passkey but does not yet challenge for one at login; see
+[limitations](limitations.md).
 
 ## Backup and restore
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Thin, hand-written client for the notification module's own HTTP surface
-// (modules/notification/openapi.yaml), built directly on the shared @rosschiu/kiban-sdk `ApiClient` the
+// (modules/notification/openapi.yaml), built directly on the shared @rossbsol/kiban-sdk `ApiClient` the
 // shell already uses everywhere else. This is
-// intentionally NOT part of @rosschiu/kiban-sdk itself: the SDK ships only foundation-owned typed clients
+// intentionally NOT part of @rossbsol/kiban-sdk itself: the SDK ships only foundation-owned typed clients
 // (org/capabilities/effectiveAccess/superadmin — web/sdk/src/index.ts); a module's own API
 // surface is the module's own concern (a module owns its manifest, API and optional
 // frontend), so notification gets its own thin wrapper here rather than the shared package
@@ -13,7 +13,7 @@
 // a direct copy of web/sdk/src/org.ts's own shape (one function taking an `ApiClient`, returning
 // an object of typed methods), so a module author following that file as a template needs
 // nothing new from the platform.
-import type { ApiClient, Page } from "@rosschiu/kiban-sdk";
+import type { ApiClient, Page } from "@rossbsol/kiban-sdk";
 
 export type NotificationChannelKind = "in_app" | "email" | "webhook";
 

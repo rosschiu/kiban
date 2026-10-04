@@ -1,8 +1,8 @@
-# Changelog — `@rosschiu/kiban-sdk`
+# Changelog — `@rossbsol/kiban-sdk`
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/). This file tracks the SDK package specifically
-(`web/sdk/`, published as `@rosschiu/kiban-sdk`); see the root [`CHANGELOG.md`](../../CHANGELOG.md) for
+(`web/sdk/`, published as `@rossbsol/kiban-sdk`); see the root [`CHANGELOG.md`](../../CHANGELOG.md) for
 the platform-wide release notes this package version ships alongside.
 
 ## [Unreleased]

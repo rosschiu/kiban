@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Thin, hand-written client for the timesheet module's own HTTP surface
-// (modules/timesheet/openapi.yaml), built on the shared @rosschiu/kiban-sdk `ApiClient` — same pattern as
+// (modules/timesheet/openapi.yaml), built on the shared @rossbsol/kiban-sdk `ApiClient` — same pattern as
 // web/shell/src/modules/notification/api.ts (no SDK change needed).
-import type { ApiClient, Page } from "@rosschiu/kiban-sdk";
+import type { ApiClient, Page } from "@rossbsol/kiban-sdk";
 
 export interface TimesheetProject {
   id: string;

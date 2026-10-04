@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
-# Renders the Kustomize tree without a cluster (K23 regression check, wired into `make check`):
+# Renders the Kustomize tree without a cluster (wired into `make check`):
 #   1. the base alone renders and contains NO Secret (so it is usable as a remote base);
 #   2. each shipped overlay, with a generated secret, renders exactly one `kiban-secrets`;
 #   3. an overlay in the shipped shape but outside this tree (a stand-in for one kept in another

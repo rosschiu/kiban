@@ -824,8 +824,12 @@ func TestHandleGrants(t *testing.T) {
 	t.Run("non-UUID companyId: 400", func(t *testing.T) {
 		expect(t, post(t, adminSub, map[string]any{"op": "grant", "companyId": "not-a-uuid", "tuples": []map[string]string{cmTuple}}), http.StatusBadRequest, errenv.CodeBadRequest)
 	})
-	t.Run("base type object (company#admin) is refused: 422", func(t *testing.T) {
+	t.Run("company#admin by a non-superadmin is refused: 403 (only a superadmin appoints administrators)", func(t *testing.T) {
 		rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{tuple("company", companyID, "admin", "user", "hg-u1")}})
+		expect(t, rec, http.StatusForbidden, errenv.CodeAuthorizationDenied)
+	})
+	t.Run("base type object other than company#admin is refused: 422", func(t *testing.T) {
+		rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{tuple("company", companyID, "member", "user", "hg-u1")}})
 		expect(t, rec, http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
 		if !strings.Contains(rec.Body.String(), "company") {
 			t.Fatalf("message must name the type, body=%s", rec.Body.String())
@@ -871,6 +875,53 @@ func TestHandleGrants(t *testing.T) {
 		}}), http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
 		if tupleCount(t, "hg-doc-x") != 0 {
 			t.Fatal("nothing may be written on a refused request")
+		}
+	})
+	t.Run("in-request anchor on an object anchored elsewhere: 422, nothing written", func(t *testing.T) {
+		before := tupleCount(t, "hg-doc-other")
+		rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
+			tuple("hg_doc", "hg-doc-other", "company_module", "company_module", anchor),
+			tuple("hg_doc", "hg-doc-other", "viewer", "user", "hg-u1"),
+		}})
+		expect(t, rec, http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+		if !strings.Contains(rec.Body.String(), "already anchored to company_module:"+otherCompany+"/"+mod) {
+			t.Fatalf("body must name the existing anchor, body=%s", rec.Body.String())
+		}
+		if tupleCount(t, "hg-doc-other") != before {
+			t.Fatal("a refused second anchor must write nothing")
+		}
+		if got, err := store.AnchorOf(context.Background(), pool, "hg_doc", "hg-doc-other"); err != nil || got != otherCompany+"/"+mod {
+			t.Fatalf("AnchorOf = %q, %v; want the original anchor", got, err)
+		}
+	})
+	t.Run("the same anchor repeated is idempotent", func(t *testing.T) {
+		body := map[string]any{"op": "grant", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}
+		expect(t, post(t, adminSub, body), http.StatusOK, "")
+		expect(t, post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
+			tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor),
+			tuple("hg_doc", "hg-doc-same", "viewer", "user", "hg-u1"),
+		}}), http.StatusOK, "")
+		if tupleCount(t, "hg-doc-same") != 2 {
+			t.Fatalf("tuples on hg-doc-same = %d, want 2", tupleCount(t, "hg-doc-same"))
+		}
+	})
+	t.Run("re-anchoring is revoke then grant", func(t *testing.T) {
+		expect(t, post(t, adminSub, map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}), http.StatusOK, "")
+		if got, _ := store.AnchorOf(context.Background(), pool, "hg_doc", "hg-doc-same"); got != "" {
+			t.Fatalf("AnchorOf after revoke = %q, want none", got)
+		}
+	})
+	t.Run("the unique index refuses a second anchor on any write path", func(t *testing.T) {
+		ctx := context.Background()
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx) //nolint:errcheck
+		err = store.Grant(ctx, tx, "test-fixture", "", store.Tuple{ObjectType: "hg_doc", ObjectID: "hg-doc-other", Relation: "company_module", SubjectType: "company_module", SubjectID: anchor})
+		var conflict *store.AnchorConflictError
+		if !errors.As(err, &conflict) || conflict.Tuple.ObjectID != "hg-doc-other" {
+			t.Fatalf("Grant of a second anchor: err = %v, want *store.AnchorConflictError", err)
 		}
 	})
 	t.Run("non-member bearer: 403 COMPANY_MEMBERSHIP_REQUIRED, audited", func(t *testing.T) {
@@ -1091,4 +1142,120 @@ func TestHandleDebugCheck(t *testing.T) {
 			t.Fatalf("error code = %q, want VALIDATION_FAILED", out["error"]["code"])
 		}
 	})
+}
+
+// The company-administration decision the gateway and org ask (authzclient.DecideInCompany):
+// company scope, the platform's own feature key, no moduleKey, operator exception on,
+// requiredCompanyRole admin. The superadmin passes without membership; a member holding
+// company#admin passes; a plain member is COMPANY_ROLE_REQUIRED; a non-member is
+// COMPANY_MEMBERSHIP_REQUIRED. A missing moduleKey never skips the module gate for a real
+// module: it is derived from the feature key.
+func TestHandleCan_CompanyAdministration(t *testing.T) {
+	const companyID, superSub, adminSub, memberSub, outsiderSub = "http-cadm-co", "http-cadm-super", "http-cadm-admin", "http-cadm-member", "http-cadm-outsider"
+	svc, issuer, pool := buildHTTPService(t,
+		map[string][]string{superSub: {"kiban-superadmin"}, adminSub: nil, memberSub: nil, outsiderSub: nil},
+		map[string]bool{"docs": false},
+		map[string]fakeCompanyFact{companyID: {exists: true, active: true}},
+		map[string]fakeMembershipFact{
+			companyID + "/" + adminSub:  {isMember: true, active: true},
+			companyID + "/" + memberSub: {isMember: true, active: true},
+		},
+		false,
+	)
+	seedCompanyAdminFragment(t, pool, "", companyID, adminSub)
+
+	ask := func(t *testing.T, sub string, body map[string]any) (int, string, bool) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/internal/authz/effective-access/can", mustJSON(t, body))
+		req.Header.Set("Authorization", "Bearer "+issuer.sign(t, sub, time.Now().Add(time.Hour)))
+		rec := httptest.NewRecorder()
+		svc.Routes().ServeHTTP(rec, req)
+		var out struct {
+			Data struct {
+				Allowed bool   `json:"allowed"`
+				Reason  string `json:"reason"`
+			} `json:"data"`
+		}
+		_ = json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out.Data.Reason, out.Data.Allowed
+	}
+	adminBody := map[string]any{
+		"featureKey": "auth.platform_administration.access", "scope": "company", "companyId": companyID,
+		"requiredPlatformRole": "kiban-superadmin", "allowPlatformOperatorCompanyScope": true, "requiredCompanyRole": "admin",
+	}
+	for _, tc := range []struct {
+		name, sub, want string
+		allowed         bool
+	}{
+		{"superadmin without membership", superSub, "ALLOWED", true},
+		{"company administrator", adminSub, "ALLOWED", true},
+		{"plain member", memberSub, "COMPANY_ROLE_REQUIRED", false},
+		{"non-member", outsiderSub, "COMPANY_MEMBERSHIP_REQUIRED", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st, reason, allowed := ask(t, tc.sub, adminBody)
+			if st != http.StatusOK || reason != tc.want || allowed != tc.allowed {
+				t.Fatalf("= %d %s allowed=%v, want 200 %s allowed=%v", st, reason, allowed, tc.want, tc.allowed)
+			}
+		})
+	}
+	t.Run("a real module's feature without moduleKey still meets the module gate", func(t *testing.T) {
+		st, reason, _ := ask(t, adminSub, map[string]any{"featureKey": "docs.document.access", "scope": "company", "companyId": companyID})
+		if st != http.StatusOK || reason != "MODULE_DISABLED" {
+			t.Fatalf("= %d %s, want 200 MODULE_DISABLED (module derived from the feature key)", st, reason)
+		}
+	})
+}
+
+// The grants route's one base-model exception: a superadmin appoints or dismisses a company
+// administrator by granting or revoking company:<companyId>#admin for a user. Nobody else may,
+// no other base type is admitted, and the object must be the request's own company.
+func TestHandleGrants_CompanyAdminAppointment(t *testing.T) {
+	const companyID, superSub, plainSub, carol = "0b1a9c2e-5d3f-4e7a-9c1b-2f3e4d5a6b7c", "http-appt-super", "http-appt-plain", "http-appt-carol"
+	svc, issuer, pool := buildHTTPService(t,
+		map[string][]string{superSub: {"kiban-superadmin"}, plainSub: nil},
+		map[string]bool{},
+		map[string]fakeCompanyFact{companyID: {exists: true, active: true}},
+		map[string]fakeMembershipFact{companyID + "/" + plainSub: {isMember: true, active: true}},
+		false,
+	)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id = $1`, companyID)
+	})
+	post := func(t *testing.T, sub string, body map[string]any) *httptest.ResponseRecorder {
+		t.Helper()
+		body["companyId"] = companyID
+		req := httptest.NewRequest(http.MethodPost, "/internal/authz/grants", mustJSON(t, body))
+		req.Header.Set("Authorization", "Bearer "+issuer.sign(t, sub, time.Now().Add(time.Hour)))
+		rec := httptest.NewRecorder()
+		svc.Routes().ServeHTTP(rec, req)
+		return rec
+	}
+	appoint := func(op, objectID string) map[string]any {
+		return map[string]any{"op": op, "tuples": []map[string]string{{"objectType": "company", "objectId": objectID, "relation": "admin", "subjectType": "user", "subjectId": carol}}}
+	}
+	tupleCount := func(t *testing.T) int {
+		t.Helper()
+		var n int
+		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.tuple WHERE object_type = 'company' AND object_id = $1 AND relation = 'admin' AND subject_id = $2`, companyID, carol).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	if rec := post(t, plainSub, appoint("grant", companyID)); rec.Code != http.StatusForbidden {
+		t.Fatalf("plain member appointing = %d %s, want 403", rec.Code, rec.Body.String())
+	}
+	if rec := post(t, superSub, appoint("grant", companyID)); rec.Code != http.StatusOK || tupleCount(t) != 1 {
+		t.Fatalf("superadmin appointing = %d %s (tuples=%d), want 200 and one tuple", rec.Code, rec.Body.String(), tupleCount(t))
+	}
+	if rec := post(t, superSub, appoint("grant", "some-other-company")); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("company#admin on another company = %d, want 422", rec.Code)
+	}
+	if rec := post(t, superSub, map[string]any{"op": "grant", "tuples": []map[string]string{{"objectType": "system", "objectId": "platform", "relation": "superadmin", "subjectType": "user", "subjectId": carol}}}); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("system#superadmin by a superadmin = %d, want 422 still", rec.Code)
+	}
+	if rec := post(t, superSub, appoint("revoke", companyID)); rec.Code != http.StatusOK || tupleCount(t) != 0 {
+		t.Fatalf("superadmin dismissing = %d %s (tuples=%d), want 200 and no tuple", rec.Code, rec.Body.String(), tupleCount(t))
+	}
 }

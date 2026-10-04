@@ -167,6 +167,76 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/org/companies/{companyId}/positions/{id}/holder:
+    get:
+      operationId: orgPositionHolder
+      summary: The member holding a position on a date (any member of the company, or a superadmin)
+      description: >
+        Proxied to org's `/internal/org/positions/{id}/holder`. The caller must be an active
+        member of the company (an app's service account counts once it is a member) or the
+        superadmin; a position of another company answers 404. Resolves approvers and
+        owners "as of" a date.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: The assignment in force on that date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgAssignment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: No holder on that date, or the position is not in this company
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/org/companies/{companyId}/groups/{id}/members:
+    get:
+      operationId: orgGroupMembers
+      summary: A group's current members (any member of the company, or a superadmin)
+      description: >
+        Proxied to org's `/internal/org/groups/{id}/members`, with the same guard as the
+        position holder read; a group of another company answers 404.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The group's members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/OrgGroupMember" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
   /api/org/companies/{companyId}/members/by-subject/{subject}:
     get:
       operationId: orgMemberBySubject
@@ -420,6 +490,151 @@ paths:
         "422": { $ref: "#/components/responses/ValidationFailed" }
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
 
+  /api/platform/admin/mfa-policy/global:
+    get:
+      operationId: superadminGetGlobalMfaPolicy
+      summary: Read the realm-wide second-factor policy (superadmin only)
+      description: >
+        Superadmin-gated fixed proxy to identity's `/internal/identity/mfa-policy/global`. A new
+        realm requires no second factor (`required: false`).
+      responses:
+        "200":
+          description: The global policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MfaPolicy" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    put:
+      operationId: superadminSetGlobalMfaPolicy
+      summary: Set the realm-wide second-factor policy (superadmin only)
+      description: >
+        Stores the policy. It reaches Keycloak on the next sync (`POST .../mfa-policy/sync`):
+        run the sync after every policy change. `required: true` needs an enforceable method.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MfaPolicyRequest" }
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      required: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: required without an enforceable method (VALIDATION_FAILED)
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/mfa-policy/users/{subject}:
+    parameters:
+      - name: subject
+        in: path
+        required: true
+        description: The user's Keycloak subject (`sub`). The user must have signed in once.
+        schema: { type: string }
+    get:
+      operationId: superadminGetUserMfaPolicy
+      summary: Read a user's effective second-factor policy (superadmin only)
+      description: The user's override when one is set, otherwise the global policy.
+      responses:
+        "200":
+          description: The effective policy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/MfaPolicy" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    put:
+      operationId: superadminSetUserMfaPolicy
+      summary: Set a user's second-factor override (superadmin only)
+      description: >
+        An override may only raise the requirement above the global policy, never lower it.
+        Takes effect on the next sync.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MfaPolicyRequest" }
+      responses:
+        "200":
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      required: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: required without an enforceable method, or weaker than the global policy (VALIDATION_FAILED)
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+    delete:
+      operationId: superadminClearUserMfaPolicy
+      summary: Remove a user's second-factor override (superadmin only)
+      responses:
+        "200":
+          description: Removed; the global policy applies again after the next sync
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      userId: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
+  /api/platform/admin/mfa-policy/sync:
+    post:
+      operationId: superadminSyncMfaPolicy
+      summary: Push the stored second-factor policy to every Keycloak user (superadmin only)
+      description: >
+        Writes each user's effective policy to Keycloak, where the login flow enforces it. Run
+        it after every policy change; safe to repeat.
+      responses:
+        "200":
+          description: One outcome per user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MfaSyncOutcome" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
   /api/platform/admin/modules/{key}/disable:
     post:
       operationId: superadminDisableModule
@@ -548,7 +763,7 @@ paths:
   /api/org/admin/members:
     post:
       operationId: superadminCreateMember
-      summary: Create a member in a company (superadmin only)
+      summary: Create a member in a company (superadmin, or an administrator of the company)
       description: >
         Superadmin-gated fixed proxy to org's `/internal/org/members`. The member has no login
         until it is linked to a subject with the link-user route.
@@ -574,7 +789,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     get:
       operationId: superadminListMembers
-      summary: List a company's members (superadmin only)
+      summary: List a company's members (superadmin, or an administrator of the company)
       parameters:
         - { name: companyId, in: query, required: true, schema: { type: string, format: uuid } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
@@ -605,7 +820,7 @@ paths:
   /api/org/admin/members/{id}:
     put:
       operationId: superadminUpdateMember
-      summary: Update a member (superadmin only)
+      summary: Update a member (superadmin, or an administrator of the company)
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -632,7 +847,7 @@ paths:
   /api/org/admin/members/{id}/link-user:
     post:
       operationId: superadminLinkMemberUser
-      summary: Link a member to a login subject (superadmin only)
+      summary: Link a member to a login subject (superadmin, or an administrator of the company)
       description: >
         `kcSub` is the subject's `sub` claim; the identity record exists once that subject has
         made one request through the gateway. A subject is linked to at most one member per company.
@@ -664,7 +879,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     delete:
       operationId: superadminUnlinkMemberUser
-      summary: Unlink a member from its login subject (superadmin only)
+      summary: Unlink a member from its login subject (superadmin, or an administrator of the company)
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
@@ -685,7 +900,7 @@ paths:
   /api/org/admin/companies/{companyId}/positions:
     get:
       operationId: adminListPositions
-      summary: List a company's positions, each with its current holder (superadmin only)
+      summary: List a company's positions, each with its current holder (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -721,7 +936,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminCreatePosition
-      summary: Create a position (superadmin only)
+      summary: Create a position (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -756,7 +971,7 @@ paths:
   /api/org/admin/positions/{id}/assignments:
     post:
       operationId: adminAssignPositionNow
-      summary: Assign a member to a position, effective now (superadmin only)
+      summary: Assign a member to a position, effective now (superadmin, or an administrator of the company)
       parameters:
         - name: id
           in: path
@@ -789,7 +1004,7 @@ paths:
   /api/org/admin/assignments/{id}/end:
     post:
       operationId: adminEndAssignmentNow
-      summary: End a position assignment, effective now (superadmin only, no body, server-dated)
+      summary: End a position assignment, effective now (superadmin, or an administrator of the company, no body, server-dated)
       parameters:
         - name: id
           in: path
@@ -816,7 +1031,7 @@ paths:
   /api/org/admin/companies/{companyId}/groups:
     get:
       operationId: adminListGroups
-      summary: List a company's groups, each with its current member count (superadmin only)
+      summary: List a company's groups, each with its current member count (superadmin, or an administrator of the company)
       parameters:
         - name: companyId
           in: path
@@ -852,7 +1067,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminCreateGroup
-      summary: Create a group (superadmin only; source is always "kiban" through this route)
+      summary: Create a group (superadmin, or an administrator of the company; source is always "kiban" through this route)
       parameters:
         - name: companyId
           in: path
@@ -885,7 +1100,7 @@ paths:
   /api/org/admin/groups/{id}/members:
     get:
       operationId: adminListGroupMembers
-      summary: List a group's current members (superadmin only)
+      summary: List a group's current members (superadmin, or an administrator of the company)
       parameters:
         - name: id
           in: path
@@ -907,7 +1122,7 @@ paths:
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
     post:
       operationId: adminAddGroupMember
-      summary: Add a member to a group (superadmin only; 409 if the group is not source="kiban")
+      summary: Add a member to a group (superadmin, or an administrator of the company; 409 if the group is not source="kiban")
       parameters:
         - name: id
           in: path
@@ -941,7 +1156,7 @@ paths:
   /api/org/admin/groups/{id}/members/{memberId}:
     delete:
       operationId: adminRemoveGroupMember
-      summary: Remove a member from a group (superadmin only; 409 if the group is not source="kiban")
+      summary: Remove a member from a group (superadmin, or an administrator of the company; 409 if the group is not source="kiban")
       parameters:
         - name: id
           in: path
@@ -990,6 +1205,37 @@ components:
             code: { type: string }
             message: { type: string }
             details: {}
+
+    MfaPolicy:
+      type: object
+      required: [required]
+      properties:
+        required: { type: boolean }
+        method:
+          type: string
+          nullable: true
+          description: "`otp` (authenticator app), `passkey`, or `otp_or_passkey`; absent when not required."
+
+    MfaPolicyRequest:
+      type: object
+      required: [required]
+      properties:
+        required: { type: boolean }
+        method:
+          type: string
+          enum: [otp, passkey, otp_or_passkey]
+          description: Required when `required` is true.
+
+    MfaSyncOutcome:
+      type: object
+      description: One user's sync result.
+      properties:
+        UserID: { type: string }
+        KcSub: { type: string }
+        Required: { type: boolean }
+        RequiredMode: { type: string, description: "The mode written to Keycloak: `none`, `otp_required`, `passkey_required` or `otp_or_passkey_required`." }
+        Success: { type: boolean }
+        Error: { type: string }
 
     PlatformRoleRequest:
       type: object
@@ -1126,9 +1372,11 @@ components:
         Every tuple is bound to `companyId`: its object must be an object type declared by one
         enabled module's fragment (anchored to `company_module:<companyId>/<module>`, an anchor
         tuple in the same grant request counts) or `company_module:<companyId>/<module>` itself;
-        base types (company, system, module, member, position, group) are refused (422). The
-        bearer must pass the effective-access decision's steps 1–6 for that (module, company)
-        (403 otherwise) and, for a `company_module` object, hold its `admin` relation.
+        base types (company, system, module, member, position, group) are refused (422), with
+        one exception: a superadmin may grant or revoke `company:<companyId>#admin` for a user,
+        which appoints or dismisses an administrator of that company. Otherwise the bearer must
+        pass the effective-access decision's steps 1–6 for that (module, company) (403
+        otherwise) and, for a `company_module` object, hold its `admin` relation.
       properties:
         op: { type: string, enum: [grant, revoke] }
         companyId: { type: string, format: uuid }
@@ -1161,6 +1409,7 @@ components:
         displayName: { type: string }
         email: { type: string }
         hasLinkedUser: { type: boolean }
+        kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account" }
 
     Capability:
       type: object
@@ -1212,6 +1461,7 @@ components:
         email: { type: string, nullable: true }
         userId: { type: string, nullable: true, description: "The linked identity user, or null" }
         isActive: { type: boolean }
+        kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account; `person` otherwise" }
     OrgMemberCreateRequest:
       type: object
       required: [companyId, code, displayName]

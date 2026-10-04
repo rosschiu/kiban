@@ -42,7 +42,7 @@ func (q *Queries) GetGlobalMfaPolicy(ctx context.Context) (IdentityMfaPolicy, er
 }
 
 const getUserAccountByID = `-- name: GetUserAccountByID :one
-SELECT id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at FROM identity.user_account WHERE id = $1
+SELECT id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at, kind FROM identity.user_account WHERE id = $1
 `
 
 func (q *Queries) GetUserAccountByID(ctx context.Context, id pgtype.UUID) (IdentityUserAccount, error) {
@@ -56,12 +56,13 @@ func (q *Queries) GetUserAccountByID(ctx context.Context, id pgtype.UUID) (Ident
 		&i.Lifecycle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
 
 const getUserAccountByKcSub = `-- name: GetUserAccountByKcSub :one
-SELECT id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at FROM identity.user_account WHERE kc_sub = $1
+SELECT id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at, kind FROM identity.user_account WHERE kc_sub = $1
 `
 
 func (q *Queries) GetUserAccountByKcSub(ctx context.Context, kcSub string) (IdentityUserAccount, error) {
@@ -75,6 +76,7 @@ func (q *Queries) GetUserAccountByKcSub(ctx context.Context, kcSub string) (Iden
 		&i.Lifecycle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -157,19 +159,21 @@ func (q *Queries) SetGlobalMfaPolicy(ctx context.Context, arg SetGlobalMfaPolicy
 const upsertUserAccount = `-- name: UpsertUserAccount :one
 
 
-INSERT INTO identity.user_account (kc_sub, email, preferred_username)
-VALUES ($1, $2, $3)
+INSERT INTO identity.user_account (kc_sub, email, preferred_username, kind)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (kc_sub) DO UPDATE SET
     email = EXCLUDED.email,
     preferred_username = EXCLUDED.preferred_username,
+    kind = EXCLUDED.kind,
     updated_at = now()
-RETURNING id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at
+RETURNING id, kc_sub, email, preferred_username, lifecycle, created_at, updated_at, kind
 `
 
 type UpsertUserAccountParams struct {
 	KcSub             string  `json:"kc_sub"`
 	Email             *string `json:"email"`
 	PreferredUsername *string `json:"preferred_username"`
+	Kind              string  `json:"kind"`
 }
 
 // SPDX-License-Identifier: Apache-2.0
@@ -178,7 +182,12 @@ type UpsertUserAccountParams struct {
 // Idempotent: calling twice with the same kc_sub returns the same row (id stable), refreshing
 // email/preferred_username from the latest validated bearer claims.
 func (q *Queries) UpsertUserAccount(ctx context.Context, arg UpsertUserAccountParams) (IdentityUserAccount, error) {
-	row := q.db.QueryRow(ctx, upsertUserAccount, arg.KcSub, arg.Email, arg.PreferredUsername)
+	row := q.db.QueryRow(ctx, upsertUserAccount,
+		arg.KcSub,
+		arg.Email,
+		arg.PreferredUsername,
+		arg.Kind,
+	)
 	var i IdentityUserAccount
 	err := row.Scan(
 		&i.ID,
@@ -188,6 +197,7 @@ func (q *Queries) UpsertUserAccount(ctx context.Context, arg UpsertUserAccountPa
 		&i.Lifecycle,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
 	)
 	return i, err
 }

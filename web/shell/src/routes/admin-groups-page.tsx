@@ -7,7 +7,7 @@
 // independently gateway-guarded by internal/gateway/admin_group_routes.go's RequireSuperadmin).
 // Same shell-native-static-route posture as AdminPositionsPage (NOT a catalog module route —
 // reads the active company from useCompanyContext()).
-import { createOrgClient, type MemberDirectoryEntry, type OrgGroupMember, type OrgGroupWithMemberCount } from "@rosschiu/kiban-sdk";
+import { createOrgClient, type MemberDirectoryEntry, type OrgGroupMember, type OrgGroupWithMemberCount } from "@rossbsol/kiban-sdk";
 import { useCallback, useEffect, useState } from "react";
 import { getShellSdk } from "../auth/sdk";
 import { describeApiError } from "../lib/api-error";

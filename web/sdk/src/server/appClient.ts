@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createApiClient, type ApiClient } from "../client.js";
-import type { EffectiveAccessDecision, EffectiveAccessRequest } from "../types.js";
+import type {
+  EffectiveAccessBatchItem,
+  EffectiveAccessBatchResult,
+  EffectiveAccessDecision,
+  EffectiveAccessRequest,
+  MemberDirectoryEntry,
+  OrgAssignment,
+  OrgGroupMember,
+  OrgMeCompany,
+  Page
+} from "../types.js";
 import type { ServiceCredentials } from "./credentials.js";
 
 /** One relation tuple: `objectType:objectId#relation@subjectType:subjectId`. */
@@ -74,6 +84,20 @@ export interface AppClient {
   anchorTuple(objectType: string, objectId: string, companyId: string): Tuple;
   /** Asks org whether a subject is an active member of a company. */
   memberBySubject(companyId: string, subject: string): Promise<MemberFact>;
+  /** Up to 100 object-relation questions for the user in one call: one round trip for a page
+   * of controls. `request` carries the feature, module and company; `items` the objects. */
+  batchCan(userBearer: string, request: EffectiveAccessRequest, items: EffectiveAccessBatchItem[]): Promise<EffectiveAccessBatchResult[]>;
+  /** `batchCan` for the app's own service account. */
+  batchCanService(request: EffectiveAccessRequest, items: EffectiveAccessBatchItem[]): Promise<EffectiveAccessBatchResult[]>;
+  /** The companies the user behind `userBearer` may see: active memberships in active companies. */
+  meCompanies(userBearer: string): Promise<OrgMeCompany[]>;
+  /** One page of the company's active members, as the app's service account (which must be a
+   * member of the company); `q` filters on a substring of display name or email. */
+  memberDirectory(companyId: string, q?: string, page?: number, pageSize?: number): Promise<Page<MemberDirectoryEntry>>;
+  /** Who holds the position on `date` (`YYYY-MM-DD`, default today); a 404 means nobody. */
+  positionHolder(companyId: string, positionId: string, date?: string): Promise<OrgAssignment>;
+  /** The group's current members, as the app's service account. */
+  groupMembers(companyId: string, groupId: string): Promise<OrgGroupMember[]>;
   /** Registers (or re-registers) the app with a superadmin's bearer. */
   registerApp(superadminBearer: string, manifest: AppManifest): Promise<void>;
   /** The underlying client, authenticated as the service account, for any other route. */
@@ -124,6 +148,41 @@ export function createAppClient(config: AppClientConfig): AppClient {
       subjectType: "company_module",
       subjectId: `${companyId}/${config.appKey}`
     }),
+    batchCan: (userBearer, request, items) =>
+      api.request<EffectiveAccessBatchResult[]>("/api/auth/effective-access/batch-can", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${userBearer}` },
+        body: { ...request, items }
+      }),
+    batchCanService: async (request, items) =>
+      api.request<EffectiveAccessBatchResult[]>("/api/auth/effective-access/batch-can", {
+        method: "POST",
+        headers: await asService(),
+        body: { ...request, items }
+      }),
+    meCompanies: (userBearer) =>
+      api.request<OrgMeCompany[]>("/api/org/me/companies", { headers: { Authorization: `Bearer ${userBearer}` } }),
+    memberDirectory: async (companyId, q, page, pageSize) => {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (page) params.set("page", String(page));
+      if (pageSize) params.set("pageSize", String(pageSize));
+      const qs = params.toString();
+      return api.request<Page<MemberDirectoryEntry>>(
+        `/api/org/companies/${encodeURIComponent(companyId)}/members${qs ? `?${qs}` : ""}`,
+        { headers: await asService() }
+      );
+    },
+    positionHolder: async (companyId, positionId, date) =>
+      api.request<OrgAssignment>(
+        `/api/org/companies/${encodeURIComponent(companyId)}/positions/${encodeURIComponent(positionId)}/holder?date=${date ?? new Date().toISOString().slice(0, 10)}`,
+        { headers: await asService() }
+      ),
+    groupMembers: async (companyId, groupId) =>
+      api.request<OrgGroupMember[]>(
+        `/api/org/companies/${encodeURIComponent(companyId)}/groups/${encodeURIComponent(groupId)}/members`,
+        { headers: await asService() }
+      ),
     memberBySubject: async (companyId, subject) =>
       api.request<MemberFact>(
         `/api/org/companies/${encodeURIComponent(companyId)}/members/by-subject/${encodeURIComponent(subject)}`,

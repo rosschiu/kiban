@@ -457,7 +457,7 @@ func (q *Queries) GetGroupMember(ctx context.Context, arg GetGroupMemberParams) 
 }
 
 const getIdentityUserByKcSub = `-- name: GetIdentityUserByKcSub :one
-SELECT id, kc_sub, email, preferred_username, lifecycle FROM identity.user_read_v WHERE kc_sub = $1
+SELECT id, kc_sub, email, preferred_username, lifecycle, kind FROM identity.user_read_v WHERE kc_sub = $1
 `
 
 // The published read contract — the ONLY way org reads identity data. Resolves the
@@ -472,6 +472,7 @@ func (q *Queries) GetIdentityUserByKcSub(ctx context.Context, kcSub string) (Ide
 		&i.Email,
 		&i.PreferredUsername,
 		&i.Lifecycle,
+		&i.Kind,
 	)
 	return i, err
 }
@@ -525,7 +526,8 @@ func (q *Queries) GetMemberByCompanyAndKcSub(ctx context.Context, arg GetMemberB
 const getMemberWithUser = `-- name: GetMemberWithUser :one
 SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
-       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle
+       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
+       u.kind AS user_kind
 FROM org.member m
 LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.id = $1
@@ -543,6 +545,7 @@ type GetMemberWithUserRow struct {
 	UserEmail             *string     `json:"user_email"`
 	UserPreferredUsername *string     `json:"user_preferred_username"`
 	UserLifecycle         *string     `json:"user_lifecycle"`
+	UserKind              *string     `json:"user_kind"`
 }
 
 func (q *Queries) GetMemberWithUser(ctx context.Context, id pgtype.UUID) (GetMemberWithUserRow, error) {
@@ -560,6 +563,7 @@ func (q *Queries) GetMemberWithUser(ctx context.Context, id pgtype.UUID) (GetMem
 		&i.UserEmail,
 		&i.UserPreferredUsername,
 		&i.UserLifecycle,
+		&i.UserKind,
 	)
 	return i, err
 }
@@ -796,8 +800,10 @@ func (q *Queries) ListGroupsWithMemberCount(ctx context.Context, arg ListGroupsW
 }
 
 const listMemberDirectory = `-- name: ListMemberDirectory :many
-SELECT m.id, m.display_name, m.email, (m.user_id IS NOT NULL)::boolean AS has_linked_user
+SELECT m.id, m.display_name, m.email, (m.user_id IS NOT NULL)::boolean AS has_linked_user,
+       COALESCE(u.kind, 'person')::text AS kind
 FROM org.member m
+LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1 AND m.is_active = true
   AND ($4::text IS NULL
        OR m.display_name ILIKE '%' || $4::text || '%' ESCAPE '\'
@@ -818,6 +824,7 @@ type ListMemberDirectoryRow struct {
 	DisplayName   string      `json:"display_name"`
 	Email         *string     `json:"email"`
 	HasLinkedUser bool        `json:"has_linked_user"`
+	Kind          string      `json:"kind"`
 }
 
 // The browser-reachable member directory (share-with/assign-to picker). REDUCED view
@@ -844,6 +851,7 @@ func (q *Queries) ListMemberDirectory(ctx context.Context, arg ListMemberDirecto
 			&i.DisplayName,
 			&i.Email,
 			&i.HasLinkedUser,
+			&i.Kind,
 		); err != nil {
 			return nil, err
 		}
@@ -858,7 +866,8 @@ func (q *Queries) ListMemberDirectory(ctx context.Context, arg ListMemberDirecto
 const listMembers = `-- name: ListMembers :many
 SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
-       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle
+       u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
+       u.kind AS user_kind
 FROM org.member m
 LEFT JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1
@@ -884,6 +893,7 @@ type ListMembersRow struct {
 	UserEmail             *string     `json:"user_email"`
 	UserPreferredUsername *string     `json:"user_preferred_username"`
 	UserLifecycle         *string     `json:"user_lifecycle"`
+	UserKind              *string     `json:"user_kind"`
 }
 
 // Member directory read: one SQL query, JOIN identity.user_read_v for linked-user display
@@ -909,6 +919,7 @@ func (q *Queries) ListMembers(ctx context.Context, arg ListMembersParams) ([]Lis
 			&i.UserEmail,
 			&i.UserPreferredUsername,
 			&i.UserLifecycle,
+			&i.UserKind,
 		); err != nil {
 			return nil, err
 		}

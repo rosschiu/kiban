@@ -52,9 +52,15 @@ kubectl -n "$ns" wait --for=condition=complete job/migrate --timeout=600s
 log "stage 3 wait: bootstrap Job complete"
 kubectl -n "$ns" wait --for=condition=complete job/bootstrap --timeout=600s
 
+# Wait for what this overlay actually deploys: the foundation always, a sample module only when
+# its Deployment exists (the base deploys none; an overlay adds them, see base/kustomization.yaml).
 log "stage 4 wait: app services ready"
 for svc in registry identity org authz notification timesheet docs helpdesk gateway; do
-  kubectl -n "$ns" rollout status deployment/"$svc" --timeout=180s
+  if kubectl -n "$ns" get deployment/"$svc" >/dev/null 2>&1; then
+    kubectl -n "$ns" rollout status deployment/"$svc" --timeout=180s
+  else
+    log "stage 4 wait: $svc not deployed by this overlay — skipped"
+  fi
 done
 
 log "done — every workload ready. Try: kubectl -n $ns port-forward svc/gateway 8090:8090"

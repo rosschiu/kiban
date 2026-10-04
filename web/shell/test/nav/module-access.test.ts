@@ -8,8 +8,8 @@ const getCatalog = vi.fn();
 const getSummary = vi.fn();
 const getMeCompanies = vi.fn();
 
-vi.mock("@rosschiu/kiban-sdk", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@rosschiu/kiban-sdk")>()),
+vi.mock("@rossbsol/kiban-sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@rossbsol/kiban-sdk")>()),
   createCapabilitiesClient: () => ({ list: listCapabilities }),
   createSuperadminClient: () => ({ catalog: getCatalog }),
   createEffectiveAccessClient: () => ({ summary: getSummary }),
@@ -118,7 +118,7 @@ describe("useModuleAccess", () => {
   });
 
   it("records a service failure (5xx) as `unavailable` on the composition, but not a 403", async () => {
-    const { KibanApiError } = await import("@rosschiu/kiban-sdk");
+    const { KibanApiError } = await import("@rossbsol/kiban-sdk");
     listCapabilities.mockRejectedValue(new KibanApiError(503, "AUTHORIZATION_UNAVAILABLE", "authz down"));
     getCatalog.mockResolvedValue([]);
     getSummary.mockRejectedValue(new KibanApiError(403, "AUTHORIZATION_DENIED", "no"));

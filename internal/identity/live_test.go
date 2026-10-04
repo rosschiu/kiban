@@ -142,7 +142,7 @@ func TestLive_ResolveAndStateRoundTrip(t *testing.T) {
 		t.Fatal("live token had no sub claim")
 	}
 
-	user, err := store.ResolveOrCreate(ctx, claims.Sub, claims.Email, claims.PreferredUsername)
+	user, err := store.ResolveOrCreate(ctx, claims.Sub, claims.Email, claims.PreferredUsername, "")
 	if err != nil {
 		t.Fatalf("resolve-or-create: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestLive_MfaSyncVisibleInKeycloak(t *testing.T) {
 		t.Fatalf("verify live token: %v", err)
 	}
 
-	user, err := store.ResolveOrCreate(ctx, claims.Sub, claims.Email, claims.PreferredUsername)
+	user, err := store.ResolveOrCreate(ctx, claims.Sub, claims.Email, claims.PreferredUsername, "")
 	if err != nil {
 		t.Fatalf("resolve-or-create: %v", err)
 	}

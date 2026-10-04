@@ -5,7 +5,7 @@
 // SDK client this shell already uses). Fails closed to `false` on any error (network hiccup,
 // non-demo deployment that doesn't mount the route yet, ...) — never shows the banner on doubt.
 import { useEffect, useState } from "react";
-import { createDemoModeClient } from "@rosschiu/kiban-sdk";
+import { createDemoModeClient } from "@rossbsol/kiban-sdk";
 import { getShellSdk } from "../auth/sdk";
 
 export function useDemoMode(): boolean {

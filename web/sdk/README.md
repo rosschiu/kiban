@@ -1,4 +1,4 @@
-# @rosschiu/kiban-sdk
+# @rossbsol/kiban-sdk
 
 TypeScript SDK for the Kiban platform: OIDC/PKCE session handling (single-flight refresh,
 StrictMode-safe callback), an envelope-aware fetch wrapper, typed clients over the gateway's
@@ -9,7 +9,7 @@ origin, never to Keycloak or a module directly.
 ## Quickstart
 
 ```ts
-import { createSession, createApiClient, createCapabilitiesClient } from "@rosschiu/kiban-sdk";
+import { createSession, createApiClient, createCapabilitiesClient } from "@rossbsol/kiban-sdk";
 
 const gatewayOrigin = "https://127.0.0.1:8443"; // your `make dev` gateway (self-signed dev TLS)
 

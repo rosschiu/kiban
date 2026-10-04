@@ -18,6 +18,12 @@ import (
 
 // Reason is one of the 13 frozen effective-access reason codes (verbatim from
 // the effective-access decision, with OPENFGA_DENIED renamed ENGINE_DENIED).
+// FoundationModuleKey is the platform's own pseudo-module: the `auth.*` feature keys (platform
+// administration, company administration) belong to the foundation, which has no catalog
+// entry and can never be disabled. authz's HTTP layer derives a missing moduleKey from the
+// feature key's first segment, so `auth.platform_administration.access` lands here.
+const FoundationModuleKey = "auth"
+
 type Reason string
 
 const (

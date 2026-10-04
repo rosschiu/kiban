@@ -69,8 +69,8 @@ func TestAdminGroupRoutes_NonSuperadmin_403(t *testing.T) {
 			if rec.Code != http.StatusForbidden {
 				t.Fatalf("status = %d, want 403 for a non-superadmin bearer, body=%s", rec.Code, rec.Body.String())
 			}
-			if len(f.backend.calls) != 0 {
-				t.Fatalf("org backend must never be called when the guard denies, got %d calls", len(f.backend.calls))
+			if n := nonLookupCalls(f.backend); n != 0 {
+				t.Fatalf("org backend must never be called when the guard denies, got %d calls", n)
 			}
 		})
 	}
@@ -86,8 +86,8 @@ func TestAdminGroupRoutes_AuthzOutage_503FailClosed(t *testing.T) {
 			if rec.Code != http.StatusServiceUnavailable {
 				t.Fatalf("status = %d, want 503 (fail-closed on guard uncertainty), body=%s", rec.Code, rec.Body.String())
 			}
-			if len(f.backend.calls) != 0 {
-				t.Fatalf("org backend must never be called when the guard is uncertain, got %d calls", len(f.backend.calls))
+			if n := nonLookupCalls(f.backend); n != 0 {
+				t.Fatalf("org backend must never be called when the guard is uncertain, got %d calls", n)
 			}
 		})
 	}

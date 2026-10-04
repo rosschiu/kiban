@@ -3,6 +3,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -184,5 +185,61 @@ func TestDecision_Denied(t *testing.T) {
 		if got := c.d.Denied(); got != c.want {
 			t.Errorf("%+v.Denied() = %v, want %v", c.d, got, c.want)
 		}
+	}
+}
+
+// DecideInCompany sends one company-scope decision that a superadmin passes by the operator
+// exception and a company administrator passes by the admin relation; the company-leg reasons
+// are confirmed denials.
+func TestAdminAuthorizer_DecideInCompany_WireAndReasons(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"allowed":false,"reason":"COMPANY_ROLE_REQUIRED"}}`))
+	}))
+	defer srv.Close()
+
+	d, err := New(srv.URL, nil).DecideInCompany(context.Background(), "Bearer t", "org.member.admin_create", "co-1", "corr-1")
+	if err != nil {
+		t.Fatalf("DecideInCompany: %v", err)
+	}
+	if got["scope"] != "company" || got["companyId"] != "co-1" || got["allowPlatformOperatorCompanyScope"] != true ||
+		got["requiredCompanyRole"] != CompanyAdminRole || got["requiredPlatformRole"] != AdminRequiredRole || got["featureKey"] != AdminFeatureKey {
+		t.Fatalf("wire = %v", got)
+	}
+	if d.Allowed || !d.Denied() {
+		t.Fatalf("decision = %+v, want a confirmed denial", d)
+	}
+	for _, r := range []string{"COMPANY_INACTIVE", "COMPANY_MEMBERSHIP_REQUIRED", "COMPANY_ACCESS_BLOCKED", "COMPANY_ROLE_REQUIRED", "PLATFORM_ROLE_REQUIRED"} {
+		if !(Decision{Reason: r}).Denied() {
+			t.Errorf("%s should be a confirmed denial", r)
+		}
+	}
+	if (Decision{Reason: "DEPENDENCY_UNAVAILABLE"}).Denied() {
+		t.Error("DEPENDENCY_UNAVAILABLE is not a confirmed denial")
+	}
+	if _, err := New(srv.URL, nil).DecideInCompany(context.Background(), "Bearer t", "x", "", ""); err == nil {
+		t.Error("an empty company id must be unavailable, never a call")
+	}
+}
+
+func TestAdminAuthorizer_DecideMemberInCompany_NoRole(t *testing.T) {
+	var got map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"allowed":true,"reason":"ALLOWED"}}`))
+	}))
+	defer srv.Close()
+	d, err := New(srv.URL, nil).DecideMemberInCompany(context.Background(), "Bearer t", "org.positions.holder", "co-1", "")
+	if err != nil || !d.Allowed {
+		t.Fatalf("= %+v, %v", d, err)
+	}
+	if _, has := got["requiredCompanyRole"]; has {
+		t.Fatalf("membership decision must name no company role: %v", got)
+	}
+	if got["scope"] != "company" || got["companyId"] != "co-1" || got["allowPlatformOperatorCompanyScope"] != true {
+		t.Fatalf("wire = %v", got)
 	}
 }

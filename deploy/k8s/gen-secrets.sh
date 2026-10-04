@@ -7,7 +7,7 @@
 # `deploy/k8s/overlays/<overlay>/secret.yaml` (gitignored — never commit it; the overlay's
 # kustomization references it by that exact filename, so `kubectl apply -k` fails loudly if this
 # script hasn't been run yet, by design). The base itself carries no Secret, so it can be used as
-# a remote Kustomize base from another repository (K23).
+# a remote Kustomize base from another repository.
 #
 # Usage: deploy/k8s/gen-secrets.sh <kind|production>
 #

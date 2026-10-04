@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { KibanApiError } from "@rosschiu/kiban-sdk";
+import { KibanApiError } from "@rossbsol/kiban-sdk";
 import { describe, expect, it } from "vitest";
 import { describeApiError, isServiceFailure } from "../../src/lib/api-error";
 

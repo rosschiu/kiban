@@ -28,18 +28,21 @@ Every route family, in one place. Everything under `/api/` needs a bearer unless
 
 | Family | Routes | Who |
 |---|---|---|
-| `/api/platform/*` | `GET capabilities`, `GET capabilities/{module}`, `GET catalog`; `POST admin/modules/{key}/enable`, `.../disable`; `POST admin/platform-roles`, `DELETE admin/platform-roles/{role}/{subjectId}`; `GET metrics`; `GET demo-mode` (no bearer) | Any user for reads; superadmin for `admin/*` and `metrics` |
+| `/api/platform/*` | `GET capabilities`, `GET capabilities/{module}`, `GET catalog`; `POST admin/apps`; `POST admin/modules/{key}/enable`, `.../disable`; `POST admin/platform-roles`, `DELETE admin/platform-roles/{role}/{subjectId}`; `GET`/`PUT admin/mfa-policy/global`, `GET`/`PUT`/`DELETE admin/mfa-policy/users/{subject}`, `POST admin/mfa-policy/sync`; `GET metrics`; `GET demo-mode` (no bearer) | Any user for reads; superadmin for `admin/*` and `metrics` |
 | `/api/auth/effective-access/*` | `POST can`, `POST batch-can`, `GET summary?companyId=` | Any user, for the bearer only |
 | `/api/auth/grants` | `POST` (grant or revoke tuples) | Superadmin |
 | `/api/org/me/companies` | `GET` | Any user |
 | `/api/org/companies/{id}/members` | `GET ?q=&page=&pageSize=` | Active members of the company, or a superadmin |
-| `/api/org/admin/*` | `GET`/`POST companies/{id}/positions`, `POST positions/{id}/assignments`, `POST assignments/{id}/end`; `GET`/`POST companies/{id}/groups`, `GET`/`POST groups/{id}/members`, `DELETE groups/{id}/members/{memberId}` | Superadmin |
+| `/api/org/companies/{id}/positions/{positionId}/holder` | `GET ?date=YYYY-MM-DD` | Active members of the company, or a superadmin |
+| `/api/org/companies/{id}/groups/{groupId}/members` | `GET` | Active members of the company, or a superadmin |
+| `/api/org/admin/units*` | `POST units`, `GET units/{id}`, `GET units/{id}/subtree` | Superadmin |
+| `/api/org/admin/*` (members, positions, assignments, groups) | `GET`/`POST members`, `PUT members/{id}`, `POST`/`DELETE members/{id}/link-user`; `GET`/`POST companies/{id}/positions`, `POST positions/{id}/assignments`, `POST assignments/{id}/end`; `GET`/`POST companies/{id}/groups`, `GET`/`POST groups/{id}/members`, `DELETE groups/{id}/members/{memberId}` | Superadmin, or an administrator of that company |
 | `/api/<module>/v1/*` | Forwarded to the module unchanged, once it is installed and enabled | The module decides |
 | `/auth/*`, `/realms/*`, `/resources/*` | Keycloak, without a bearer; `/auth/admin*` and the master realm answer `404` | Browser login |
 | `/` | The sample shell | |
 
-Company, org-unit and member creation are not mounted; see
-[Integrate your app](integrate.md#escape-hatch-create-a-company-and-its-first-member).
+Companies, org units and members are created through `/api/org/admin/*`; see
+[Integrate your app](integrate.md#administration).
 
 ## SDKs
 

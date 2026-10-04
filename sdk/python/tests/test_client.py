@@ -30,6 +30,8 @@ class State:
     token_calls = 0
     grants = []
     bearers = []
+    paths = []
+    batch = {}
     issuer = ""
 
 
@@ -55,6 +57,20 @@ class Handler(BaseHTTPRequestHandler):
         if "/members/by-subject/" in self.path:
             State.bearers.append(self.headers.get("Authorization"))
             return self._json(200, {"data": {"isMember": True, "isActive": True, "memberId": "m-1"}})
+        if self.path == "/api/org/me/companies":
+            State.bearers.append(self.headers.get("Authorization"))
+            return self._json(200, {"data": [{"id": "co-1", "code": "ACME", "name": "Acme", "isActive": True}]})
+        if self.path.startswith("/api/org/companies/co-1/members?"):
+            State.bearers.append(self.headers.get("Authorization"))
+            State.paths.append(self.path)
+            return self._json(200, {"data": {"items": [{"id": "m-1", "displayName": "Alice", "email": "", "hasLinkedUser": True, "kind": "service"}], "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
+        if "/positions/p-1/holder?date=" in self.path:
+            State.paths.append(self.path)
+            return self._json(200, {"data": {"id": "a-1", "positionId": "p-1", "memberId": "m-1", "validFrom": "2026-01-01", "validTo": None}})
+        if self.path.endswith("/groups/g-1/members"):
+            return self._json(200, {"data": [{"groupId": "g-1", "memberId": "m-1", "memberDisplayName": "Alice"}]})
+        if self.path.endswith("/groups/empty/members"):
+            return self._json(200, {"data": []})
         self._json(404, {"error": {"code": "NOT_FOUND", "message": "nope"}})
 
     def do_POST(self):
@@ -70,6 +86,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/auth/effective-access/can":
             allowed = data.get("featureKey") == "app.ticket.view"
             return self._json(200, {"data": {"allowed": allowed, "reason": "ALLOWED" if allowed else "ENGINE_DENIED"}})
+        if self.path == "/api/auth/effective-access/batch-can":
+            State.batch = data
+            return self._json(200, {"data": [
+                {"object": it["object"], "relation": it["relation"], "decision": {"allowed": it["object"]["id"] == "t-1", "reason": "ALLOWED" if it["object"]["id"] == "t-1" else "ENGINE_DENIED"}}
+                for it in data.get("items", [])
+            ]})
         if self.path == "/api/auth/grants":
             State.grants.append(data)
             if data.get("companyId") == "other":
@@ -121,6 +143,26 @@ class ClientTest(unittest.TestCase):
         with self.assertRaises(KibanApiError) as ctx:
             c.grant("other", [])
         self.assertEqual((ctx.exception.status, ctx.exception.code), (403, "AUTHORIZATION_DENIED"))
+
+        # The batch check: triples in, one decision per item out, the user's bearer.
+        results = c.batch_can(user, "app.ticket.view", [("ticket", "t-1", "viewer"), ("ticket", "t-2", "viewer")], module_key="app", company_id="co-1")
+        self.assertEqual([(r.object_id, r.decision.allowed) for r in results], [("t-1", True), ("t-2", False)])
+        self.assertEqual(State.batch["items"][0], {"object": {"type": "ticket", "id": "t-1"}, "relation": "viewer"})
+        self.assertEqual(State.bearers[-1], f"Bearer {user}")
+        self.assertEqual(len(c.batch_can_service("app.ticket.view", [("ticket", "t-1", "viewer")], company_id="co-1")), 1)
+
+        # The org reads: companies with the user's bearer, the rest with the service token.
+        self.assertEqual([co["code"] for co in c.me_companies(user)], ["ACME"])
+        self.assertEqual(State.bearers[-1], f"Bearer {user}")
+        page = c.member_directory("co-1", q="ali", page=1, page_size=25)
+        self.assertEqual(page["items"][0]["kind"], "service")
+        self.assertIn("q=ali", State.paths[-1])
+        self.assertTrue(State.bearers[-1].startswith("Bearer ey"))
+        holder = c.position_holder("co-1", "p-1", "2026-09-28")
+        self.assertEqual(holder["memberId"], "m-1")
+        self.assertTrue(State.paths[-1].endswith("/holder?date=2026-09-28"))
+        self.assertEqual(c.group_members("co-1", "g-1")[0]["memberDisplayName"], "Alice")
+        self.assertEqual(c.group_members("co-1", "empty"), [])
 
         fact = c.member_by_subject("co-1", "alice")
         self.assertEqual((fact.is_member, fact.member_id), (True, "m-1"))

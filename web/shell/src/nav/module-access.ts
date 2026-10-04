@@ -11,7 +11,7 @@ import {
   createEffectiveAccessClient,
   createOrgClient,
   createSuperadminClient
-} from "@rosschiu/kiban-sdk";
+} from "@rossbsol/kiban-sdk";
 import { useEffect, useState } from "react";
 import { getShellSdk } from "../auth/sdk";
 import { describeApiError, isServiceFailure } from "../lib/api-error";

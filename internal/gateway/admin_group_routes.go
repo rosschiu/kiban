@@ -44,23 +44,25 @@ func rewriteAdminGroupMemberPath() func(*http.Request) string {
 // gated by RequireAuth AND RequireSuperadmin — same fail-closed shape
 // mountAdminPositionRoutes already established. orgTarget is org's compose-internal base URL.
 func mountAdminGroupRoutes(mux routeMux, verifier *TokenVerifier, prov *Provisioner, orgTarget *url.URL, adminClient *AuthzAdminClient) {
-	guarded := func(action string, rewrite func(*http.Request) string) http.Handler {
-		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadmin(adminClient, action)(
+	// The superadmin, or an administrator of the group's company (company_admin.go).
+	guarded := func(action string, companyOf companyOfFunc, rewrite func(*http.Request) string) http.Handler {
+		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadminOrCompanyAdmin(adminClient, action, companyOf)(
 			newFixedProxy(orgTarget, rewrite))))
 	}
+	groupCompany := companyFromOrg(orgTarget, "groups", "id")
 
 	mux.Handle("GET /api/org/admin/companies/{companyId}/groups",
-		guarded("org.group.admin_list", rewriteAdminCompanyGroupsPath()))
+		guarded("org.group.admin_list", companyFromPath("companyId"), rewriteAdminCompanyGroupsPath()))
 	mux.Handle("POST /api/org/admin/companies/{companyId}/groups",
-		guarded("org.group.admin_create", rewriteAdminCompanyGroupsPath()))
+		guarded("org.group.admin_create", companyFromPath("companyId"), rewriteAdminCompanyGroupsPath()))
 	// GET .../groups/{id}/members: the Groups admin page needs to list a group's CURRENT members
 	// (to render a remove button per member) — org's own internal read
 	// (GET /internal/org/groups/{id}/members) already exists; this is its
 	// superadmin-gated browser exposure, same posture as the list/create routes above.
 	mux.Handle("GET /api/org/admin/groups/{id}/members",
-		guarded("org.group.admin_member_list", rewriteAdminGroupMembersPath()))
+		guarded("org.group.admin_member_list", groupCompany, rewriteAdminGroupMembersPath()))
 	mux.Handle("POST /api/org/admin/groups/{id}/members",
-		guarded("org.group.admin_member_add", rewriteAdminGroupMembersPath()))
+		guarded("org.group.admin_member_add", groupCompany, rewriteAdminGroupMembersPath()))
 	mux.Handle("DELETE /api/org/admin/groups/{id}/members/{memberId}",
-		guarded("org.group.admin_member_remove", rewriteAdminGroupMemberPath()))
+		guarded("org.group.admin_member_remove", groupCompany, rewriteAdminGroupMemberPath()))
 }

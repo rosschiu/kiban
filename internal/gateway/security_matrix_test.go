@@ -40,6 +40,7 @@ func gatewayMatrixFixture(t *testing.T, adminClient *AuthzAdminClient) (*testsec
 	mountAdminPositionRoutes(rec, verifier, nil, target, adminClient)
 	mountAdminGroupRoutes(rec, verifier, nil, target, adminClient)
 	mountPlatformRoutes(rec, verifier, nil, target, adminClient, nil)
+	mountAdminIdentityRoutes(rec, verifier, nil, target, adminClient)
 	return rec, jwks, backend
 }
 
@@ -67,11 +68,19 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "admin_group_members_add", Pattern: "POST /api/org/admin/groups/{id}/members", Method: http.MethodPost, Path: "/api/org/admin/groups/grp-1/members", Body: `{"memberId":"mem-1"}`},
 	{Name: "admin_group_members_remove", Pattern: "DELETE /api/org/admin/groups/{id}/members/{memberId}", Method: http.MethodDelete, Path: "/api/org/admin/groups/grp-1/members/mem-1"},
 	{Name: "foundation_member_by_subject", Pattern: "GET /api/org/companies/{companyId}/members/by-subject/{subject}", Method: http.MethodGet, Path: "/api/org/companies/co-1/members/by-subject/sub-1"},
+	{Name: "foundation_position_holder", Pattern: "GET /api/org/companies/{companyId}/positions/{id}/holder", Method: http.MethodGet, Path: "/api/org/companies/co-1/positions/pos-1/holder?date=2026-09-28"},
+	{Name: "foundation_group_members", Pattern: "GET /api/org/companies/{companyId}/groups/{id}/members", Method: http.MethodGet, Path: "/api/org/companies/co-1/groups/grp-1/members"},
 	{Name: "foundation_grants", Pattern: "POST /api/auth/grants", Method: http.MethodPost, Path: "/api/auth/grants", Body: `{"type":"user","typeId":"u-1","relation":"admin","objectType":"company","objectId":"co-1"}`},
 	{Name: "platform_role_grant", Pattern: "POST /api/platform/admin/platform-roles", Method: http.MethodPost, Path: "/api/platform/admin/platform-roles", Body: `{"subjectId":"u-1","role":"kiban-superadmin"}`},
 	{Name: "platform_role_revoke", Pattern: "DELETE /api/platform/admin/platform-roles/{role}/{subjectId}", Method: http.MethodDelete, Path: "/api/platform/admin/platform-roles/kiban-superadmin/u-1"},
 	{Name: "platform_admin_module_enable", Pattern: "POST /api/platform/admin/modules/{key}/enable", Method: http.MethodPost, Path: "/api/platform/admin/modules/notification/enable"},
 	{Name: "platform_admin_module_disable", Pattern: "POST /api/platform/admin/modules/{key}/disable", Method: http.MethodPost, Path: "/api/platform/admin/modules/notification/disable"},
+	{Name: "platform_admin_mfa_global_get", Pattern: "GET /api/platform/admin/mfa-policy/global", Method: http.MethodGet, Path: "/api/platform/admin/mfa-policy/global"},
+	{Name: "platform_admin_mfa_global_set", Pattern: "PUT /api/platform/admin/mfa-policy/global", Method: http.MethodPut, Path: "/api/platform/admin/mfa-policy/global", Body: `{"required":true,"method":"otp"}`},
+	{Name: "platform_admin_mfa_user_get", Pattern: "GET /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodGet, Path: "/api/platform/admin/mfa-policy/users/sub-1"},
+	{Name: "platform_admin_mfa_user_set", Pattern: "PUT /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodPut, Path: "/api/platform/admin/mfa-policy/users/sub-1", Body: `{"required":true,"method":"otp"}`},
+	{Name: "platform_admin_mfa_user_clear", Pattern: "DELETE /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodDelete, Path: "/api/platform/admin/mfa-policy/users/sub-1"},
+	{Name: "platform_admin_mfa_sync", Pattern: "POST /api/platform/admin/mfa-policy/sync", Method: http.MethodPost, Path: "/api/platform/admin/mfa-policy/sync"},
 	{Name: "platform_admin_app_register", Pattern: "POST /api/platform/admin/apps", Method: http.MethodPost, Path: "/api/platform/admin/apps", Body: `{"key":"tokidesk","displayName":"TokiDesk","version":"1.0.0","serviceClientId":"tokidesk-backend","authzFragment":{}}`},
 	{Name: "platform_metrics", Pattern: "GET /api/platform/metrics", Method: http.MethodGet, Path: "/api/platform/metrics"},
 

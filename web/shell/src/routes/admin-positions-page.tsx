@@ -9,7 +9,7 @@
 // shell-native org feature, so it reads the active company from useCompanyContext() (the same
 // company-switcher state module routes get via the URL's {companyId} segment) rather than a
 // ModulePageContext.
-import { createOrgClient, type MemberDirectoryEntry, type OrgPositionWithHolder } from "@rosschiu/kiban-sdk";
+import { createOrgClient, type MemberDirectoryEntry, type OrgPositionWithHolder } from "@rossbsol/kiban-sdk";
 import { useCallback, useEffect, useState } from "react";
 import { getShellSdk } from "../auth/sdk";
 import { describeApiError } from "../lib/api-error";

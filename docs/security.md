@@ -17,7 +17,10 @@ reproduction, and the impact you believe it has.
 Authorization fails closed: any error while evaluating a decision is a refusal. Every object
 check is bound to the request's company: companies and company modules by id, positions and
 groups through their company, module objects through the anchor tuple their module writes at
-creation. An object from another company is denied.
+creation. An object from another company is denied. An object carries exactly one anchor: a
+grant that would anchor an already-anchored object to another company is refused (`422`), and
+a unique index on the tuple table holds that rule for every write path; re-anchoring is a
+revoke followed by a grant.
 
 A grant names the company and may only write tuples on object types the caller owns: an
 app's backend, identified by the verified `azp` of its service-client token matching the app's
@@ -44,9 +47,11 @@ Every mutation is audited in the same transaction, with the actor taken from the
 administrative route is audited with its reason. Foundation audit tables refuse updates, deletes
 and `TRUNCATE` at the database level, and the service roles have no privilege to bypass that.
 
-Authenticator-app or passkey MFA policy is set globally or per user; a per-user override can only
-raise the requirement. Passkey enrolment works; the login challenge for a passkey policy does not
-yet (see limitations).
+Authenticator-app (`otp`) or passkey MFA policy is set globally or per user by the superadmin
+through `/api/platform/admin/mfa-policy/*` and pushed to Keycloak with the sync route (see
+[Operating](operating.md#requiring-a-second-factor)); a per-user override can only raise the
+requirement. A new realm requires no second factor. Passkey enrolment works; the login challenge
+for a passkey policy does not yet (see limitations).
 
 Bootstrap enforces brute-force protection (temporary lockout after ten failures) and the
 password policy `length(12) and notUsername and notEmail`. The realm binds one browser flow

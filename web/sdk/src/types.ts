@@ -265,6 +265,8 @@ export interface MemberDirectoryEntry {
   displayName: string;
   email: string;
   hasLinkedUser: boolean;
+  /** `service` when the linked user is an app's service account, `person` otherwise. */
+  kind: "person" | "service";
 }
 
 /** A named seat in a company's org structure (the position mechanism behind position-based access). */
