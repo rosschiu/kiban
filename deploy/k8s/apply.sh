@@ -25,7 +25,7 @@ fail() {
 }
 
 [ -d "$overlay_dir" ] || fail "no such overlay: $overlay_dir"
-[ -f "$script_dir/base/secret.yaml" ] || fail "$script_dir/base/secret.yaml missing — run deploy/k8s/gen-secrets.sh first"
+[ -f "$overlay_dir/secret.yaml" ] || fail "$overlay_dir/secret.yaml missing — run deploy/k8s/gen-secrets.sh $overlay first (it moves a 0.1.0 base/secret.yaml into place)"
 command -v kubectl >/dev/null 2>&1 || fail "kubectl not on PATH"
 
 # Re-runnable for an upgrade: a Job's pod template is immutable, so `kubectl apply` of the same
