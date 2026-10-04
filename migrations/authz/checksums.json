@@ -11,6 +11,6 @@
     "0009_org_object_company_revoke.sql": "e05b2d7132b6d190bbcdcacb9fe7578f9e5e438aa60c3852ac3191938049e5c6",
     "0010_platform_role_backfill.sql": "7fc28eb1d3badbd9b0ed678472389e64181cdc3be5b30e00427e52b322191a3b",
     "0011_audit_reject_truncate.sql": "f9ad5f3b6835d73138eafcbc78d5df89262ebba901e47561d95256df01ba375f",
-    "0012_one_anchor_per_object.sql": "835abd5b746a908ab5fabc5de5b14d91a3b44a64d5eafd3597c45b9bce1a8cc8"
+    "0012_one_anchor_per_object.sql": "c6a3be33e4adaec5354f322fbf29b2f923c08ef9ef6fc8a2dbdaecc321621843"
   }
 }

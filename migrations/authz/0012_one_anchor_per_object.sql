@@ -3,7 +3,7 @@
 -- One company anchor per object. authz.tuple's primary key spans the whole tuple, so two anchor
 -- rows (`<obj>#company_module @ company_module:<A>/<M>` and `... @ company_module:<B>/<M>`)
 -- both fit, and an object could be read from two companies. The grants handler refuses a second
--- anchor with 422 (internal/authz/http.go, K25); this partial unique index is the guarantee
+-- anchor with 422 (internal/authz/http.go); this partial unique index is the guarantee
 -- behind it for every write path, including two concurrent requests. Partial on the anchor
 -- shape only, so ordinary relations (many viewers per object) are untouched.
 --

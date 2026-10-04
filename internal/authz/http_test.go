@@ -873,7 +873,7 @@ func TestHandleGrants(t *testing.T) {
 			t.Fatal("nothing may be written on a refused request")
 		}
 	})
-	t.Run("K25: in-request anchor on an object anchored elsewhere: 422, nothing written", func(t *testing.T) {
+	t.Run("in-request anchor on an object anchored elsewhere: 422, nothing written", func(t *testing.T) {
 		before := tupleCount(t, "hg-doc-other")
 		rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
 			tuple("hg_doc", "hg-doc-other", "company_module", "company_module", anchor),
@@ -890,7 +890,7 @@ func TestHandleGrants(t *testing.T) {
 			t.Fatalf("AnchorOf = %q, %v; want the original anchor", got, err)
 		}
 	})
-	t.Run("K25: the same anchor repeated is idempotent", func(t *testing.T) {
+	t.Run("the same anchor repeated is idempotent", func(t *testing.T) {
 		body := map[string]any{"op": "grant", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}
 		expect(t, post(t, adminSub, body), http.StatusOK, "")
 		expect(t, post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{
@@ -901,13 +901,13 @@ func TestHandleGrants(t *testing.T) {
 			t.Fatalf("tuples on hg-doc-same = %d, want 2", tupleCount(t, "hg-doc-same"))
 		}
 	})
-	t.Run("K25: re-anchoring is revoke then grant", func(t *testing.T) {
+	t.Run("re-anchoring is revoke then grant", func(t *testing.T) {
 		expect(t, post(t, adminSub, map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-same", "company_module", "company_module", anchor)}}), http.StatusOK, "")
 		if got, _ := store.AnchorOf(context.Background(), pool, "hg_doc", "hg-doc-same"); got != "" {
 			t.Fatalf("AnchorOf after revoke = %q, want none", got)
 		}
 	})
-	t.Run("K25: the unique index refuses a second anchor on any write path", func(t *testing.T) {
+	t.Run("the unique index refuses a second anchor on any write path", func(t *testing.T) {
 		ctx := context.Background()
 		tx, err := pool.Begin(ctx)
 		if err != nil {

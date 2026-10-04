@@ -491,7 +491,7 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// K25 — an object carries ONE anchor. An in-request anchor on an object already anchored
+	// An object carries ONE anchor. An in-request anchor on an object already anchored
 	// elsewhere (another company, or another module) is refused before anything is written;
 	// re-anchoring is revoke first, then grant. The same anchor repeated is idempotent.
 	for key := range inRequestAnchor {

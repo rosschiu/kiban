@@ -170,7 +170,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	); err != nil {
 		t.Fatalf("Grant as the app: %v", err)
 	}
-	// K25: an object carries one anchor. A second company cannot claim t-1, even from the
+	// An object carries one anchor. A second company cannot claim t-1, even from the
 	// owning app, and the first company's view of it is unchanged.
 	companyB := step("createCompanyB", http.MethodPost, "/api/org/admin/units", adminBearer, map[string]any{
 		"typeKey": "company", "parentId": nil, "code": "storyb" + platformRandString(t, 5), "name": "Story Co B",
