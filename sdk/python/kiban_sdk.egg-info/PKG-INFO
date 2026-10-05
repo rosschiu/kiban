@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: kiban-sdk
-Version: 0.1.0
+Version: 0.1.1
 Summary: Kiban SDK for a Python backend beside Kiban: service token, user token verification, access decisions, relation tuples, members.
 License: Apache-2.0
 Project-URL: Homepage, https://github.com/rosschiu/kiban

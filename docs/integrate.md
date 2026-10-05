@@ -17,8 +17,9 @@ should see.
 
 Three things 0.1 does not do. They shape the steps below.
 
-1. **Registering an app, enabling it, and creating companies and members are superadmin
-   work.** There is no self-service registration and no company-administrator delegation yet.
+1. **Registering an app, enabling it, and creating companies are superadmin work.** A company's
+   administrator manages that company's members, positions, assignments and groups
+   ([Administration](#administration)); there is no self-service registration.
 2. **Checks answer for the bearer only.** Your backend asks with the user's own token ("may
    this user") or its service token ("may I"). There is no "list every object this user may
    see" API yet.

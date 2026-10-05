@@ -36,7 +36,7 @@ deploy/k8s/
                                # service's name, image, port and env (parity with infra/compose.yaml)
     ingress.yaml               # class-agnostic Ingress — see "Ingress vs. port-forward" below
   overlays/
-    kind/kustomization.yaml    # retags images to :v0.1.0 (or whatever `make images-all
+    kind/kustomization.yaml    # retags images to :v0.1.1 (or whatever `make images-all
                                 # VERSION=...` built), imagePullPolicy: Never (no registry pull)
     kind/secret.yaml            # gitignored — written by gen-secrets.sh kind
     production/kustomization.yaml # SAMPLE — GHCR image refs, real domain, cert-manager Ingress
@@ -133,12 +133,12 @@ rely on it in production.
 
 # 1. build the images locally (13; kind needs the 12 below — gateway-devcert is compose-only)
 #    and load them into the kind cluster (no registry pull)
-make images-all VERSION=v0.1.0
+make images-all VERSION=v0.1.1
 kind create cluster --name kiban
 for img in kiban-registry kiban-identity kiban-org kiban-authz kiban-notification \
            kiban-timesheet kiban-docs kiban-helpdesk kiban-gateway kiban-migrate \
            kiban-bootstrap kiban-keycloak; do
-  kind load docker-image "$img:v0.1.0" --name kiban
+  kind load docker-image "$img:v0.1.1" --name kiban
 done
 
 # 2. secrets, then apply
@@ -152,10 +152,10 @@ kubectl -n kiban port-forward svc/gateway 8090:8090
 
 # 4. teardown
 kind delete cluster --name kiban
-docker image rm $(docker images 'kiban-*:v0.1.0' -q)
+docker image rm $(docker images 'kiban-*:v0.1.1' -q)
 ```
 
-The `v0.1.0` tag must match the `newTag` values in `overlays/kind/kustomization.yaml`.
+The `v0.1.1` tag must match the `newTag` values in `overlays/kind/kustomization.yaml`.
 
 ## Production notes (what a real cluster changes)
 
