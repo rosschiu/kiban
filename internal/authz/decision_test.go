@@ -470,3 +470,17 @@ func TestEligibilityWithoutSourceIsUnavailable(t *testing.T) {
 		}
 	}
 }
+
+// The foundation's own pseudo-module (`auth.*` keys) never consults the module state: a
+// company-scope administration check must not fail MODULE_DISABLED because the platform is not
+// a catalog module.
+func TestDecisionFoundationModuleAlwaysEnabled(t *testing.T) {
+	deps := happyDeps()
+	deps.ModuleState = fakeModuleState{enabled: false}
+	req := companyRequest()
+	req.ModuleKey = decision.FoundationModuleKey
+	req.FeatureKey = "auth.company_administration.access"
+	req.Object, req.Relation = decision.ObjectRef{}, "" // the company itself, no module object
+	got := decision.NewDecider(deps).Evaluate(context.Background(), req)
+	record(t, got, decision.ReasonAllowed)
+}

@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
+
 	"github.com/rosschiu/kiban/internal/audit"
 )
 
@@ -192,7 +194,7 @@ func TestHandleMemberDirectory_ActiveMember_200ReducedView(t *testing.T) {
 			t.Errorf("reduced view leaked field %q: %v", forbidden, item)
 		}
 	}
-	for _, required := range []string{"id", "displayName", "email", "hasLinkedUser"} {
+	for _, required := range []string{"id", "displayName", "email", "hasLinkedUser", "kind"} {
 		if _, present := item[required]; !present {
 			t.Errorf("reduced view missing required field %q: %v", required, item)
 		}
@@ -247,5 +249,49 @@ func TestHandleMemberDirectory_QParam_Forwarded(t *testing.T) {
 	}
 	if body.Data.Total != 1 || body.Data.Items[0]["displayName"] != "Findme Person" {
 		t.Fatalf("q filter not applied through HTTP layer: %+v", body.Data)
+	}
+}
+
+// TestStore_MemberDirectory_Kind: the directory and the admin member read carry the linked
+// user's kind, so a staff list can leave an app's service account out; an unlinked member is a
+// person.
+func TestStore_MemberDirectory_Kind(t *testing.T) {
+	f := newHTTPTestFixture(t)
+	admin := adminPool(t)
+	company := mustCreateCompany(t, f.svc.store, "MDKIND1")
+	person := mustCreateMember(t, f.svc.store, company.ID, "MDK1")
+	worker := mustCreateMember(t, f.svc.store, company.ID, "MDK2")
+
+	var serviceUserID uuid.UUID
+	if err := admin.QueryRow(context.Background(),
+		`INSERT INTO identity.user_account (kc_sub, preferred_username, kind) VALUES ($1, $2, 'service') RETURNING id`,
+		"kc-sub-service-kind", "service-account-app").Scan(&serviceUserID); err != nil {
+		t.Fatalf("create service user: %v", err)
+	}
+	if _, err := admin.Exec(context.Background(), `UPDATE org.member SET user_id = $1 WHERE id = $2`, serviceUserID, worker.ID); err != nil {
+		t.Fatalf("link worker: %v", err)
+	}
+
+	entries, _, err := f.svc.store.MemberDirectory(context.Background(), company.ID, "", 1, 25)
+	if err != nil {
+		t.Fatalf("MemberDirectory: %v", err)
+	}
+	kinds := map[uuid.UUID]string{}
+	for _, e := range entries {
+		kinds[e.ID] = e.Kind
+	}
+	if kinds[person.ID] != "person" || kinds[worker.ID] != "service" {
+		t.Fatalf("kinds = %v, want person=%s service=%s", kinds, person.ID, worker.ID)
+	}
+
+	got, err := f.svc.store.GetMember(context.Background(), worker.ID)
+	if err != nil {
+		t.Fatalf("GetMember: %v", err)
+	}
+	if got.UserKind != "service" || memberKind(got) != "service" {
+		t.Fatalf("GetMember kind = %q / %q, want service", got.UserKind, memberKind(got))
+	}
+	if memberKind(person) != "person" {
+		t.Fatalf("unlinked member kind = %q, want person", memberKind(person))
 	}
 }

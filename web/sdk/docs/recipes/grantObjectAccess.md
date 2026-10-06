@@ -8,7 +8,7 @@ Named use-case recipe: one call over the gateway's superadmin-guarded grant rout
 ## Pattern
 
 ```ts
-import { createApiClient, createGrantObjectAccess } from "@rosschiu/kiban-sdk";
+import { createApiClient, createGrantObjectAccess } from "@rossbsol/kiban-sdk";
 
 const apiClient = createApiClient({
   baseUrl: "https://127.0.0.1:8443", // always the gateway origin
@@ -62,7 +62,7 @@ one).
 `kiban-superadmin` platform role) may call this route; every other caller gets 403. Behind the
 guard, the authz service additionally binds the tuples to the request's company and one enabled
 module, as described above. v1 keeps the grant recipe honest this way: only superadmins grant
-(per-object manager-relation delegation is not supported yet). `grantObjectAccess`'s **logic**
+(there is no per-object manager relation that lets a non-superadmin grant). `grantObjectAccess`'s **logic**
 is covered by `test/recipes/grantObjectAccess.test.ts` (mocked fetch: company + tuple shape and
 grant/revoke op mapping); the **live** e2e test is `e2e/login.spec.ts`, using the seeded
 superadmin's bearer to anchor, grant, revoke and un-anchor a fixture document in a fixture

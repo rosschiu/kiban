@@ -13,6 +13,7 @@ import (
 type UserState struct {
 	Lifecycle string
 	KCEnabled string
+	Kind      string
 }
 
 // ResolveUserState looks up kcSub's identity.user_account row (ErrUserNotFound if absent —
@@ -26,5 +27,5 @@ func (s *Store) ResolveUserState(ctx context.Context, admin *AdminClient, kcSub 
 	}
 
 	kcEnabled, _ := admin.UserEnabled(ctx, kcSub) // error already collapsed into KCStateUnknown
-	return UserState{Lifecycle: user.Lifecycle, KCEnabled: kcEnabled}, nil
+	return UserState{Lifecycle: user.Lifecycle, KCEnabled: kcEnabled, Kind: user.Kind}, nil
 }

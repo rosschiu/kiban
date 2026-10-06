@@ -25,7 +25,7 @@ fail() {
 }
 
 [ -d "$overlay_dir" ] || fail "no such overlay: $overlay_dir"
-[ -f "$script_dir/base/secret.yaml" ] || fail "$script_dir/base/secret.yaml missing — run deploy/k8s/gen-secrets.sh first"
+[ -f "$overlay_dir/secret.yaml" ] || fail "$overlay_dir/secret.yaml missing — run deploy/k8s/gen-secrets.sh $overlay first (it moves a 0.1.0 base/secret.yaml into place)"
 command -v kubectl >/dev/null 2>&1 || fail "kubectl not on PATH"
 
 # Re-runnable for an upgrade: a Job's pod template is immutable, so `kubectl apply` of the same
@@ -52,9 +52,15 @@ kubectl -n "$ns" wait --for=condition=complete job/migrate --timeout=600s
 log "stage 3 wait: bootstrap Job complete"
 kubectl -n "$ns" wait --for=condition=complete job/bootstrap --timeout=600s
 
+# Wait for what this overlay actually deploys: the foundation always, a sample module only when
+# its Deployment exists (the base deploys none; an overlay adds them, see base/kustomization.yaml).
 log "stage 4 wait: app services ready"
 for svc in registry identity org authz notification timesheet docs helpdesk gateway; do
-  kubectl -n "$ns" rollout status deployment/"$svc" --timeout=180s
+  if kubectl -n "$ns" get deployment/"$svc" >/dev/null 2>&1; then
+    kubectl -n "$ns" rollout status deployment/"$svc" --timeout=180s
+  else
+    log "stage 4 wait: $svc not deployed by this overlay — skipped"
+  fi
 done
 
 log "done — every workload ready. Try: kubectl -n $ns port-forward svc/gateway 8090:8090"

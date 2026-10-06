@@ -52,4 +52,8 @@ patches:
       - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_TLS_KEY_FILE, value: "" } }
       - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_INSECURE_HTTP, value: "true" } }
       - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_TRUSTED_PROXY, value: "true" } }
+      # The public origin for the CORS allow-list and the extra app origins, the same two values
+      # infra/compose.yaml hands the gateway (bootstrap reads the same keys from kiban-config).
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_DOMAIN, valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_DOMAIN } } } }
+      - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_EXTRA_ORIGINS, valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_EXTRA_ORIGINS } } } }
       - { op: add, path: /spec/template/spec/containers/0/env/-, value: { name: KIBAN_STATIC_DIR, value: "/var/www/kiban-shell" } }

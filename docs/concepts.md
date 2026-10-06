@@ -40,6 +40,13 @@ Two levels of administration exist:
   bypass.
 - The **Keycloak Admin** is the identity provider's own master administrator, used only during
   bootstrap and by operators, never at runtime by the application.
+- A **company administrator** is a member holding the company's `admin` relation. They manage
+  that company's members, positions, assignments and groups; they cannot create companies or org
+  units, or touch another company.
+
+A user is a person or a service: an app's backend signs in as its service account, a Keycloak
+user that authenticates with a client secret. Authorization treats both alike, membership
+included; the member directory carries the kind so people and services can be told apart.
 
 Multi-factor policy (authenticator app or passkey) can be required globally or per user; a
 per-user override can only raise the requirement.
@@ -111,9 +118,9 @@ at the database level; the roles services run as cannot update or delete rows.
 
 ## The SDKs and the shell
 
-The **browser SDK** (`@rosschiu/kiban-sdk`, TypeScript, no runtime dependencies) runs the login
+The **browser SDK** (`@rossbsol/kiban-sdk`, TypeScript, no runtime dependencies) runs the login
 flow, refreshes tokens, wraps every call in the platform's success and error envelope, and
-offers typed clients and recipes. The **backend SDKs** (`@rosschiu/kiban-sdk/server` for Node,
+offers typed clients and recipes. The **backend SDKs** (`@rossbsol/kiban-sdk/server` for Node,
 `kiban-sdk` for Python, `github.com/rosschiu/kiban/sdk` for Go) do the same five things each:
 obtain the app's service token, verify a user's token, ask for decisions, write and remove
 tuples on the app's own types, look members up. The **shell** is a sample web application built

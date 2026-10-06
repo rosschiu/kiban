@@ -22,6 +22,10 @@ func (d denyAuthorizer) Can(ctx context.Context, authCtx AuthContext, action str
 	return false, &DeniedError{Reason: d.reason}
 }
 
+func (d denyAuthorizer) CanInCompany(ctx context.Context, authCtx AuthContext, action, companyID string) (bool, error) {
+	return false, &DeniedError{Reason: d.reason}
+}
+
 func TestHTTP_CreateUnit_ConfirmedDenial_403AndAuditedWithReason(t *testing.T) {
 	f := newHTTPTestFixture(t)
 	f.svc.authz = denyAuthorizer{reason: "PLATFORM_ROLE_REQUIRED"}

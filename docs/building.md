@@ -13,7 +13,7 @@ platform.
 ## Using the SDK
 
 ```ts
-import { createSession, createApiClient, createCapabilitiesClient } from "@rosschiu/kiban-sdk";
+import { createSession, createApiClient, createCapabilitiesClient } from "@rossbsol/kiban-sdk";
 
 const origin = "https://127.0.0.1:8443";
 const session = createSession({

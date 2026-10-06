@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Thin, hand-written client for the helpdesk module's own HTTP surface (modules/helpdesk/
-// openapi.yaml), built directly on the shared @rosschiu/kiban-sdk `ApiClient` — same pattern as
+// openapi.yaml), built directly on the shared @rossbsol/kiban-sdk `ApiClient` — same pattern as
 // web/shell/src/modules/{notification,timesheet,docs}/api.ts (a module's own
 // API surface is the module's own concern, never added to the shared SDK package).
-import type { ApiClient } from "@rosschiu/kiban-sdk";
+import type { ApiClient } from "@rossbsol/kiban-sdk";
 
 export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 export type HelpdeskTier = "member" | "agent" | "admin";

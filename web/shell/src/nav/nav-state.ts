@@ -8,7 +8,7 @@
 // (useShellSession) and `activeCompanyId` (useCompanyContext), so it is also the natural place to
 // re-derive nav entries whenever either changes, without threading extra params through
 // module-route-host.tsx's unchanged `useModuleAccess()` call.
-import type { OrgMeCompany } from "@rosschiu/kiban-sdk";
+import type { OrgMeCompany } from "@rossbsol/kiban-sdk";
 import { useEffect, useState } from "react";
 import { localModuleRegistry } from "../modules/registry";
 import { getCompanySessionContext } from "./company-context";

@@ -3,6 +3,7 @@
 package org
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/rosschiu/kiban/internal/httpx"
@@ -93,6 +94,7 @@ func (svc *Service) Routes() http.Handler {
 	// writes the assignment, its audit record, and the position-holder tuple grant.
 	mux.HandleFunc("POST /internal/org/positions/{id}/assignments", svc.handleAssignNow)
 
+	mux.HandleFunc("GET /internal/org/assignments/{id}", svc.handleGetAssignment)
 	mux.HandleFunc("POST /internal/org/assignments/{id}/end", svc.handleEndAssignment)
 
 	mux.HandleFunc("GET /health", svc.handleHealth)
@@ -109,6 +111,18 @@ func (svc *Service) Routes() http.Handler {
 // touch the store.
 func (svc *Service) authorize(w http.ResponseWriter, r *http.Request, authCtx AuthContext, action, subject string) bool {
 	ok, err := svc.authz.Can(r.Context(), authCtx, action)
+	return svc.finishAuthorize(w, r, authCtx, action, subject, ok, err)
+}
+
+// authorizeInCompany is authorize for a write that belongs to one company: the superadmin, or
+// an administrator of that company (AdminAuthorizer.CanInCompany). Same denial/unavailable
+// handling and audit as authorize.
+func (svc *Service) authorizeInCompany(w http.ResponseWriter, r *http.Request, authCtx AuthContext, action, subject string, companyID uuid.UUID) bool {
+	ok, err := svc.authz.CanInCompany(r.Context(), authCtx, action, companyID.String())
+	return svc.finishAuthorize(w, r, authCtx, action, subject, ok, err)
+}
+
+func (svc *Service) finishAuthorize(w http.ResponseWriter, r *http.Request, authCtx AuthContext, action, subject string, ok bool, err error) bool {
 	if ok && err == nil {
 		return true
 	}
@@ -513,7 +527,7 @@ func (svc *Service) handleMemberDirectory(w http.ResponseWriter, r *http.Request
 	views := make([]map[string]any, 0, len(entries))
 	for _, e := range entries {
 		views = append(views, map[string]any{
-			"id": e.ID.String(), "displayName": e.DisplayName, "email": e.Email, "hasLinkedUser": e.HasLinkedUser,
+			"id": e.ID.String(), "displayName": e.DisplayName, "email": e.Email, "hasLinkedUser": e.HasLinkedUser, "kind": e.Kind,
 		})
 	}
 	totalPages := (total + pageSize - 1) / pageSize
@@ -534,10 +548,6 @@ type memberRequest struct {
 }
 
 func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
-	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.member.create", "member:new") {
-		return
-	}
 	var req memberRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -545,6 +555,10 @@ func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
 	companyID, err := uuid.Parse(req.CompanyID)
 	if err != nil {
 		errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid companyId", Details: map[string]string{"field": "companyId"}})
+		return
+	}
+	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
+	if !svc.authorizeInCompany(w, r, authCtx, "org.member.create", "member:new", companyID) {
 		return
 	}
 	isActive := true
@@ -610,8 +624,13 @@ func (svc *Service) handleUpdateMember(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	existing, err := svc.store.GetMember(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.member.update", "member:"+id.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.member.update", "member:"+id.String(), existing.CompanyID) {
 		return
 	}
 	var req memberRequest
@@ -639,8 +658,13 @@ func (svc *Service) handleLinkUser(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	existing, err := svc.store.GetMember(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.member.link_user", "member:"+id.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.member.link_user", "member:"+id.String(), existing.CompanyID) {
 		return
 	}
 	var req linkUserRequest
@@ -660,8 +684,13 @@ func (svc *Service) handleUnlinkUser(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	existing, err := svc.store.GetMember(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.member.unlink_user", "member:"+id.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.member.unlink_user", "member:"+id.String(), existing.CompanyID) {
 		return
 	}
 	member, err := svc.store.UnlinkUser(r.Context(), actorFor(authCtx), id)
@@ -670,6 +699,14 @@ func (svc *Service) handleUnlinkUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	errenv.WriteData(w, http.StatusOK, memberView(member))
+}
+
+// memberKind is the linked user's kind; an unlinked member is a person until proven otherwise.
+func memberKind(m Member) string {
+	if m.UserKind == "" {
+		return "person"
+	}
+	return m.UserKind
 }
 
 func memberView(m Member) map[string]any {
@@ -685,6 +722,7 @@ func memberView(m Member) map[string]any {
 		"email":       m.Email,
 		"userId":      userID,
 		"isActive":    m.IsActive,
+		"kind":        memberKind(m),
 	}
 	if m.UserID != nil {
 		v["user"] = map[string]any{
@@ -692,6 +730,7 @@ func memberView(m Member) map[string]any {
 			"email":             m.UserEmail,
 			"preferredUsername": m.UserPreferredUsername,
 			"lifecycle":         m.UserLifecycle,
+			"kind":              memberKind(m),
 		}
 	}
 	return v
@@ -842,7 +881,7 @@ func (svc *Service) handleAdminCreatePosition(w http.ResponseWriter, r *http.Req
 		return
 	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.position.create", "position:new") {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.position.create", "position:new", companyID) {
 		return
 	}
 	var req adminCreatePositionRequest
@@ -1000,6 +1039,42 @@ func (svc *Service) handleCreateAndAssign(w http.ResponseWriter, r *http.Request
 	errenv.WriteData(w, http.StatusCreated, map[string]any{"position": positionView(position), "assignment": assignmentView(assignment)})
 }
 
+// assignmentCompany resolves the company an assignment belongs to through its position.
+func (svc *Service) assignmentCompany(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	a, err := svc.store.GetAssignment(ctx, id)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	p, err := svc.store.GetPosition(ctx, a.PositionID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+	return p.CompanyID, nil
+}
+
+// handleGetAssignment answers `GET /internal/org/assignments/{id}`: the assignment plus the
+// company it belongs to, so the gateway can decide company-administrator access to the end
+// route without knowing org's schema.
+func (svc *Service) handleGetAssignment(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	a, err := svc.store.GetAssignment(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	companyID, err := svc.assignmentCompany(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	v := assignmentView(a)
+	v["companyId"] = companyID.String()
+	errenv.WriteData(w, http.StatusOK, v)
+}
+
 // handleEndAssignment is the end-NOW surface: no request body is consulted (the server sets
 // valid_to = today — no caller-supplied dates). A client that sends a {"validTo": ...} body is
 // simply ignored, never honored.
@@ -1008,8 +1083,13 @@ func (svc *Service) handleEndAssignment(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
+	companyID, err := svc.assignmentCompany(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.assignment.end", "assignment:"+id.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.assignment.end", "assignment:"+id.String(), companyID) {
 		return
 	}
 	assignment, err := svc.store.EndAssignment(r.Context(), actorFor(authCtx), id)
@@ -1034,8 +1114,13 @@ func (svc *Service) handleAssignNow(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	position, err := svc.store.GetPosition(r.Context(), positionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.assignment.create", "position:"+positionID.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.assignment.create", "position:"+positionID.String(), position.CompanyID) {
 		return
 	}
 	var req assignNowRequest
@@ -1102,7 +1187,7 @@ func (svc *Service) handleAdminCreateGroup(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.group.create", "group:new") {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.group.create", "group:new", companyID) {
 		return
 	}
 	var req adminCreateGroupRequest
@@ -1170,8 +1255,13 @@ func (svc *Service) handleAddGroupMember(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
+	group, err := svc.store.GetGroup(r.Context(), groupID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.group.member_add", "group:"+groupID.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.group.member_add", "group:"+groupID.String(), group.CompanyID) {
 		return
 	}
 	var req groupMemberRequest
@@ -1202,8 +1292,13 @@ func (svc *Service) handleRemoveGroupMember(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
+	group, err := svc.store.GetGroup(r.Context(), groupID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
-	if !svc.authorize(w, r, authCtx, "org.group.member_remove", "group:"+groupID.String()) {
+	if !svc.authorizeInCompany(w, r, authCtx, "org.group.member_remove", "group:"+groupID.String(), group.CompanyID) {
 		return
 	}
 	if err := svc.store.RemoveGroupMember(r.Context(), actorFor(authCtx), groupID, memberID); err != nil {

@@ -40,6 +40,12 @@ func (svc *Service) Routes() http.Handler {
 	mux.HandleFunc("GET /internal/identity/mfa-policy/users/{userId}", svc.handleGetUserPolicy)
 	mux.HandleFunc("PUT /internal/identity/mfa-policy/users/{userId}", svc.handleSetUserPolicy)
 	mux.HandleFunc("DELETE /internal/identity/mfa-policy/users/{userId}", svc.handleClearUserPolicy)
+	// The same three, keyed by Keycloak subject: the public surface (the gateway's
+	// /api/platform/admin/mfa-policy/users/{subject}) names users by `sub`, never by identity's
+	// internal id. A subject identity has never provisioned answers 404.
+	mux.HandleFunc("GET /internal/identity/mfa-policy/subjects/{kcSub}", svc.bySubject(svc.handleGetUserPolicy))
+	mux.HandleFunc("PUT /internal/identity/mfa-policy/subjects/{kcSub}", svc.bySubject(svc.handleSetUserPolicy))
+	mux.HandleFunc("DELETE /internal/identity/mfa-policy/subjects/{kcSub}", svc.bySubject(svc.handleClearUserPolicy))
 	mux.HandleFunc("POST /internal/identity/mfa-policy/sync", svc.handleSyncPolicy)
 
 	mux.HandleFunc("GET /health", svc.handleHealth)
@@ -98,7 +104,15 @@ func (svc *Service) handleResolve(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	user, err := svc.store.ResolveOrCreate(r.Context(), claims.Sub, claims.Email, claims.PreferredUsername)
+	// Keycloak knows whether the subject is a client's service account (AdminClient.
+	// IsServiceAccount); identity records it so directories can tell people and services apart.
+	// Unreachable Keycloak defaults to person and the next resolve (once per gateway cache
+	// period) corrects it.
+	kind := UserKindPerson
+	if isSA, err := svc.admin.IsServiceAccount(r.Context(), claims.Sub); err == nil && isSA {
+		kind = UserKindService
+	}
+	user, err := svc.store.ResolveOrCreate(r.Context(), claims.Sub, claims.Email, claims.PreferredUsername, kind)
 	if err != nil {
 		httpx.WriteInternalError(w, err)
 		return
@@ -123,6 +137,7 @@ func (svc *Service) handleUserState(w http.ResponseWriter, r *http.Request) {
 	errenv.WriteData(w, http.StatusOK, map[string]string{
 		"lifecycle": state.Lifecycle,
 		"kcEnabled": state.KCEnabled,
+		"kind":      state.Kind,
 	})
 }
 
@@ -155,6 +170,20 @@ func (svc *Service) authorize(w http.ResponseWriter, r *http.Request, authCtx Au
 
 func actorFor(authCtx AuthContext) string {
 	return httpx.ActorFor(authCtx.Subject, authCtx.RawBearer)
+}
+
+// bySubject resolves the {kcSub} path value to identity's user id and hands the request to a
+// {userId}-keyed handler with that value set, so the two route families share one body.
+func (svc *Service) bySubject(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, err := svc.store.GetUserByKcSub(r.Context(), r.PathValue("kcSub"))
+		if err != nil {
+			writeMfaPolicyError(w, err)
+			return
+		}
+		r.SetPathValue("userId", u.ID.String())
+		next(w, r)
+	}
 }
 
 func parseUserID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
@@ -350,6 +379,7 @@ func userView(u User) map[string]any {
 		"email":             u.Email,
 		"preferredUsername": u.PreferredUsername,
 		"lifecycle":         u.Lifecycle,
+		"kind":              u.Kind,
 	}
 }
 

@@ -39,7 +39,7 @@ func TestUserState_KCEnabledTrue(t *testing.T) {
 	resetIdentityFixtures(t, adminPoolConn)
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-1", "e@example.com", "erin"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-1", "e@example.com", "erin", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
@@ -63,7 +63,7 @@ func TestUserState_KCEnabledFalse(t *testing.T) {
 	resetIdentityFixtures(t, adminPoolConn)
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-2", "f@example.com", "frank"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-2", "f@example.com", "frank", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
@@ -90,7 +90,7 @@ func TestUserState_TimeoutIsUnknown(t *testing.T) {
 	resetIdentityFixtures(t, adminPoolConn)
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-3", "g@example.com", "grace"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-3", "g@example.com", "grace", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
@@ -113,7 +113,7 @@ func TestUserState_ServerErrorIsUnknown(t *testing.T) {
 	resetIdentityFixtures(t, adminPoolConn)
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-4", "h@example.com", "hank"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-4", "h@example.com", "hank", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
@@ -138,7 +138,7 @@ func TestUserState_TokenFetchFailureIsUnknown(t *testing.T) {
 	resetIdentityFixtures(t, adminPoolConn)
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-5", "i@example.com", "ivan"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-state-5", "i@example.com", "ivan", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 

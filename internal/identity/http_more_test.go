@@ -7,8 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -537,4 +539,114 @@ func unsignedBearerForActorTest(t *testing.T, sub string) string {
 		t.Fatal(err)
 	}
 	return string(raw)
+}
+
+// TestHTTP_MfaPolicy_BySubject mirrors the user-id lifecycle above through the subject-keyed
+// routes the gateway proxies to: an unknown subject is 404, a provisioned one resolves to the
+// same policy row as its user id.
+func TestHTTP_MfaPolicy_BySubject(t *testing.T) {
+	f := newHTTPTestFixtureWithAuthz(t, allowAllAuthorizer{}, nil)
+	const sub = "kc-sub-by-subject"
+	userID := resolveAndGetID(t, f, sub)
+
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		var rd io.Reader
+		if body != "" {
+			rd = strings.NewReader(body)
+		}
+		req := httptest.NewRequest(method, path, rd)
+		rec := httptest.NewRecorder()
+		f.svc.Routes().ServeHTTP(rec, req)
+		return rec
+	}
+
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+		rec := do(method, "/internal/identity/mfa-policy/subjects/never-provisioned", `{"required":true,"method":"otp"}`)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s unknown subject: status = %d, want 404, body=%s", method, rec.Code, rec.Body.String())
+		}
+	}
+
+	if rec := do(http.MethodPut, "/internal/identity/mfa-policy/subjects/"+sub, `{"required":true,"method":"otp"}`); rec.Code != http.StatusOK {
+		t.Fatalf("set by subject: status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	rec := do(http.MethodGet, "/internal/identity/mfa-policy/users/"+userID.String(), "")
+	if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["required"] != true || data["method"] != "otp" {
+		t.Fatalf("policy set by subject not visible by user id: %v", data)
+	}
+	if rec := do(http.MethodDelete, "/internal/identity/mfa-policy/subjects/"+sub, ""); rec.Code != http.StatusOK {
+		t.Fatalf("clear by subject: status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	rec = do(http.MethodGet, "/internal/identity/mfa-policy/subjects/"+sub, "")
+	if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["required"] != false {
+		t.Fatalf("expected fallback to the global policy after clear, got %v", data)
+	}
+}
+
+// TestHTTP_Resolve_KindFromKeycloak: provisioning records whether the subject is a client's
+// service account, from Keycloak's serviceAccountClientId marker, and the user-state route
+// reports it; a plain user is a person.
+func TestHTTP_Resolve_KindFromKeycloak(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		username string
+		linked   bool // the client's service-account-user is this very user
+		want     string
+	}{
+		{"service account", "service-account-tokidesk-backend", true, "service"},
+		{"person", "alice", false, "person"},
+		{"person imitating the username convention", "service-account-tokidesk-backend", false, "person"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sub := "kc-sub-kind-" + strings.ReplaceAll(tc.name, " ", "-")
+			f := newHTTPTestFixture(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case strings.HasPrefix(r.URL.Path, "/admin/realms/kc-realm/users/"):
+					_ = json.NewEncoder(w).Encode(map[string]any{"enabled": true, "username": tc.username})
+				case r.URL.Path == "/admin/realms/kc-realm/clients":
+					_ = json.NewEncoder(w).Encode([]map[string]any{{"id": "c-1", "clientId": "tokidesk-backend"}})
+				case r.URL.Path == "/admin/realms/kc-realm/clients/c-1/service-account-user":
+					id := "someone-else"
+					if tc.linked {
+						id = sub
+					}
+					_ = json.NewEncoder(w).Encode(map[string]any{"id": id})
+				default:
+					http.NotFound(w, r)
+				}
+			})
+			req := httptest.NewRequest(http.MethodPost, "/internal/identity/resolve", nil)
+			req.Header.Set("Authorization", "Bearer "+f.bearer(t, sub, sub+"@example.com", sub))
+			rec := httptest.NewRecorder()
+			f.svc.Routes().ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("resolve: %d %s", rec.Code, rec.Body.String())
+			}
+			if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["kind"] != tc.want {
+				t.Fatalf("resolve kind = %v, want %s", data["kind"], tc.want)
+			}
+			req = httptest.NewRequest(http.MethodGet, "/internal/identity/users/"+sub+"/state", nil)
+			rec = httptest.NewRecorder()
+			f.svc.Routes().ServeHTTP(rec, req)
+			if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["kind"] != tc.want {
+				t.Fatalf("state kind = %v, want %s", data["kind"], tc.want)
+			}
+		})
+	}
+}
+
+// Keycloak unreachable at provisioning: the user is still provisioned, as a person.
+func TestHTTP_Resolve_KeycloakDown_DefaultsToPerson(t *testing.T) {
+	f := newHTTPTestFixture(t, nil)
+	req := httptest.NewRequest(http.MethodPost, "/internal/identity/resolve", nil)
+	req.Header.Set("Authorization", "Bearer "+f.bearer(t, "kc-sub-kind-down", "d@example.com", "d"))
+	rec := httptest.NewRecorder()
+	f.svc.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("resolve: %d %s", rec.Code, rec.Body.String())
+	}
+	if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["kind"] != "person" {
+		t.Fatalf("kind = %v, want person", data["kind"])
+	}
 }

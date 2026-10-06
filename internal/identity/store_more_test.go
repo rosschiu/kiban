@@ -27,7 +27,7 @@ func TestGetUserByID_FoundAndNotFound(t *testing.T) {
 		t.Fatalf("expected ErrUserNotFound for an unknown id, got %v", err)
 	}
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-get-by-id", "g@example.com", "g")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-get-by-id", "g@example.com", "g", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestMfaPolicy_EffectivePolicy_FallsBackToGlobal(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-mfa-1", "m1@example.com", "mfa1")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-mfa-1", "m1@example.com", "mfa1", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestMfaPolicy_UserOverrideWinsThenClearFallsBack(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-mfa-2", "m2@example.com", "mfa2")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-mfa-2", "m2@example.com", "mfa2", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -137,11 +137,11 @@ func TestMfaPolicy_ListEffectivePolicies_MixOfOverrideAndGlobal(t *testing.T) {
 		t.Fatalf("set global policy: %v", err)
 	}
 
-	overridden, err := store.ResolveOrCreate(ctx, "kc-sub-list-1", "l1@example.com", "list1")
+	overridden, err := store.ResolveOrCreate(ctx, "kc-sub-list-1", "l1@example.com", "list1", "")
 	if err != nil {
 		t.Fatalf("resolve overridden: %v", err)
 	}
-	plain, err := store.ResolveOrCreate(ctx, "kc-sub-list-2", "l2@example.com", "list2")
+	plain, err := store.ResolveOrCreate(ctx, "kc-sub-list-2", "l2@example.com", "list2", "")
 	if err != nil {
 		t.Fatalf("resolve plain: %v", err)
 	}
@@ -178,10 +178,10 @@ func TestSyncMfaPolicy_PerUserFailureReportedTruthfully(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-sync-fail-1", "sf1@example.com", "sf1"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-sync-fail-1", "sf1@example.com", "sf1", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	if _, err := store.ResolveOrCreate(ctx, "kc-sub-sync-fail-2", "sf2@example.com", "sf2"); err != nil {
+	if _, err := store.ResolveOrCreate(ctx, "kc-sub-sync-fail-2", "sf2@example.com", "sf2", ""); err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
@@ -217,7 +217,7 @@ func TestSyncMfaPolicy_UnenforceablePolicyRefusedPerUser(t *testing.T) {
 	store := NewStore(identityPool(t))
 	ctx := context.Background()
 
-	user, err := store.ResolveOrCreate(ctx, "kc-sub-sync-nomethod", "nm@example.com", "nm")
+	user, err := store.ResolveOrCreate(ctx, "kc-sub-sync-nomethod", "nm@example.com", "nm", "")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}

@@ -43,7 +43,7 @@ func newHTTPTestFixture(t *testing.T, adminUserHandler http.HandlerFunc) *httpTe
 	if adminUserHandler != nil {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/realms/kc-realm/protocol/openid-connect/token", okTokenHandler)
-		mux.HandleFunc("/admin/realms/kc-realm/users/", adminUserHandler)
+		mux.HandleFunc("/admin/realms/kc-realm/", adminUserHandler) // users/, clients/ (IsServiceAccount)
 		srv := httptest.NewServer(mux)
 		t.Cleanup(srv.Close)
 		adminClient = NewAdminClient(&http.Client{Timeout: 2 * time.Second}, srv.URL, "kc-realm", "identity-service", "secret")

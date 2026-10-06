@@ -335,7 +335,7 @@ func TestLive_MfaEnforcement_NoPolicyAllowsPlainLogin(t *testing.T) {
 	adminClient := NewAdminClient(&http.Client{Timeout: 5 * time.Second}, cfg.baseURL, cfg.realm, "kiban-identity-service", cfg.clientSecret)
 	kcUser := mfaEnforcementEnsureTestUser(ctx, t, adminClient, cfg, "kiban-mfa-enforce-nopolicy")
 
-	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username)
+	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username, "")
 	if err != nil {
 		t.Fatalf("resolve-or-create: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestLive_MfaEnforcement_RequiredOtpPolicyChallengesLogin(t *testing.T) {
 	adminClient := NewAdminClient(&http.Client{Timeout: 5 * time.Second}, cfg.baseURL, cfg.realm, "kiban-identity-service", cfg.clientSecret)
 	kcUser := mfaEnforcementEnsureTestUser(ctx, t, adminClient, cfg, "kiban-mfa-enforce-required")
 
-	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username)
+	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username, "")
 	if err != nil {
 		t.Fatalf("resolve-or-create: %v", err)
 	}
@@ -419,7 +419,7 @@ func TestLive_MfaEnforcement_PolicyRemovedRestoresPlainLogin(t *testing.T) {
 	adminClient := NewAdminClient(&http.Client{Timeout: 5 * time.Second}, cfg.baseURL, cfg.realm, "kiban-identity-service", cfg.clientSecret)
 	kcUser := mfaEnforcementEnsureTestUser(ctx, t, adminClient, cfg, "kiban-mfa-enforce-removed")
 
-	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username)
+	user, err := store.ResolveOrCreate(ctx, kcUser.ID, kcUser.Username+"@example.invalid", kcUser.Username, "")
 	if err != nil {
 		t.Fatalf("resolve-or-create: %v", err)
 	}

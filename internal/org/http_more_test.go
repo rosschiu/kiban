@@ -27,6 +27,10 @@ func (allowAllAuthorizer) Can(ctx context.Context, authCtx AuthContext, action s
 	return true, nil
 }
 
+func (allowAllAuthorizer) CanInCompany(ctx context.Context, authCtx AuthContext, action, companyID string) (bool, error) {
+	return true, nil
+}
+
 // newAllowAllFixture builds a Service backed by real DB fixtures, an allow-all authorizer, and
 // the given identity checker (nil defaults to an empty fakeIdentityChecker — fine for every
 // handler except link-user).

@@ -124,6 +124,69 @@ func (c *AdminClient) UserEnabled(ctx context.Context, kcSub string) (string, er
 	return KCStateFalse, nil
 }
 
+// IsServiceAccount reports whether kcSub is a client's service account. Keycloak 26 does not
+// fill serviceAccountClientId on a fetched user, so the check goes the other way: a service
+// account's username is always service-account-<clientId>, and the client's own
+// service-account-user endpoint must name this very user (the username alone is a convention a
+// person could imitate; the client link cannot be). A user without the prefix is a person with
+// no further call.
+func (c *AdminClient) IsServiceAccount(ctx context.Context, kcSub string) (bool, error) {
+	user, err := c.getUser(ctx, kcSub)
+	if err != nil {
+		return false, err
+	}
+	username, _ := user["username"].(string)
+	clientID, ok := strings.CutPrefix(username, "service-account-")
+	if !ok {
+		return false, nil
+	}
+	// Usernames are lowercased by Keycloak; search (substring, case-insensitive) rather than an
+	// exact clientId match, then let the client link decide.
+	var clients []struct {
+		ID string `json:"id"`
+	}
+	if err := c.getJSON(ctx, fmt.Sprintf("%s/admin/realms/%s/clients?clientId=%s&search=true", c.baseURL, c.realm, url.QueryEscape(clientID)), &clients); err != nil {
+		return false, err
+	}
+	for _, cl := range clients {
+		var sa struct {
+			ID string `json:"id"`
+		}
+		if err := c.getJSON(ctx, fmt.Sprintf("%s/admin/realms/%s/clients/%s/service-account-user", c.baseURL, c.realm, url.PathEscape(cl.ID)), &sa); err != nil {
+			continue // a client without service accounts answers 404
+		}
+		if sa.ID == kcSub {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// getJSON performs an authenticated admin GET and decodes the JSON body into out.
+func (c *AdminClient) getJSON(ctx context.Context, rawURL string, out any) error {
+	token, err := c.token(ctx)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return fmt.Errorf("identity: build admin request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("identity: admin request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("identity: admin request: unexpected status %d", resp.StatusCode)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("identity: decode admin response: %w", err)
+	}
+	return nil
+}
+
 // getUser fetches kcSub's full Keycloak user representation as a raw map — deliberately
 // untyped so round-tripping it back through updateUser can't silently drop fields Keycloak
 // returned that this package doesn't model.
