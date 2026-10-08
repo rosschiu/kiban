@@ -246,7 +246,7 @@ jobs:
         run: cd web && npm run -w sdk build
 
       - name: Upload the built package as a workflow artifact (always, token or not)
-        run: cd web/sdk && npm pack --pack-destination "$RUNNER_TEMP/npm-dist"
+        run: mkdir -p "$RUNNER_TEMP/npm-dist" && cd web/sdk && npm pack --pack-destination "$RUNNER_TEMP/npm-dist"
       - uses: actions/upload-artifact@v4
         with:
           name: kiban-sdk-npm
