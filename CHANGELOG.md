@@ -6,12 +6,13 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 - Nothing yet
 
-## [0.1.1] — 2026-10-04
+## [0.1.1] — 2026-10-08
 
 From two integration reviews: a public origin and a standard OIDC issuer for the published
 images, second-factor policy and company administrators through the gateway, service accounts
 as members, org reads and SDK parity, and package publishing.
 
+- `golang.org/x/text` 0.41.0 (GO-2026-6629, a panic on crafted input in the `precis` package that `pgx` reaches on connect); the release gate's `govulncheck` blocked the 0.1.1 tag on 0.40.0
 - Compose marks Keycloak healthy only on a `200` readiness status, not on any `"status": "UP"` fragment; bootstrap's readiness wait grows from 30s to 90s, so a cold first `docker compose up --wait` no longer fails
 - Authz debug check answers an engine refusal as `422` `VALIDATION_FAILED` (was the `VALIDATION_ERROR` shape code)
 - Quickstart "What to try first" points at the admin routes instead of a removed section
