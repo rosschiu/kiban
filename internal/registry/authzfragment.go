@@ -40,6 +40,12 @@ func upsertAuthzFragment(ctx context.Context, ex sqlExecutor, moduleKey string, 
 	if err != nil {
 		return fmt.Errorf("registry: seed: module %q authz fragment failed the subset wall: %w", moduleKey, err)
 	}
+	// The company anchor, checked here at the write and not only when authz loads the fragment:
+	// a type without `company_module` used to register fine, then fragment.Load refused the
+	// whole model and every check for every module failed once the app was enabled.
+	if err := m.ValidateCompanyModuleAnchor(); err != nil {
+		return fmt.Errorf("registry: seed: module %q authz fragment: %w", moduleKey, err)
+	}
 	// Same base-type-redeclaration reject modvalidate enforces at build time
 	// (internal/modvalidate/fragment.go), asserted again here — this is the actual runtime
 	// write gate a fragment passes through before ever reaching authz.model_fragment.
