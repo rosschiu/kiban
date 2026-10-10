@@ -16,16 +16,6 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
   services read the superadmin's initial password, the identity client secret and the Keycloak
   admin password from files; each service's own database role password is an environment
   variable.
-- **An app's backend can write tuples outside its own types once its service account is a
-  company member.** The owner rule covers the app's own types. For any other enabled app's or
-  module's types the grants route applies the membership rule, and a service account that was
-  made a member of a company (which background jobs and the org reads need) passes it there.
-  Module-tier tuples still need the company-module administrator relation.
-- **A manifest without the `company_module` anchor is accepted at registration.** Every object
-  type must declare `"company_module": { "this": true }`, but registering an app does not check
-  it. Once such an app is enabled the authorization service cannot load the model and answers
-  every check in the deployment with an error until the app is disabled or the manifest is
-  registered again, corrected.
 - **The org service's internal member-fact reads take no bearer.** Inside the Compose network,
   `GET /internal/org/companies/{id}/members/by-kcsub/{kcSub}` answers any caller; every write
   checks the bearer. Never publish a module container, or any internal service, on a host port.

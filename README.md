@@ -1,21 +1,20 @@
-# Kiban (基盤)
+# Kiban - Permission control for organization
 
 [![CI](https://github.com/rosschiu/kiban/actions/workflows/ci.yml/badge.svg)](https://github.com/rosschiu/kiban/actions/workflows/ci.yml)
 
-Self-hostable identity, organization and authorization for business applications. Kiban runs
-beside your app, in your environment, and answers three questions for every request: **who** is
-this (login through an embedded Keycloak, your identity provider federated in), **where** do
-they sit (companies, members, positions, groups) and **what may they do** (a relationship-based
-authorization engine in the family of Zanzibar and OpenFGA, with an immutable audit trail).
-Your app keeps its own code, database and deployment, and calls Kiban through an SDK.
+Self-hostable identity, organization and authorization for business applications. Kiban answers three questions:
+- **who**: user's identity
+- **where**: user's position in a hierarchy (companies, members, positions, groups)
+- **what may they do**: (relationship-based authorization engine with an immutable audit trail).
 
-**Documentation: <https://rosschiu.github.io/kiban/>** (source in `docs/`; `make docs-site`
-builds it locally). Start with the [quickstart](https://rosschiu.github.io/kiban/quickstart/) to
-run it, [Integrate your app](https://rosschiu.github.io/kiban/integrate/) for the backend and
-frontend steps, and [known limitations](https://rosschiu.github.io/kiban/limitations/) for what
-0.1 cannot do. `AGENTS.md` gives a coding agent the same reading order and the rules of the tree.
+This project is an extract of past enterprise projects with features revamp and enhancements.
 
-## What it does
+**Documentation: <https://rosschiu.github.io/kiban/>**
+[Quickstart](https://rosschiu.github.io/kiban/quickstart/)
+[Integrate your app](https://rosschiu.github.io/kiban/integrate/) for the backend and frontend steps
+[Known limitations](https://rosschiu.github.io/kiban/limitations/)
+
+## Features
 
 - **Identity**: an embedded Keycloak instance (OpenID Connect with PKCE; authenticator-app or
   passkey MFA policy, global or per user, where a per-user override can only raise it) synced to
@@ -44,9 +43,6 @@ frontend steps, and [known limitations](https://rosschiu.github.io/kiban/limitat
 Four sample modules ship in the repository as worked examples of a deeper integration
 (`notification`, `docs`, `helpdesk`, `timesheet`); they are off by default.
 
-**Stack**: Go (standard library `net/http`), Postgres 18, Keycloak 26, a TypeScript SDK and a
-React sample shell (npm workspaces), Docker Compose. Kubernetes manifests exist under
-`deploy/k8s/` and are proven on a local kind cluster only.
 
 ## Quickstart
 
@@ -58,7 +54,7 @@ make setup   # checks docker, writes .env with generated secrets (once), creates
 make dev     # builds and starts every container, waits until all are healthy
 ```
 
-Kiban is then at `https://127.0.0.1:8443` (self-signed certificate). Log in as
+Then access Kiban at `https://127.0.0.1:8443` (self-signed certificate). Log in as
 `KIBAN_SUPERADMIN_USERNAME` from `.env` (default `superadmin`) with the password in
 `infra/secrets-in/superadmin-password` (a 0600 file written once, never printed to a log; the
 first login makes you change it). `make dev-down` stops it and keeps data; `make dev-clean` also

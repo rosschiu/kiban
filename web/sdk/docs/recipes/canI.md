@@ -7,7 +7,7 @@ every call site.
 ## Pattern
 
 ```ts
-import { createApiClient, createEffectiveAccessClient, createCanI } from "@rosschiu/kiban-sdk";
+import { createApiClient, createEffectiveAccessClient, createCanI } from "@rossbsol/kiban-sdk";
 
 const apiClient = createApiClient({
   baseUrl: "https://127.0.0.1:8443", // always the gateway origin

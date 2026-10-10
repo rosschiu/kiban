@@ -4,7 +4,7 @@
 // "agents"): admin only. List/add/remove agents, with an explicit blocked-removal message
 // when the last-ticket-assignment protection rule fires.
 import { useCallback, useEffect, useState } from "react";
-import { createOrgClient, type MemberDirectoryEntry, type OrgGroupWithMemberCount, type OrgPositionWithHolder } from "@rosschiu/kiban-sdk";
+import { createOrgClient, type MemberDirectoryEntry, type OrgGroupWithMemberCount, type OrgPositionWithHolder } from "@rossbsol/kiban-sdk";
 import { getShellSdk } from "../../auth/sdk";
 import type { ModulePageContext } from "../../resolver/resolver";
 import { Button } from "../../ui/button";

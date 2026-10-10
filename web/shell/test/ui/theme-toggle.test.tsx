@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { createMemoryStorage } from "@rosschiu/kiban-sdk";
+import { createMemoryStorage } from "@rossbsol/kiban-sdk";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

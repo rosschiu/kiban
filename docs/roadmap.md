@@ -18,4 +18,4 @@ Planned, in no particular order; nothing is promised for a date. Shipped items m
 - Field- and row-level policy on member data
 - Writer for the user lifecycle (`disabled`, and an `archived` state)
 - Wider differential harness and the concurrent batch check on the request path
-- Later: commercial module packaging, Entra ID and SCIM federation, all-in-one image, admin consoles
+- Later: all-in-one image, admin consoles

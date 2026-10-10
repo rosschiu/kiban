@@ -5,7 +5,7 @@
 // I/O — a pure function of already-fetched SDK data => resolver input / sidebar entries, exactly
 // mirroring resolver.ts's own "pure function, table-driven test" shape so this is fully covered
 // without any network/DOM involved (compose.test.ts).
-import type { Capability, CatalogEntry, EffectiveAccessSummary, OrgMeCompany } from "@rosschiu/kiban-sdk";
+import type { Capability, CatalogEntry, EffectiveAccessSummary, OrgMeCompany } from "@rossbsol/kiban-sdk";
 import type { RegisteredModule } from "../modules/registry";
 import type { NavEntry } from "./sidebar-nav";
 

@@ -84,11 +84,17 @@ through the admin routes on the gateway; the administration pages cover position
    [Administration](integrate.md#administration).
 2. Open the administration pages, create a position in that company and assign your member to
    it.
+<<<<<<< HEAD
 3. Bring up a sample module (`COMPOSE_PROFILES=samples` and `KIBAN_INSTALLED_MODULES` in
    `.env`, then `make dev` again), enable it for the company, and grant it to the position
    rather than to the person. The registry installs sample modules only at its first boot: on
    a stack that has already started, `make dev-clean` first (this deletes its data). Path B's
    compose file has no sample modules.
+=======
+3. Bring up one sample module (`COMPOSE_PROFILES=docs` and `KIBAN_INSTALLED_MODULES=docs` in
+   `.env`, then `make dev` again; `samples` and the full list bring up all four), enable it
+   for the company, and grant it to the position rather than to the person.
+>>>>>>> origin/main
 4. Change the position holder and watch access move with the chair.
 
 ## Next

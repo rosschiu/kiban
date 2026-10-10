@@ -5,6 +5,7 @@ package authz
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -527,6 +528,21 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// An object carries ONE anchor. An in-request anchor on an object already anchored
+	// elsewhere (another company, or another module) is refused before anything is written;
+	// re-anchoring is revoke first, then grant. The same anchor repeated is idempotent.
+	for key := range inRequestAnchor {
+		objType, objID, _ := strings.Cut(key, ":")
+		existing, err := store.AnchorOf(r.Context(), svc.Pool, objType, objID)
+		if err != nil {
+			writeDecision(w, decision.Decision{Reason: decision.ReasonDependencyUnavailable, Dependency: "engine", Step: "grants_anchor"})
+			return
+		}
+		if existing != "" && existing != anchorID {
+			writeValidationFailed(w, "object "+key+" is already anchored to company_module:"+existing)
+			return
+		}
+	}
 	adminChecked := false
 	for _, t := range tuples {
 		if t.ObjectType == "company_module" {
@@ -584,6 +600,11 @@ func (svc *Service) writeGrants(w http.ResponseWriter, r *http.Request, sub, mod
 		opErr = store.Revoke(r.Context(), tx, sub, req.CorrelationID, tuples...)
 	}
 	if opErr != nil {
+		var conflict *store.AnchorConflictError
+		if errors.As(opErr, &conflict) { // two concurrent anchors: the index caught the second
+			writeValidationFailed(w, "object "+conflict.Tuple.ObjectType+":"+conflict.Tuple.ObjectID+" is already anchored to another company_module")
+			return
+		}
 		writeInternalError(w, opErr)
 		return
 	}

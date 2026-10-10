@@ -5,7 +5,7 @@
 // signature" posture the session applies to its own nonce check — and the claims are used for
 // display only, never for an authz decision (every real access check still goes through the
 // gateway/resolver against the bearer token itself).
-import { decodeIdTokenClaims } from "@rosschiu/kiban-sdk";
+import { decodeIdTokenClaims } from "@rossbsol/kiban-sdk";
 
 export interface DecodedUserProfile {
   name: string;

@@ -7,7 +7,7 @@
 // current shares with revoke buttons, immediate visible state changes) and the per-document audit
 // panel (human-readable event list — the visible-audit selling point).
 import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { createOrgClient, type MemberDirectoryEntry } from "@rosschiu/kiban-sdk";
+import { createOrgClient, type MemberDirectoryEntry } from "@rossbsol/kiban-sdk";
 import { getShellSdk } from "../../auth/sdk";
 import { describeApiError } from "../../lib/api-error";
 import type { ModulePageContext } from "../../resolver/resolver";

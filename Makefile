@@ -2,7 +2,7 @@
 # Wire each target to real commands as the stack solidifies. A target that isn't
 # wired yet must fail loudly, not pass silently.
 
-.PHONY: sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-devcert images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
+.PHONY: k8s-check sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-devcert images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
 
 # VERSION defaults from the VERSION file (`v` + its contents, e.g. "v0.1.0") so `make images`
 # needs no argument on a normal release cut; `make images VERSION=v0.1.0-rc2` overrides it for an
@@ -164,6 +164,7 @@ check: ## fast gate: lint + typecheck/vet + unit tests (CI runs this) — target
 	$(MAKE) sdk-python-check
 	$(MAKE) validate-modules
 	$(MAKE) validate-migrations
+	$(MAKE) k8s-check
 	$(MAKE) ratchet-guard
 	$(MAKE) coverage-gate
 	$(MAKE) license-check
@@ -193,6 +194,9 @@ ratchet-guard: ## coverage/ratchet.json may only ever increase a scope's min, ne
 
 validate-modules: ## module artifact validator (static, no live stack needed) over every modules/*/ directory
 	go run ./cmd/modvalidate modules/*/
+
+k8s-check: ## render the Kustomize base and overlays without a cluster — base carries no Secret, every overlay supplies one (deploy/k8s/kustomize-check.sh)
+	./deploy/k8s/kustomize-check.sh
 
 validate-migrations: ## foundation migration trees (migrations/*/): filename/order rules + checksums.json ledger completeness and immutability (static; `go run ./cmd/modvalidate -write-checksums migrations/<tree>` records a new file)
 	go run ./cmd/modvalidate migrations/*/

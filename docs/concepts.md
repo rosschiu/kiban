@@ -119,9 +119,9 @@ at the database level; the roles services run as cannot update or delete rows.
 
 ## The SDKs and the shell
 
-The **browser SDK** (`@rosschiu/kiban-sdk`, TypeScript, no runtime dependencies) runs the login
+The **browser SDK** (`@rossbsol/kiban-sdk`, TypeScript, no runtime dependencies) runs the login
 flow, refreshes tokens, wraps every call in the platform's success and error envelope, and
-offers typed clients and recipes. The **backend SDKs** (`@rosschiu/kiban-sdk/server` for Node,
+offers typed clients and recipes. The **backend SDKs** (`@rossbsol/kiban-sdk/server` for Node,
 `kiban-sdk` for Python, `github.com/rosschiu/kiban/sdk` for Go) do the same five things each:
 obtain the app's service token, verify a user's token, ask for decisions, write and remove
 tuples on the app's own types, look members up. The **shell** is a sample web application built

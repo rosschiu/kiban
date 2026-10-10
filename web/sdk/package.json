@@ -1,6 +1,6 @@
 {
-  "name": "@rosschiu/kiban-sdk",
-  "version": "0.1.0",
+  "name": "@rossbsol/kiban-sdk",
+  "version": "0.1.1",
   "description": "Kiban platform SDK: OIDC/PKCE session, envelope-aware API client, typed clients, use-case recipes.",
   "type": "module",
   "private": false,
@@ -11,7 +11,8 @@
     "directory": "web/sdk"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "exports": {
     ".": {

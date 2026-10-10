@@ -5,7 +5,7 @@
 // auth/session-context.tsx: the SDK's own context
 // object is a plain synchronous-getter + subscribe API (no React dependency); this
 // module supplies the "re-render on change" piece a React host needs.
-import { createSessionContext, type SessionContext } from "@rosschiu/kiban-sdk";
+import { createSessionContext, type SessionContext } from "@rossbsol/kiban-sdk";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 let cached: SessionContext | null = null;
