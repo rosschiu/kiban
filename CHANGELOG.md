@@ -4,6 +4,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- API docs pages load Redoc from Redocly's CDN through one pinned, integrity-checked `<script>` instead of inlining the bundle into `docs/api/*.html`; the backend SDK trims the gateway origin's trailing slashes without a regex; the remaining code-scanning alerts were triaged with a written reason each
 - Nothing yet
 
 ## [0.1.1] — 2026-10-08

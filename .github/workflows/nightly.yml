@@ -7,6 +7,10 @@
 
 name: Nightly full tier
 
+# Least privilege: nothing here writes to the repository (artifacts need no permission).
+permissions:
+  contents: read
+
 on:
   schedule:
     - cron: "0 3 * * *"

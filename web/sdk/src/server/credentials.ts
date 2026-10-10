@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import { stripTrailingSlashes } from "./origin";
+
 /** Configuration for {@link createServiceCredentials}: the app's confidential service client
  * (one of `KIBAN_SERVICE_CLIENTS`) and the gateway it authenticates against. */
 export interface ServiceCredentialsConfig {
@@ -29,7 +31,7 @@ const EXPIRY_WINDOW_MS = 30_000;
 export function createServiceCredentials(config: ServiceCredentialsConfig): ServiceCredentials {
   const fetchImpl = config.fetchFn ?? fetch;
   const realm = config.realm ?? "kiban";
-  const tokenUrl = `${config.gatewayOrigin.replace(/\/+$/, "")}/realms/${realm}/protocol/openid-connect/token`;
+  const tokenUrl = `${stripTrailingSlashes(config.gatewayOrigin)}/realms/${realm}/protocol/openid-connect/token`;
   let token: string | null = null;
   let expiresAt = 0;
   let inflight: Promise<string> | null = null;

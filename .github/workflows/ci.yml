@@ -48,6 +48,10 @@
 
 name: CI
 
+# Least privilege: nothing here writes to the repository (artifacts need no permission).
+permissions:
+  contents: read
+
 on:
   push:
     branches: ["**"]
