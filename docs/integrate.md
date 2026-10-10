@@ -17,15 +17,9 @@ should see.
 
 Three things 0.1 does not do. They shape the steps below.
 
-<<<<<<< HEAD
-1. **Registering an app, enabling it, and creating companies and org units are superadmin
-   work.** Members, positions and groups of a company can also be managed by an administrator
-   of that company, whom a superadmin appoints. There is no self-service registration.
-=======
 1. **Registering an app, enabling it, and creating companies are superadmin work.** A company's
    administrator manages that company's members, positions, assignments and groups
    ([Administration](#administration)); there is no self-service registration.
->>>>>>> origin/main
 2. **Checks answer for the bearer only.** Your backend asks with the user's own token ("may
    this user") or its service token ("may I"). There is no "list every object this user may
    see" API yet.
@@ -279,12 +273,10 @@ company; without it every check on the object is denied.
     ```
 
 `revoke` removes what `grant` wrote. You should see `403 AUTHORIZATION_DENIED` if you name
-another enabled app's or module's object type while your service account is not a member of
-that company, and `422 VALIDATION_FAILED` for a base type such as `company` or a type no enabled
-app declares. Outside its own types an app's backend is treated like any other caller: the
-membership rule applies, so a service account that is a member of the company (step 10) may
-write tuples on another enabled app's or module's objects there; see
-[limitations](limitations.md). A subject can also be a position (`subjectType:
+another enabled app's or module's object type: outside its own types an app's backend needs
+the company's `admin` relation (`company:<id>#admin`), and a service account that is only a
+member of the company (step 10) is refused with reason `COMPANY_ROLE_REQUIRED`. A base type
+such as `company`, or a type no enabled app declares, is `422 VALIDATION_FAILED`. A subject can also be a position (`subjectType:
 "position"`, `subjectRelation: "holder"`) or a group (`subjectType: "group"`, `subjectRelation:
 "member"`), so access follows the chair or the membership. Without the `subjectRelation` the
 tuple is stored and never matches.
