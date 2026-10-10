@@ -479,7 +479,7 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 	// backend token's verified `azp` matching M's service client id, owns M's object types the
 	// way an OpenFGA store owner does: it may write tuples on them in any company where M is
 	// enabled without being a member there. Rules 1, 2 and 4 still apply to it.
-	ownerCall := false
+	ownerCall, registeredApp := false, false
 	if claims.ClientID != "" && svc.AppOwners != nil {
 		owners, err := svc.AppOwners(r.Context())
 		if err != nil {
@@ -487,6 +487,14 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ownerCall = owners[moduleKey] == claims.ClientID
+		// azp is on every token (a user's names the client they logged in through), so "is
+		// this an app's service account" means: some registered app's service client id.
+		for _, clientID := range owners {
+			if clientID == claims.ClientID {
+				registeredApp = true
+				break
+			}
+		}
 	}
 	if ownerCall {
 		if enabled, err := svc.moduleStateSource().Enabled(r.Context(), moduleKey); err != nil {
@@ -502,11 +510,20 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 	// decision's reason, audited like a /can denial; uncertain ⇒ 503. The owning app skips it.
 	d := decision.Decision{Allowed: true, Reason: decision.ReasonAllowed}
 	if !ownerCall {
-		d = svc.evaluate(r.Context(), decider, decision.Request{
+		dreq := decision.Request{
 			SubjectID: sub, FeatureKey: moduleKey + ".grants", ModuleKey: moduleKey, Scope: decision.ScopeCompany,
 			CompanyID: req.CompanyID, RequiredPlatformRole: summarySuperadminRole, AllowPlatformOperatorCompanyScope: true,
 			CorrelationID: req.CorrelationID,
-		})
+		}
+		// An app's service account writing on a module it does not own: membership alone is
+		// not enough, or any app made a member of a company could write tuples on every other
+		// app's objects there. It needs the company's admin relation; the superadmin takes the
+		// operator exception above. A user's token keeps the membership rule (modules forward
+		// the user's bearer for the user's own objects; the gateway admits no plain user here).
+		if registeredApp {
+			dreq.RequiredCompanyRole = "admin"
+		}
+		d = svc.evaluate(r.Context(), decider, dreq)
 	}
 	if !d.Allowed {
 		svc.auditDenial(r.Context(), sub, moduleKey+".grants", d)
