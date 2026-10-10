@@ -1,6 +1,7 @@
 # Kiban on Kubernetes
 
-This directory is the Kubernetes translation of `infra/compose.yaml`: the same 9 app services,
+This directory is the Kubernetes translation of `infra/compose.yaml`: the same 5 foundation services
+(the four sample modules have directories here but are off by default, as in Compose),
 Postgres, Keycloak, the `migrate`/`bootstrap` one-shot jobs and the gateway edge, expressed as
 [Kustomize](https://kubectl.docs.kubernetes.io/references/kustomize/) manifests instead of a
 compose file. Nothing in the platform assumes Compose. The manifest set has been brought up end
@@ -22,7 +23,7 @@ chart for third-party operators) makes templating worth it.
 
 ```
 deploy/k8s/
-  base/                    # the full 12-workload manifest set, image tags = :latest placeholders
+  base/                    # the manifest set (9 workloads; 13 with the sample modules), image tags = :latest placeholders
     namespace.yaml
     configmap.yaml          # non-secret env (kiban-config) + postgres keycloak-DB init SQL
     secret.example.yaml     # COMMITTED placeholder — field list only, never real values
@@ -50,7 +51,7 @@ deploy/k8s/
 
 Kubernetes has no native "wait for this Job before that Deployment starts" primitive. There were
 two ways to reproduce `infra/compose.yaml`'s `depends_on` chain (postgres -> keycloak -> migrate
--> bootstrap -> the 9 app services):
+-> bootstrap -> the app services):
 
 1. **initContainers on every Deployment** that wait for the upstream dependency (a `busybox`/
    `curl` loop polling the dependency's health, or a Job's completion via the API).
@@ -95,6 +96,11 @@ pass the wait without running the new migrations — this is what makes the scri
 an upgrade), runs `kubectl apply -k <overlay>` once for the full manifest set, then waits in
 stages: postgres ready -> keycloak ready -> `migrate` Job complete -> `bootstrap` Job complete ->
 every app Deployment's rollout finishes. The script's own header explains the reasoning.
+
+The base deploys the five foundation services. To run the sample modules, add `notification`,
+`timesheet`, `docs` and `helpdesk` to `base/kustomization.yaml` and to `KIBAN_INSTALLED_MODULES`
+in `base/configmap.yaml`. The initial superadmin password is the `superadmin-password` value
+`gen-secrets.sh` wrote.
 
 ## Resource requests/limits
 
@@ -192,7 +198,7 @@ The `v0.1.1` tag must match the `newTag` values in `overlays/kind/kustomization.
   `Host: gateway:8090` workaround depends on that, production must not. Forwarded headers should
   reach the gateway only from the Ingress controller; that is a NetworkPolicy (next bullet), not
   something the manifests can enforce.
-- **Pod hardening**: the nine app images run as uid/gid 65532 with a read-only root filesystem,
+- **Pod hardening**: the app images run as uid/gid 65532 with a read-only root filesystem,
   all capabilities dropped, `allowPrivilegeEscalation: false` and the `RuntimeDefault` seccomp
   profile (`base/template/service.yaml`). The `migrate`/`bootstrap` Jobs run the toolchain image
   as root; Postgres and Keycloak keep their upstream images' defaults.

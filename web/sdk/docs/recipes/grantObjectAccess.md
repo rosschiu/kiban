@@ -1,6 +1,6 @@
 # Recipe: `grantObjectAccess` — "share object X with user Y as `<relation>`"
 
-Named use-case recipe: one call over the gateway's superadmin-guarded grant route
+Named use-case recipe: one call over the gateway's guarded grant route
 (`POST /api/auth/grants`, `op: "grant"`, forwarding to authz's transactional
 `handleGrants`), instead of hand-assembling `tupleWire`/`grantsRequestWire` at every call site.
 `revokeObjectAccess` is the inverse (`op: "revoke"`, same tuple shape).
@@ -44,7 +44,8 @@ await revokeObjectAccess({
 
 Every call names the company the tuple belongs to. The authz service binds the request to that
 company and to the one enabled module whose fragment declares the object type (`docs_document`
-belongs to the docs module; a base type such as `company` is refused), and the object must
+belongs to the docs module; a base type such as `company` is refused, except that a superadmin
+may grant `company:<companyId>#admin` to a user, which appoints a company administrator), and the object must
 already be anchored to `company_module:<companyId>/<module>`, which the module writes when it
 creates the object. A request without a UUID `companyId` is answered `400`; an object type no
 enabled module declares, or an unanchored object, is answered `422`.
@@ -58,8 +59,9 @@ one).
 ## Gateway exposure and tests
 
 `POST /api/auth/grants` (`internal/gateway/foundation_routes.go`) sits behind
-`RequireSuperadmin` — only a caller holding `auth.platform_administration.access` (the
-`kiban-superadmin` platform role) may call this route; every other caller gets 403. Behind the
+`RequireSuperadminOrApp` — only a caller holding `auth.platform_administration.access` (the
+`kiban-superadmin` platform role), or a registered app's backend with its service token, may
+call this route; every other caller gets 403. Behind the
 guard, the authz service additionally binds the tuples to the request's company and one enabled
 module, as described above. v1 keeps the grant recipe honest this way: only superadmins grant
 (there is no per-object manager relation that lets a non-superadmin grant). `grantObjectAccess`'s **logic**

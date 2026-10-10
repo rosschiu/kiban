@@ -1,7 +1,7 @@
 # Kiban zero-clone quickstart
 
-Run Kiban with no `git clone`, no `make` and no build: every service is pulled straight from
-`ghcr.io/rosschiu`. You need two files, two settings, and one command.
+Run Kiban with no `git clone`, no `make` and no build: every Kiban image is pulled straight from
+`ghcr.io/rosschiu` (Postgres is the stock `postgres:18-alpine`). You need two files, two settings, and one command.
 
 ## 1. Download two files
 
@@ -48,20 +48,22 @@ chmod 600 secrets-in/superadmin-password
 docker compose up -d --wait
 ```
 
-The first run pulls 8 images (the 5 foundation services plus `migrate`/`bootstrap`/`keycloak`;
+The first run pulls 9 images (Postgres, the 5 foundation services and `migrate`/`bootstrap`/`keycloak`;
 the release also publishes `gateway-devcert` and the four sample modules, which this file does
 not use) and takes a few minutes depending on your connection. `--wait` blocks until every service reports healthy.
 
 ## 4. Log in
 
-Open <http://localhost:3000> (or the `KIBAN_GATEWAY_HTTP_HOST_PORT` you set). Sign in as
+Open <http://localhost:3000>. Sign in as
 `KIBAN_SUPERADMIN_USERNAME` (from `.env`, default `superadmin`) with the password in
 `secrets-in/superadmin-password`; that password is temporary, so the first login makes you set
 a new one (bootstrap creates the account with Keycloak's `UPDATE_PASSWORD` required action). Port
 3000 is the default on purpose: with no `KIBAN_DOMAIN`,
-bootstrap registers only fixed dev-loopback redirect URIs (`http://localhost:3000`, `:5173`) on
-the realm, so the browser OAuth login only completes from that origin. Remapping the port
-breaks the browser login, and there is no other way to get a token: the realm has no
+bootstrap registers only fixed dev redirect URIs (`http://localhost:3000`, `:5173` and
+`http://localhost` among them) on the realm, so the browser OAuth login only completes from such
+an origin. A remapped port (`KIBAN_GATEWAY_HTTP_HOST_PORT`) also needs
+`KIBAN_EXTRA_ORIGINS=http://localhost:<port>` in `.env`, or the browser login breaks, and there
+is no other way to get a token: the realm has no
 direct-grant client. Use the same host:port every time you sign in: `KEYCLOAK_ISSUER_URL` is compared as a string against the token's `iss` claim.
 
 ## 5. Serve it at a real address (optional)
@@ -99,7 +101,7 @@ production setup:
 
 For a real deployment, clone the repository and use the full `infra/compose.yaml`. You can
 `make dev` for a local build from source, `make public-up` for a deployment behind a
-TLS-terminating reverse proxy, or set `KIBAN_IMAGE_TAG=vX.Y.Z` to deploy from pre-built images.
+TLS-terminating Traefik, or set `KIBAN_IMAGE_TAG=vX.Y.Z` to deploy from pre-built images.
 
 ## Design notes (why this file looks the way it does)
 
@@ -116,13 +118,14 @@ build any of those from, so the generator:
   are pulled from GHCR too (built by `make images-quickstart`, pushed by
   `.github/workflows/release.yml`); `kiban-keycloak` includes the MFA authenticator and realm,
   which a plain `quay.io/keycloak/keycloak` image plus a downloaded realm file would silently drop.
-- Drops the profile-gated test fixtures (`mailpit`, `webhook-target`) and `gateway-devcert`,
+- Drops every profile-gated service (the four sample modules and the `mailpit` and
+  `webhook-target` test fixtures) and `gateway-devcert`,
   and runs the gateway's dev-only plain-HTTP listener instead (`KIBAN_INSECURE_HTTP=true`, host
   port 3000), the same mode `infra/compose.public.yaml` uses behind a real reverse proxy.
   `KEYCLOAK_ISSUER_URL` follows that plain-HTTP origin.
 - Takes every env default (ports, names) from `.env.example`; blank fields there become required
   (`${VAR:?}`) in the compose file.
-- Inlines `infra/postgres-init/*.sql` as a compose `configs:` entry (no repo file to bind-mount)
+- Inlines `infra/postgres-init/*.sh` as a compose `configs:` entry (no repo file to bind-mount)
   and prefixes the named volumes `kiban-quickstart-` so a `make dev` clone on the same host is
   never touched.
 

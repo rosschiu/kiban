@@ -16,6 +16,6 @@ Planned, in no particular order; nothing is promised for a date. Shipped items m
 - Kubernetes as a supported deployment path
 - Passkey challenge at login when the policy requires one
 - Field- and row-level policy on member data
-- Writer for the `archived` user state
+- Writer for the user lifecycle (`disabled`, and an `archived` state)
 - Wider differential harness and the concurrent batch check on the request path
 - Later: all-in-one image, admin consoles

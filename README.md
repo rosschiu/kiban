@@ -46,7 +46,7 @@ Four sample modules ship in the repository as worked examples of a deeper integr
 
 ## Quickstart
 
-Needs `docker` (with the Compose plugin) and `make` on a Linux x86_64 host. Every service builds
+Needs `docker` (with the Compose plugin), `make` and `openssl` on a Linux x86_64 host. Every service builds
 inside containers.
 
 ```
@@ -74,8 +74,8 @@ A checkout-free variant lives in `deploy/quickstart/`: it pulls the foundation i
 
 ```
 make test-stack-up   # isolated test stack (compose project kiban-test, its own ports and volumes)
-make check           # format, vet, vulnerability check, unit tests, module and migration validation, web checks, coverage ratchet (40 scopes), licence and secret scans
-make test            # full tests, including live-tagged tests and the OpenFGA differential harness
+make check           # format, vet, vulnerability check, unit tests, module and migration validation, web checks, coverage ratchet (40 scopes; this run includes the live-tagged tests), licence and secret scans
+make test            # Go tests under the race detector, and the OpenFGA differential harness
 ```
 
 Coverage is enforced by a per-package ratchet whose minimums only rise. Browser end-to-end tests
@@ -84,8 +84,9 @@ deployment. See `CONTRIBUTING.md`.
 
 ## Operating
 
-Every service exposes Prometheus metrics on its internal listener; the gateway also serves its
-own at `GET /api/platform/metrics` for a superadmin bearer. Upgrades, backup and restore, TLS
+Every foundation service and module exposes Prometheus metrics on its internal listener; the
+gateway has no bare `/metrics` and serves the whole platform's exposition (its own included) at
+`GET /api/platform/metrics` for a superadmin bearer. Upgrades, backup and restore, TLS
 modes and identity federation are covered in the documentation's *Operating Kiban* page.
 
 ## Status and limitations

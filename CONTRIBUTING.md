@@ -21,8 +21,9 @@ with setup steps and the conventions that matter, is the documentation's
 - Write tests with the code, not after. Every behaviour change needs a test; every service
   boundary (an HTTP endpoint, a database constraint, a cross-service call, an auth flow) needs at
   least one integration test against the real stack, not a mock.
-- Never hand-edit generated files: sqlc output, `docs/api/`, `docs/sdk/`. They regenerate from
-  `make docs`, and `make check` fails if they drift.
+- Never hand-edit generated files: sqlc output, `docs/api/`, `docs/sdk/`. The last two
+  regenerate from `make docs`, and `make check` fails if they drift; sqlc output regenerates
+  with `go tool sqlc generate` and is not drift-checked.
 - Never weaken authentication, authorization, or audit behaviour. If you believe a change there
   is right, explain it in the issue first.
 - Use the vocabulary in the documentation's *Glossary* in code, comments, and API fields.
@@ -36,13 +37,16 @@ make test            # the fuller suite, including the OpenFGA differential auth
 ```
 
 `make check` is what CI runs on every push and pull request, by calling exactly these targets.
-`make test` is required whenever behaviour changed. `make help` lists every target.
+`make test` is required whenever behaviour changed. Each target in the `Makefile` carries a `##`
+comment saying what it does.
 
 ### Coverage ratchet
 
-Coverage minimums are tiered by risk: 95% for security-critical packages (the authorization
+Coverage targets are tiered by risk: 95% for security-critical packages (the authorization
 engine and decision layers, the gateway's token, guard and proxy paths, identity, audit,
-bootstrap's realm and seed code, the SDK's session code) and 80% elsewhere. Minimums in
+bootstrap's realm and seed code, the live-stack guard, the SDK's session code) and 80%
+elsewhere. The enforced minimums have reached the target everywhere except the four sample
+modules' `cmd` packages and `internal/version`, which are at 0. Minimums in
 `coverage/ratchet.json` may rise, never fall; CI checks this mechanically. Coverage must come
 from tests that assert real behaviour. Assertion-free padding is rejected in review.
 
@@ -58,7 +62,7 @@ regenerated, licence headers present.
 ## Licensing of contributions
 
 Every first-party file in this repository is Apache-2.0, and so is your contribution; see
-`LICENSING.md`. A new module declares its licence class in its manifest, and `make license-check`
+`LICENSING.md`. A new module declares its licence class in its manifest, and `make validate-modules`
 verifies that the module's `LICENSE` file matches.
 
 Whether outside contributions need a Developer Certificate of Origin sign-off or a contributor

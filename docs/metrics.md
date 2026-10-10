@@ -51,7 +51,8 @@ host to it), so an unauthenticated mount would be reachable from the internet
 | helpdesk | 8180 | standard + DB pool |
 
 A gateway-forwarded `/api/<module>/metrics` keeps its `/api/<module>` path prefix all the way to
-the module's mux, which only registers routes under its base path or the bare `/metrics`, so the
+the module's mux, which registers its base-path routes, `/health`, `/ready`, any
+`/internal/<module>/...` route and the bare `/metrics`, so the
 two never collide (`internal/gateway/internal_exposure_test.go` and
 `internal/gateway/metrics_exposure_test.go` prove this both ways).
 
@@ -77,7 +78,7 @@ list only the labels beyond `service`).
 
 | Name | Type | Labels (beyond `service`) | Meaning |
 |---|---|---|---|
-| `kiban_authz_decisions_total` | counter | `reason` | Effective-access decisions by outcome: one of the 13 frozen reason codes (`internal/authz/decision.Reason`, `ALLOWED` included). Recorded only for the two enforcement endpoints, `POST /internal/authz/effective-access/can` and `.../batch-can` (one increment per batch item). The `/effective-access/summary` endpoint's internal decisions are not recorded: they compose a display read across every feature and module rather than answer one enforcement question. |
+| `kiban_authz_decisions_total` | counter | `reason` | Effective-access decisions by outcome: one of the 13 frozen reason codes (`internal/authz/decision.Reason`, `ALLOWED` included). Recorded for the two enforcement endpoints, `POST /internal/authz/effective-access/can` and `.../batch-can` (one increment per batch item), and for the decisions the grants and platform-role routes make to authorize their caller. The `/effective-access/summary` endpoint's internal decisions are not recorded: they compose a display read across every feature and module rather than answer one enforcement question. |
 | `kiban_authz_decision_duration_seconds` | histogram | (none) | Latency of one `decision.Decider.Evaluate` call (batch calls record the batch's total latency divided evenly across its items). |
 
 ### notification-only
@@ -168,6 +169,6 @@ operator route carries every service's series with `kiban_metrics_scrape_up` at 
 
 ## See also
 
-- [Concepts](concepts.md): service topology (the gateway is the only edge)
+- [Operating Kiban](operating.md): the stack (the gateway is the only edge)
 - `internal/authz/decision`: the 13-reason enum `kiban_authz_decisions_total{reason}` reports
 - [Building on Kiban](building.md): module ports and base paths
