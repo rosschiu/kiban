@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /** The gateway origin without trailing slashes. A loop, not `/\/+$/`: the regex backtracks on a
  * long run of slashes and code scanning flags it on every call site. */
 export function stripTrailingSlashes(origin: string): string {
