@@ -146,7 +146,7 @@ class ClientTest(unittest.TestCase):
 
         # The batch check: triples in, one decision per item out, the user's bearer.
         results = c.batch_can(user, "app.ticket.view", [("ticket", "t-1", "viewer"), ("ticket", "t-2", "viewer")], module_key="app", company_id="co-1")
-        self.assertEqual([(r.object_id, r.decision.allowed) for r in results], [("t-1", True), ("t-2", False)])
+        self.assertEqual([(r.object_type, r.object_id, r.decision.allowed) for r in results], [("ticket", "t-1", True), ("ticket", "t-2", False)])
         self.assertEqual(State.batch["items"][0], {"object": {"type": "ticket", "id": "t-1"}, "relation": "viewer"})
         self.assertEqual(State.bearers[-1], f"Bearer {user}")
         self.assertEqual(len(c.batch_can_service("app.ticket.view", [("ticket", "t-1", "viewer")], company_id="co-1")), 1)

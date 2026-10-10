@@ -293,6 +293,26 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if results, err := app.BatchCan(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}, []sdk.BatchItem{sdk.NewBatchItem("livestory_ticket", "t-1", "viewer")}); err != nil || len(results) != 1 || results[0].Decision.Allowed {
 		t.Fatalf("BatchCan after revoke = %+v, %v; want one denied item", results, err)
 	}
+	// The echoed object on the wire, as the Node and Python SDKs read it (case-sensitive). The
+	// Go SDK cannot catch this: encoding/json matches "Type" to `json:"type"` case-insensitively,
+	// which is how 0.1.1 shipped with "Type"/"ID" here while every Go test stayed green.
+	{
+		_, rec := doPlatformRequest(t, tlsClient, http.MethodPost, gwBase+"/api/auth/effective-access/batch-can", userBearer, mustJSON(t, map[string]any{
+			"featureKey": appKey + ".ticket.view", "moduleKey": appKey, "scope": "company", "companyId": companyID,
+			"items": []map[string]any{{"object": map[string]string{"type": "livestory_ticket", "id": "t-1"}, "relation": "viewer"}},
+		}))
+		var env struct {
+			Data []struct {
+				Object map[string]any `json:"object"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil || rec.Code != http.StatusOK || len(env.Data) != 1 {
+			t.Fatalf("batch-can raw = HTTP %d %s (%v); want 200 with one item", rec.Code, rec.Body.String(), err)
+		}
+		if obj := env.Data[0].Object; obj["type"] != "livestory_ticket" || obj["id"] != "t-1" {
+			t.Fatalf("batch-can echoed object = %v; want {\"type\":\"livestory_ticket\",\"id\":\"t-1\"} (0.1.1 wrote Go field names)", obj)
+		}
+	}
 
 }
 

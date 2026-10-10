@@ -1246,6 +1246,8 @@ components:
 
     EffectiveAccessObjectRef:
       type: object
+      required: [type, id]
+      additionalProperties: false
       properties:
         type: { type: string }
         id: { type: string }
