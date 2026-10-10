@@ -56,6 +56,7 @@ log "generating $out_file from $example_file's field list"
   echo "kind: Secret"
   echo "metadata:"
   echo "  name: kiban-secrets"
+  echo "  namespace: kiban"
   echo "type: Opaque"
   echo "stringData:"
   while IFS= read -r key; do
