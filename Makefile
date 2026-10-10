@@ -151,13 +151,16 @@ test: ## full test suite (incl. the authz differential harness) — targets the 
 	$(MAKE) test-harness
 
 GOVULNCHECK_VERSION := v1.8.0
-vulncheck: ## fail on any reachable known vulnerability in the toolchain or dependencies
+VULNCHECK ?= 1
+vulncheck: ## fail on any reachable known vulnerability in the toolchain or dependencies (weekly in CI: .github/workflows/vulncheck.yml)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
 check: ## fast gate: lint + typecheck/vet + unit tests (CI runs this) — targets the isolated test stack (`make test-stack-up` first)
 	test -z "$$(gofmt -l .)"
 	go vet ./...
-	$(MAKE) vulncheck
+	@# VULNCHECK=0 skips the advisory scan: the tag gate (release.yml) re-checks what the PRs
+	@# proved and must not race the advisory feed; ci.yml and `make check` by hand keep it.
+	@if [ "$(VULNCHECK)" != 0 ]; then $(MAKE) vulncheck; fi
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }
 	set -a; . ./.env.test; set +a; go test -p 1 ./...
 	$(MAKE) web-check
