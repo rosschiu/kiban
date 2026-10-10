@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createApiClient, type ApiClient } from "../client.js";
+import { stripTrailingSlashes } from "./origin";
 import type {
   EffectiveAccessBatchItem,
   EffectiveAccessBatchResult,
@@ -106,7 +107,7 @@ export interface AppClient {
 
 /** Creates the app's backend client. */
 export function createAppClient(config: AppClientConfig): AppClient {
-  const baseUrl = config.gatewayOrigin.replace(/\/+$/, "");
+  const baseUrl = stripTrailingSlashes(config.gatewayOrigin);
   const api = createApiClient({
     baseUrl,
     fetchFn: config.fetchFn,
