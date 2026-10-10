@@ -105,6 +105,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 			_, _ = adminPool.Exec(ctx, `DELETE FROM org.org_unit WHERE id = $1`, companyBID)
 		}
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
+		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id = $1`, "story-ch-"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.grant_ledger WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.default_grant WHERE module_key = $1`, appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.model_fragment WHERE module_key = $1`, appKey)
@@ -269,6 +270,24 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if kinds["Live Story (worker)"] != "service" || kinds[member["displayName"].(string)] != "person" {
 		t.Fatalf("directory kinds = %v; want the service account as service and the person as person", kinds)
 	}
+
+	// Membership does not widen the app's write surface: on another module's type the member
+	// service account is still refused, now for the missing company admin relation. Only once
+	// the superadmin appoints it company administrator does the write pass.
+	otherType := sdk.Tuple{ObjectType: "notification_channel", ObjectID: "story-ch-" + appKey, Relation: "company_module", SubjectType: "company_module", SubjectID: companyID + "/notification"}
+	if err := app.Grant(ctx, companyID, otherType); !asAPIError(err, &apiErr) || apiErr.Status != http.StatusForbidden || !strings.Contains(err.Error(), "COMPANY_ROLE_REQUIRED") {
+		t.Fatalf("member service account on another module's type: err = %v, want 403 COMPANY_ROLE_REQUIRED", err)
+	}
+	step("appointServiceAccountAdmin", http.MethodPost, "/api/auth/grants", adminBearer, map[string]any{"op": "grant", "companyId": companyID,
+		"tuples": []map[string]string{{"objectType": "company", "objectId": companyID, "relation": "admin", "subjectType": "user", "subjectId": serviceSub}}}, http.StatusOK)
+	if err := app.Grant(ctx, companyID, otherType); err != nil {
+		t.Fatalf("company-admin service account on another module's type: %v, want 200", err)
+	}
+	if err := app.Revoke(ctx, companyID, otherType); err != nil {
+		t.Fatalf("revoke on another module's type as company admin: %v", err)
+	}
+	step("revokeServiceAccountAdmin", http.MethodPost, "/api/auth/grants", adminBearer, map[string]any{"op": "revoke", "companyId": companyID,
+		"tuples": []map[string]string{{"objectType": "company", "objectId": companyID, "relation": "admin", "subjectType": "user", "subjectId": serviceSub}}}, http.StatusOK)
 
 	// --- 6. the org reads through the SDK, as the app (a member now) and as the user. ---
 	if page, err := app.MemberDirectory(ctx, companyID, "", 1, 25); err != nil || page.Total != 2 {

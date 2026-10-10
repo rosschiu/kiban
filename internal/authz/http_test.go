@@ -1259,3 +1259,85 @@ func TestHandleGrants_CompanyAdminAppointment(t *testing.T) {
 		t.Fatalf("superadmin dismissing = %d %s (tuples=%d), want 200 and no tuple", rec.Code, rec.Body.String(), tupleCount(t))
 	}
 }
+
+// TestHandleGrantsServiceAccount pins the rule for an app's service account on a module it does
+// not own: membership of the company is not enough (it would let any app made a member write on
+// every other app's objects there); the company's admin relation is; the superadmin exception
+// and the owning app's own types are unchanged.
+func TestHandleGrantsServiceAccount(t *testing.T) {
+	const (
+		modA, modB    = "sa-mod-a", "sa-mod-b"
+		clientA       = "sa-app-a-backend"
+		clientB       = "sa-app-b-backend"
+		svcASub       = "sa-svc-a" // app A's service account, a member of the company
+		svcBSub       = "sa-svc-b" // app B's service account, a member AND the company's admin
+		superSvcSub   = "sa-svc-super"
+		fragmentA     = `{"sa_doc_a": {"company_module": {"this": true}, "viewer": {"this": true}}}`
+		fragmentB     = `{"sa_doc_b": {"company_module": {"this": true}, "viewer": {"this": true}}}`
+		superadminSub = "sa-super"
+	)
+	companyID := uuid.NewString()
+	prevOwners := fakeAppOwners
+	fakeAppOwners = map[string]string{modA: clientA, modB: clientB}
+	t.Cleanup(func() { fakeAppOwners = prevOwners })
+
+	svc, issuer, pool := buildHTTPService(t,
+		map[string][]string{svcASub: nil, svcBSub: nil, superSvcSub: {summarySuperadminRole}, superadminSub: {summarySuperadminRole}},
+		map[string]bool{modA: true, modB: true},
+		map[string]fakeCompanyFact{companyID: {exists: true, active: true}},
+		map[string]fakeMembershipFact{companyID + "/" + svcASub: {isMember: true, active: true}, companyID + "/" + svcBSub: {isMember: true, active: true}},
+		false,
+	)
+	for _, m := range []struct{ key, fragment string }{{modA, fragmentA}, {modB, fragmentB}} {
+		mustExecAuthz(t, pool, `DELETE FROM authz.model_fragment WHERE module_key = $1`, m.key)
+		mustExecAuthz(t, pool, `INSERT INTO authz.model_fragment (module_key, fragment, active) VALUES ($1, $2::jsonb, true)`, m.key, m.fragment)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.model_fragment WHERE module_key = ANY($1)`, []string{modA, modB})
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id LIKE 'sa-%' OR object_id LIKE $1`, companyID+"%")
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.grant_ledger WHERE object_id LIKE 'sa-%' OR object_id LIKE $1`, companyID+"%")
+	})
+	grantTestTuple(t, pool, store.Tuple{ObjectType: "company", ObjectID: companyID, Relation: "admin", SubjectType: "user", SubjectID: svcBSub})
+
+	post := func(t *testing.T, sub, azp string, tuples ...map[string]string) *httptest.ResponseRecorder {
+		t.Helper()
+		body := map[string]any{"op": "grant", "companyId": companyID, "tuples": tuples}
+		req := httptest.NewRequest(http.MethodPost, "/internal/authz/grants", mustJSON(t, body))
+		req.Header.Set("Authorization", "Bearer "+issuer.signClient(t, sub, azp, time.Now().Add(time.Hour)))
+		rec := httptest.NewRecorder()
+		svc.Routes().ServeHTTP(rec, req)
+		return rec
+	}
+	anchorOn := func(mod, typ, id string) []map[string]string {
+		return []map[string]string{
+			{"objectType": typ, "objectId": id, "relation": "viewer", "subjectType": "user", "subjectId": "sa-u1"},
+			{"objectType": typ, "objectId": id, "relation": "company_module", "subjectType": "company_module", "subjectId": companyID + "/" + mod},
+		}
+	}
+	expect := func(t *testing.T, rec *httptest.ResponseRecorder, status int, reason string) {
+		t.Helper()
+		if rec.Code != status || (reason != "" && !strings.Contains(rec.Body.String(), reason)) {
+			t.Fatalf("status = %d, want %d with %q, body=%s", rec.Code, status, reason, rec.Body.String())
+		}
+	}
+
+	t.Run("owner app on its own types: allowed, membership not required", func(t *testing.T) {
+		expect(t, post(t, "sa-svc-a-nomember", clientA, anchorOn(modA, "sa_doc_a", "sa-own-1")...), http.StatusOK, "")
+	})
+	t.Run("member service account on another app's types: 403 COMPANY_ROLE_REQUIRED, nothing written", func(t *testing.T) {
+		expect(t, post(t, svcASub, clientA, anchorOn(modB, "sa_doc_b", "sa-cross-1")...), http.StatusForbidden, string(decision.ReasonCompanyRoleRequired))
+		var n int
+		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.tuple WHERE object_id = 'sa-cross-1'`).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("tuples written = %d (%v), want 0", n, err)
+		}
+	})
+	t.Run("company-admin service account on another app's types: allowed", func(t *testing.T) {
+		expect(t, post(t, svcBSub, clientB, anchorOn(modA, "sa_doc_a", "sa-cross-2")...), http.StatusOK, "")
+	})
+	t.Run("superadmin service account that is no member: allowed by the operator exception", func(t *testing.T) {
+		expect(t, post(t, superSvcSub, clientB, anchorOn(modA, "sa_doc_a", "sa-cross-3")...), http.StatusOK, "")
+	})
+	t.Run("a user's token (azp names a login client, not an app) keeps the membership rule", func(t *testing.T) {
+		expect(t, post(t, svcASub, "kiban-shell", anchorOn(modB, "sa_doc_b", "sa-user-1")...), http.StatusOK, "")
+	})
+}
