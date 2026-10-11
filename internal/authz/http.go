@@ -305,10 +305,12 @@ func (svc *Service) handleBatchCan(w http.ResponseWriter, r *http.Request) {
 	var denied []map[string]any
 	for i, res := range results {
 		if !res.Decision.Allowed && len(denied) < maxAuditedDenials {
-			denied = append(denied, map[string]any{"object": res.Item.Object, "relation": res.Item.Relation, "reason": string(res.Decision.Reason)})
+			denied = append(denied, map[string]any{"object": objectRefWire{Type: res.Item.Object.Type, ID: res.Item.Object.ID}, "relation": res.Item.Relation, "reason": string(res.Decision.Reason)})
 		}
+		// objectRefWire, never decision.ObjectRef: the latter has no json tags and serialised as
+		// "Type"/"ID" in 0.1.1, so every SDK read an empty object back.
 		wire[i] = map[string]any{
-			"object":   res.Item.Object,
+			"object":   objectRefWire{Type: res.Item.Object.Type, ID: res.Item.Object.ID},
 			"relation": res.Item.Relation,
 			"decision": toDecisionWire(res.Decision),
 		}

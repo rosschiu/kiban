@@ -77,6 +77,7 @@ repository is the shipped overlays' shape with the base fetched by tag:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: kiban         # the base's namespace covers only its own resources; yours need it too
 resources:
   - github.com/rosschiu/kiban//deploy/k8s/base?ref=v0.1.1
   - secret.yaml            # your own `kiban-secrets` (base/secret.example.yaml lists the keys)
@@ -84,7 +85,8 @@ images: [...]              # as in overlays/production/kustomization.yaml
 patches: [...]
 ```
 
-The Secret may come from anywhere that produces a `kiban-secrets` Secret in the namespace: a
+The Secret may come from anywhere that produces a `kiban-secrets` Secret in the `kiban` namespace
+(a Secret without a namespace lands in the kubeconfig's current one and every pod waits on it): a
 committed sealed-secret, an external-secrets resource, or a file written by a vault. Upgrading
 from 0.1.0, where the base listed `base/secret.yaml`: run `gen-secrets.sh <overlay>` once; it
 moves the existing file into the overlay unchanged, so the cluster's Secret is not re-issued.

@@ -65,8 +65,11 @@ forbidden_regex='(^|[^A-Za-z])(A?GPL)(-[0-9]+(\.[0-9]+)*)?([^A-Za-z]|$)|SSPL'
 # "UNKNOWN"/"unclassified" (the scanner could not determine a license).
 unknown_regex='(^|[^A-Za-z0-9])(UNKNOWN|UNLICENSED|unclassified)([^A-Za-z0-9]|$)'
 
-go_violations="$(grep -inE "$forbidden_regex" "$work/go-deps.csv" || true)"
-go_unknown="$(grep -inE "$unknown_regex" "$work/go-deps.csv" || true)"
+# Classify by the LICENSE column (module,url,license) only: go-licenses answers "Unknown" in the
+# URL column for a module it cannot map to a repository (gopkg.in/yaml.v3), which says nothing
+# about the licence it did classify.
+go_violations="$(cut -d, -f3 "$work/go-deps.csv" | grep -inE "$forbidden_regex" || true)"
+go_unknown="$(cut -d, -f3 "$work/go-deps.csv" | grep -inE "$unknown_regex" || true)"
 npm_violations="$(python3 - "$work/npm-licenses.json" <<'PYEOF'
 import json, re, sys
 data = json.load(open(sys.argv[1]))
