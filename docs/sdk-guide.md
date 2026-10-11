@@ -7,7 +7,8 @@ the gateway origin alone, never to Keycloak or to a module's service directly. T
 in `web/shell/` is one consumer of it; you do not need the shell to use the SDK.
 
 Every sample on this page compiles against the package as shipped: the same code lives in
-`web/sdk/docs-snippets/guide.ts`, which the SDK's type check and unit tests cover.
+`web/sdk/docs-snippets/guide.ts` and `server.ts`, which the SDK's type check and unit tests
+cover.
 
 ## Install
 
@@ -17,7 +18,7 @@ npm i @rossbsol/kiban-sdk
 
 Every release is published to the public npm registry, so no `.npmrc` and no token are needed.
 
-The package ships ESM only (`dist/index.js` and `dist/index.d.ts`). Node 20 or a modern browser
+The package ships ESM only (`dist/index.js` and `dist/server/index.js`, each with its `.d.ts`). Node 20 or a modern browser
 gives you the `fetch` and `crypto.subtle` it relies on.
 
 ## Create a session
@@ -52,9 +53,9 @@ const session = createSession({
   route).
 
 `redirectUri` must be registered on the `kiban-frontend` client. Bootstrap writes that list on
-every start: exactly `https://<KIBAN_DOMAIN>/*` when `KIBAN_DOMAIN` is set, otherwise the fixed
-localhost set. An edit in the Keycloak admin console lasts until the next start, and no variable
-adds an extra origin. [Integrate your app](integrate.md#1-register-your-applications-origin)
+every start: `https://<KIBAN_DOMAIN>/*` when `KIBAN_DOMAIN` is set, otherwise the fixed
+localhost set, plus every entry of `KIBAN_EXTRA_ORIGINS`. An edit in the Keycloak admin console
+lasts until the next start; `KIBAN_EXTRA_ORIGINS` is the place to add an origin. [Integrate your app](integrate.md#1-register-your-applications-origin)
 has the list and the steps.
 
 ### Where tokens live
@@ -118,8 +119,9 @@ Each client is a function of the API client and returns an object of typed metho
 |---|---|---|
 | `createCapabilitiesClient(api)` | `list()`, `get(moduleKey)` | `GET /api/platform/capabilities[/{module}]` |
 | `createEffectiveAccessClient(api)` | `can(request)`, `batchCan(request)`, `summary(companyId?)` | `POST /api/auth/effective-access/can`, `/batch-can`, `GET .../summary` |
-| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, and the superadmin-only `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
+| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, and the admin methods (a superadmin, or an administrator of that company) `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
 | `createSuperadminClient(api)` | `catalog()`, `enableModule(key)`, `disableModule(key)`, `grantPlatformRole(subjectId, role)`, `revokePlatformRole(subjectId, role)` | `/api/platform/catalog`, `/api/platform/admin/...` |
+| `createDemoModeClient(api)` | `get()` | `GET /api/platform/demo-mode` |
 
 Effective access is self-scoped: the gateway answers for the bearer only, and a request body
 naming another subject is rejected. `summary()` returns the feature keys, role bindings and
@@ -174,15 +176,17 @@ const admin = await canI({
   requiredPlatformRole: "kiban-superadmin"
 });
 
-const view = await canI({ featureKey: "core.company.view", companyId: summary.companyId });
+const view = await canI({ featureKey: "notification.inbox.view", moduleKey: "notification", companyId: summary.companyId });
 if (!view.allowed) {
   console.log(view.reason); // e.g. "COMPANY_MEMBERSHIP_REQUIRED"
 }
 ```
 
-Omit `companyId` for a global check, set it for a company-scoped one. A denial is a normal
-`{ allowed: false, reason }` result and does not throw; `KibanApiError` is thrown only for a
-transport or envelope failure.
+Omit `companyId` for a global check, set it for a company-scoped one. A global check must set
+`requiredPlatformRole`; without it the server answers `400 VALIDATION_ERROR`. A denial is a
+normal `{ allowed: false, reason }` result and does not throw; `KibanApiError` is thrown for a
+non-2xx answer (a `400` for an invalid request, a `422` for a feature key a registered app does
+not declare, `401`, `5xx`).
 
 ### `grantObjectAccess`: "share this object with that subject"
 
@@ -212,10 +216,12 @@ await revokeObjectAccess({
 });
 ```
 
-Both write one tuple through `POST /api/auth/grants`. The gateway admits only a superadmin
-(anyone else receives `403 FORBIDDEN`), and the authz service then binds the request to the
+Both write one tuple through `POST /api/auth/grants`. The gateway admits a superadmin
+or a registered app's backend (a service token whose client id is the app's service client);
+anyone else, which includes every other browser login, receives `403 FORBIDDEN`. The authz service then binds the request to the
 company named by `companyId` and to the one enabled module whose fragment declares the object
-type: `docs_document` belongs to the docs module, a base type such as `company` is refused, and
+type: `docs_document` belongs to the docs module, a base type such as `company` is refused (the one exception: a superadmin may grant or revoke
+`company:<companyId>#admin` for a user, which appoints a company administrator), and
 the object must already be anchored to that company's module (the module does this when it
 creates the object). A request without a UUID `companyId` is answered `400`; an object type no
 enabled module declares, or an unanchored object, `422`. A position's holder is
@@ -223,7 +229,7 @@ enabled module declares, or an unanchored object, `422`. A position's holder is
 
 ## Error handling
 
-Every failed request throws `KibanApiError` with `status`, `code`, `message`, optional `details`
+Every non-2xx response throws `KibanApiError` with `status`, `code`, `message`, optional `details`
 and the `correlationId` the client sent, which also appears in the gateway's logs and audit
 rows. `ApiErrorCode` holds the canonical codes as constants; the ones a frontend usually
 branches on:
@@ -261,8 +267,9 @@ try {
 }
 ```
 
-`code` is `"UNKNOWN_ERROR"` when the response carried no envelope (a proxy error page, a network
-failure midway). Do not parse `message`; it is for people.
+`code` is `"UNKNOWN_ERROR"` when a non-2xx response carried no JSON envelope (a proxy error
+page). A request that never got a response (network failure, abort) rejects with the error
+`fetch` threw, not a `KibanApiError`. Do not parse `message`; it is for people.
 
 ## The backend entry: `@rossbsol/kiban-sdk/server`
 
@@ -283,11 +290,15 @@ const verifier = createTokenVerifier({ gatewayOrigin });
 - `createTokenVerifier(...).verify(token)` checks a user's token against the realm's signing
   keys (RS256, WebCrypto), the issuer, the audience and the time claims, and returns the
   subject, the client id (`azp`) and every claim. It refetches the keys once for an unknown key
-  id. It rejects with an error whose message starts with `kiban: invalid token`.
-- `createAppClient` gives `can(userBearer, request)`, `canService(request)`, `grant(companyId,
-  tuples)`, `revoke(companyId, tuples)`, `anchorTuple(objectType, objectId, companyId)`,
-  `memberBySubject(companyId, subject)` and `registerApp(superadminBearer, manifest)`, plus
-  `api`, the underlying client authenticated as the service account, for any other route.
+  id. It rejects with an error whose message starts with `kiban: invalid token`; when the key
+  set cannot be loaded, with `kiban: JWKS fetch failed`.
+- `createAppClient` gives `can(userBearer, request)`, `canService(request)`, `batchCan` and
+  `batchCanService`, `grant(companyId, tuples)`, `revoke(companyId, tuples)`,
+  `anchorTuple(objectType, objectId, companyId)`, `memberBySubject(companyId, subject)`, the org
+  reads `meCompanies(userBearer)`, `memberDirectory`, `positionHolder` and `groupMembers`, and
+  `registerApp(superadminBearer, manifest)`, plus
+  `api`, a plain client on the gateway origin for any other route. It attaches no token: pass
+  `headers: { Authorization: "Bearer " + (await credentials.getAccessToken()) }` yourself.
   Errors are `KibanApiError` like the browser client's.
 
 [Integrate your app](integrate.md#backend-track) walks the ten steps with these calls; its Node
@@ -308,14 +319,15 @@ The package exports the request and response shapes as TypeScript types, hand-ty
 handlers and pinned by tests: `Capability`, `CatalogEntry`, `EffectiveAccessRequest`,
 `EffectiveAccessDecision`, `EffectiveAccessSummary`, `AuthzTuple`, `OrgMeCompany`,
 `OrgPositionWithHolder`, `OrgGroupWithMemberCount`, `Page<T>` (`items`, `total`, `page`,
-`pageSize`, `totalPages`) and `Cursor<T>`. `ApiErrorCode` and `EffectiveAccessReason` are string
+`pageSize`, `totalPages`) and `Cursor<T>`. `Capability` and `CatalogEntry` do not yet declare
+three fields the server sends: `external`, `serviceClientId` and `features`. `ApiErrorCode` and `EffectiveAccessReason` are string
 constants checked against the same golden file as the Go side, so a code you compare against
 exists on the wire.
 
 ## Versioning
 
 The SDK follows semantic versioning and ships with each platform release; before 1.0 a minor
-version may rename an export, and the rename is listed under "Changed (breaking)" in
+version may rename an export, and the rename is listed under "Changed (breaking — pre-1.0)" in
 [`web/sdk/CHANGELOG.md`](https://github.com/rosschiu/kiban/blob/main/web/sdk/CHANGELOG.md). Pin
 the version and read that file when you bump it.
 
