@@ -32,6 +32,7 @@ var subcommands = map[string]struct {
 	"license-check":      {"every source file carries its SPDX header (-fix inserts them)", licensecheck.Run},
 	"license-scan":       {"third-party licence scan of Go and npm dependencies; regenerates THIRD-PARTY-LICENSES.md", runLicenseScan},
 	"ratchet-guard":      {"coverage/ratchet.json never decreases, working tree vs HEAD and HEAD vs parent", func([]string) int { return ratchetguard.Run() }},
+	"migrate":            {"apply every migration tree in order and set the role passwords (--only <tree> for one)", runMigrate},
 	"modvalidate":        {"validate module directories or migration trees; -write-checksums records a ledger", runModvalidate},
 	"k8s-check":          {"render the Kustomize base and overlays without a cluster and check the Secret rules", runK8sCheck},
 	"pin-images":         {"rewrite every third-party image reference to its current digest", runPinImages},

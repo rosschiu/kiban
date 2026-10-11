@@ -343,7 +343,7 @@ DROP ROLE kiban_<key>;
 ```
 
 The role's password is set after the tree runs, from `KIBAN_<KEY>_DB_PASSWORD`, by
-`scripts/set-role-password.sh`, both in `infra/migrate-entrypoint.sh` (Compose) and in the
+the role-password step (`go run ./tools/dev migrate`), both in the Compose `migrate` job and in the
 `Makefile`'s `migrate-<key>` target (host run).
 
 **The ledger.** Every migrations directory carries `checksums.json`, file name to SHA-256. The
@@ -520,22 +520,19 @@ Every item is needed; the platform has no runtime registration in 0.1.
 4. `infra/Dockerfile.service`: a `go build ... -o /out/<key> ./modules/<key>/service/cmd` line
    in the builder stage and a `FROM runtime-base AS <key>` stage that copies the binary and sets
    it as the entrypoint.
-5. `Makefile`: `migrate-<key>` in `MIGRATE_TARGETS`, `MIGRATE_DIR_<key> :=
-   modules/<key>/migrations` and `MIGRATE_PW_<key> := ./scripts/set-role-password.sh kiban_<key>
-   KIBAN_<KEY>_DB_PASSWORD`.
-6. `infra/migrate-entrypoint.sh`: after the foundation trees, `go tool tern migrate -m
-   modules/<key>/migrations -c modules/<key>/migrations/tern.conf` followed by the same
-   `set-role-password.sh` line.
-7. `.env.example` and `.env`: `KIBAN_<KEY>_DB_PASSWORD=`; `infra/compose.yaml`: the same
+5. `tools/dev/migrate.go`: a `migrationTrees` entry after the foundation trees, naming
+   `modules/<key>/migrations` and the role-to-variable pair `kiban_<key>:
+   KIBAN_<KEY>_DB_PASSWORD`; `Makefile`: `migrate-<key>` in `MIGRATE_TARGETS`.
+6. `.env.example` and `.env`: `KIBAN_<KEY>_DB_PASSWORD=`; `infra/compose.yaml`: the same
    variable on the `migrate` service's environment.
-8. `infra/compose.yaml`: a `<key>` service copied from `notification`'s block (build target
+7. `infra/compose.yaml`: a `<key>` service copied from `notification`'s block (build target
    `<key>`, the environment table above, the `/ready` healthcheck, `depends_on` `postgres`,
    `migrate`, `bootstrap`, `org` and `registry`), and `<key>` appended to
    `KIBAN_INSTALLED_MODULES` on the `registry` service.
-9. `infra/compose.yaml`, `gateway` service: `KIBAN_MODULE_HOST_<KEY>: <key>` and `<key>` under
+8. `infra/compose.yaml`, `gateway` service: `KIBAN_MODULE_HOST_<KEY>: <key>` and `<key>` under
    `depends_on`. Without the variable the gateway dials `127.0.0.1:<port>`, which is not your
    container.
-10. `make validate-modules`, `make validate-migrations`, then `make dev` to rebuild the images
+9. `make validate-modules`, `make validate-migrations`, then `make dev` to rebuild the images
     and start the stack. Enable the module for a company with
     `POST /api/platform/admin/modules/<key>/enable` or the sample shell.
 

@@ -97,6 +97,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		{Name: "KIBAN_EXTRA_ORIGINS", Default: ""}, // comma-separated; web origins join the CORS allow-list
 		{Name: "KIBAN_TLS_CERT_FILE", Default: ""},
 		{Name: "KIBAN_TLS_KEY_FILE", Default: ""},
+		{Name: "KIBAN_TLS_SELF_SIGNED_DIR", Default: ""}, // development: a self-signed certificate the gateway generates and keeps here
 		{Name: "KIBAN_INSECURE_HTTP", Default: "false"},
 		// Trust inbound X-Forwarded-Proto/-Host on the /auth proxy — ONLY behind a TLS-
 		// terminating edge that overwrites these headers itself (compose.public.yaml's
@@ -169,7 +170,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		return serveTLS(ctx, logger, handler, tlsConfig, host+":"+tlsPort)
 	}
 	if values["KIBAN_INSECURE_HTTP"] != "true" {
-		return fmt.Errorf("no TLS configured (set KIBAN_TLS_CERT_FILE+KIBAN_TLS_KEY_FILE, or " +
+		return fmt.Errorf("no TLS configured (set KIBAN_TLS_CERT_FILE+KIBAN_TLS_KEY_FILE, KIBAN_TLS_SELF_SIGNED_DIR for development, or " +
 			"KIBAN_INSECURE_HTTP=true behind a TLS-terminating proxy) — refusing to serve plaintext by default")
 	}
 	return serveDevHTTP(ctx, logger, handler, host+":"+devHTTPPort)

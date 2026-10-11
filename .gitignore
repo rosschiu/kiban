@@ -17,7 +17,7 @@ coverage/go.out
 infra/keycloak-build/authenticator/target/
 # Documentation site build output (make docs-site) and its local virtualenv.
 docs-site-build/
-# Real credentials written by deploy/k8s/gen-secrets.sh. secret.example.yaml (placeholders) is committed.
+# Real credentials written by deploy/k8s/kiban.sh secrets. secret.example.yaml (placeholders) is committed.
 deploy/k8s/base/secret.yaml
 deploy/k8s/overlays/*/secret.yaml
 .venv-docs/

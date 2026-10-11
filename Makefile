@@ -2,7 +2,7 @@
 # Wire each target to real commands as the stack solidifies. A target that isn't
 # wired yet must fail loudly, not pass silently.
 
-.PHONY: k8s-check sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-devcert images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
+.PHONY: k8s-check sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
 
 # VERSION defaults from the VERSION file (`v` + its contents, e.g. "v0.1.0") so `make images`
 # needs no argument on a normal release cut; `make images VERSION=v0.1.0-rc2` overrides it for an
@@ -65,16 +65,16 @@ APP_SERVICES := registry identity org authz gateway notification timesheet docs 
 # is checked out (services carry both `build:` and `image:`), defeating "deploy a specific version".
 # Fail closed, name the missing image.
 #
-# Also checks migrate/bootstrap/keycloak (QUICKSTART_SERVICES) and gateway-devcert
-# (DEVCERT_SERVICE), which infra/compose.yaml tags too, so a `KIBAN_IMAGE_TAG=vX make dev`/`make
+# Also checks migrate/bootstrap/keycloak (QUICKSTART_SERVICES), which infra/compose.yaml tags
+# too, so a `KIBAN_IMAGE_TAG=vX make dev`/`make
 # public-up` needs `make images-all VERSION=vX` (all 13) run first.
 images-preflight:
 	@test -n "$(KIBAN_IMAGE_TAG)" || { echo "images-preflight: KIBAN_IMAGE_TAG is not set" >&2; exit 1; }
-	@missing=""; for s in $(APP_SERVICES) $(QUICKSTART_SERVICES) $(DEVCERT_SERVICE); do \
+	@missing=""; for s in $(APP_SERVICES) $(QUICKSTART_SERVICES); do \
 	  docker image inspect "kiban-$$s:$(KIBAN_IMAGE_TAG)" >/dev/null 2>&1 || missing="$$missing kiban-$$s:$(KIBAN_IMAGE_TAG)"; \
 	done; \
 	if [ -n "$$missing" ]; then echo "images-preflight: missing local image(s):$$missing — run \`make images-all VERSION=$(KIBAN_IMAGE_TAG)\` first (or check the tag)" >&2; exit 1; fi; \
-	echo "images-preflight: all $(words $(APP_SERVICES) $(QUICKSTART_SERVICES) $(DEVCERT_SERVICE)) images present for $(KIBAN_IMAGE_TAG)"
+	echo "images-preflight: all $(words $(APP_SERVICES) $(QUICKSTART_SERVICES)) images present for $(KIBAN_IMAGE_TAG)"
 
 images: ## build+tag every app-service image kiban-<service>:$(VERSION) (default: v<VERSION file>), stamping the short git SHA into kiban_build_info{commit}
 	@echo "images: building kiban-{registry,identity,org,authz,gateway,notification,timesheet,docs,helpdesk}:$(VERSION) at commit $(shell git rev-parse --short HEAD)"
@@ -88,11 +88,7 @@ images: ## build+tag every app-service image kiban-<service>:$(VERSION) (default
 # them). Kept as a SEPARATE target from `images` (not folded into APP_SERVICES) so `images`/
 # `images-preflight`'s existing 9-service contract for `KIBAN_IMAGE_TAG` deploys is untouched —
 # this target is additive, called by `images-all` and by release.yml directly.
-# `gateway-devcert` is not part of it: the quickstart runs the gateway in insecure-HTTP mode (no
-# TLS cert needed at all — see deploy/quickstart/README.md). It is its own target below so a
-# `KIBAN_IMAGE_TAG` deploy of the TLS `make dev` shape never builds it from the checkout either.
 QUICKSTART_SERVICES := migrate bootstrap keycloak
-DEVCERT_SERVICE := gateway-devcert
 
 images-quickstart: ## build+tag kiban-{migrate,bootstrap,keycloak}:$(VERSION) — the one-shot jobs deploy/quickstart's zero-clone compose file needs as GHCR images
 	@echo "images-quickstart: building kiban-{migrate,bootstrap,keycloak}:$(VERSION) at commit $(shell git rev-parse --short HEAD)"
@@ -101,10 +97,7 @@ images-quickstart: ## build+tag kiban-{migrate,bootstrap,keycloak}:$(VERSION) �
 	    $(QUICKSTART_SERVICES)
 	@echo "images-quickstart: done"
 
-images-devcert: ## build+tag kiban-gateway-devcert:$(VERSION) — the self-signed dev-cert one-shot `make dev` (TLS shape) needs; not used by the quickstart or k8s
-	KIBAN_IMAGE_TAG=$(VERSION) docker compose $(ENV_FILE_IF_PRESENT) --project-directory infra -f infra/compose.yaml build $(DEVCERT_SERVICE)
-
-images-all: images images-quickstart images-devcert ## the full 13-image set release.yml pushes to GHCR (9 app services + migrate/bootstrap/keycloak + gateway-devcert)
+images-all: images images-quickstart ## the full 12-image set release.yml pushes to GHCR (9 app services + migrate/bootstrap/keycloak)
 
 pin-images: ## refresh the @sha256 digest pin on every third-party base image (Dockerfiles, compose, k8s postgres) to the tag's current index digest (`tools/dev pin-images`); run `make quickstart-compose` after
 	go run ./tools/dev pin-images
@@ -253,39 +246,16 @@ fmt: ## auto-format (gofmt over every tracked .go file; web/ has no formatter sc
 # migrate-* targets run against the HOST-published Postgres port (127.0.0.1:$POSTGRES_HOST_PORT
 # — KIBAN_DB_HOST/KIBAN_DB_PORT). `make dev`'s own `migrate` compose service applies
 # the identical migrations against the compose-internal postgres:5432 instead — see
-# infra/compose.yaml and infra/migrate-entrypoint.sh.
+# infra/compose.yaml and tools/dev/migrate.go.
 #
-# Per-target table: migrations dir (tern.conf lives inside it) and the role-password step that
-# runs after tern. registry sets the four foundation roles (migrations/registry/0001_roles.sql
-# creates them; bootstrap execs the same wrapper); each module target sets its own role, which
-# migrations/registry/00NN_<module>_role.sql created — so `make migrate-registry` runs first.
-# identity/org/authz have no step: migrate-registry already set their passwords. Order: registry,
-# authz, identity, org (authz before identity — see infra/migrate-entrypoint.sh).
+# Each target is one tree of tools/dev/migrate.go's table: tern, then the role-password step
+# that belongs to that tree (registry sets the four foundation roles that
+# migrations/registry/0001_roles.sql creates; each module sets its own). `make migrate-registry`
+# runs first. Order for a full run: registry, authz, identity, org, then the modules.
 MIGRATE_TARGETS := migrate-registry migrate-authz migrate-identity migrate-org migrate-notification migrate-timesheet migrate-docs migrate-helpdesk
-MIGRATE_DIR_registry     := migrations/registry
-MIGRATE_DIR_identity     := migrations/identity
-MIGRATE_DIR_org          := migrations/org
-MIGRATE_DIR_authz        := migrations/authz
-MIGRATE_DIR_notification := modules/notification/migrations
-MIGRATE_DIR_timesheet    := modules/timesheet/migrations
-MIGRATE_DIR_docs         := modules/docs/migrations
-MIGRATE_DIR_helpdesk     := modules/helpdesk/migrations
-MIGRATE_PW_registry      := ./migrations/registry/set-role-passwords.sh
-MIGRATE_PW_notification  := ./scripts/set-role-password.sh kiban_notification KIBAN_NOTIFICATION_DB_PASSWORD
-MIGRATE_PW_timesheet     := ./scripts/set-role-password.sh kiban_timesheet KIBAN_TIMESHEET_DB_PASSWORD
-MIGRATE_PW_docs          := ./scripts/set-role-password.sh kiban_docs KIBAN_DOCS_DB_PASSWORD
-MIGRATE_PW_helpdesk      := ./scripts/set-role-password.sh kiban_helpdesk KIBAN_HELPDESK_DB_PASSWORD
-
-# A literal newline (make folds backslash-newline inside a $(if ...) into one shell line; this
-# keeps the password step on its own continuation line like the tern step).
-define MIGRATE_NL
-
-
-endef
-
 $(MIGRATE_TARGETS): migrate-%: ## migrate-{registry,identity,org,authz,notification,timesheet,docs,helpdesk}: apply that service's/module's migrations (tern) + set its DB role password(s) where the table above says so
 	set -a; . ./.env; set +a; \
-	KIBAN_DB_HOST=127.0.0.1 KIBAN_DB_PORT=$$POSTGRES_HOST_PORT go tool tern migrate -m $(MIGRATE_DIR_$*) -c $(MIGRATE_DIR_$*)/tern.conf$(if $(MIGRATE_PW_$*),; \$(MIGRATE_NL)KIBAN_DB_HOST=127.0.0.1 KIBAN_DB_PORT=$$POSTGRES_HOST_PORT $(MIGRATE_PW_$*))
+	KIBAN_DB_HOST=127.0.0.1 KIBAN_DB_PORT=$$POSTGRES_HOST_PORT go run ./tools/dev migrate --only $*
 
 bench-authz: ## authz benchmark: 1M-tuple dataset, concurrent batchCan gate — targets the isolated test stack
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }

@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -12,6 +13,7 @@ import (
 	"encoding/pem"
 	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -477,5 +479,51 @@ func TestRefreshJWKSPeriodically_TicksAndRefreshes(t *testing.T) {
 	case <-done:
 	case <-time.After(5 * time.Second):
 		t.Fatal("refreshJWKSPeriodically did not return within 5s of ctx expiry")
+	}
+}
+
+// TestBuildTLSConfig_SelfSignedDir_GeneratesThenReuses proves the development branch: an empty
+// directory gets a generated localhost certificate (key 0600), and a second call loads the
+// same pair instead of generating a new one, so a restart keeps the certificate clients trust.
+func TestBuildTLSConfig_SelfSignedDir_GeneratesThenReuses(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "certs")
+	cfg, err := buildTLSConfig(map[string]string{"KIBAN_TLS_SELF_SIGNED_DIR": dir})
+	if err != nil {
+		t.Fatalf("buildTLSConfig: %v", err)
+	}
+	if cfg == nil || len(cfg.Certificates) != 1 {
+		t.Fatalf("cfg = %+v, want one generated certificate", cfg)
+	}
+	leaf, err := x509.ParseCertificate(cfg.Certificates[0].Certificate[0])
+	if err != nil {
+		t.Fatalf("parse generated certificate: %v", err)
+	}
+	if leaf.Subject.CommonName != "localhost" || len(leaf.DNSNames) != 1 || leaf.DNSNames[0] != "localhost" || len(leaf.IPAddresses) != 1 || !leaf.IPAddresses[0].Equal(net.IPv4(127, 0, 0, 1)) {
+		t.Fatalf("generated certificate names = CN %q DNS %v IP %v; want localhost/127.0.0.1", leaf.Subject.CommonName, leaf.DNSNames, leaf.IPAddresses)
+	}
+	info, err := os.Stat(filepath.Join(dir, "dev.key"))
+	if err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("dev.key: %v, mode %v; want present with 0600", err, info)
+	}
+	again, err := buildTLSConfig(map[string]string{"KIBAN_TLS_SELF_SIGNED_DIR": dir})
+	if err != nil {
+		t.Fatalf("buildTLSConfig (second call): %v", err)
+	}
+	if !bytes.Equal(again.Certificates[0].Certificate[0], cfg.Certificates[0].Certificate[0]) {
+		t.Fatal("second call generated a new certificate; want the stored pair reused")
+	}
+}
+
+// TestBuildTLSConfig_OperatorCertsWinOverSelfSigned proves the priority: an operator pair is
+// used even when the development directory is also set, and nothing is written there.
+func TestBuildTLSConfig_OperatorCertsWinOverSelfSigned(t *testing.T) {
+	certFile, keyFile := generateSelfSignedCert(t)
+	dir := filepath.Join(t.TempDir(), "unused")
+	cfg, err := buildTLSConfig(map[string]string{"KIBAN_TLS_CERT_FILE": certFile, "KIBAN_TLS_KEY_FILE": keyFile, "KIBAN_TLS_SELF_SIGNED_DIR": dir})
+	if err != nil || cfg == nil {
+		t.Fatalf("buildTLSConfig: cfg=%v err=%v", cfg, err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("self-signed directory was touched (%v); want untouched when operator certs are set", err)
 	}
 }

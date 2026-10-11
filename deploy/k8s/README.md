@@ -38,12 +38,11 @@ deploy/k8s/
   overlays/
     kind/kustomization.yaml    # retags images to :v0.1.1 (or whatever `make images-all
                                 # VERSION=...` built), imagePullPolicy: Never (no registry pull)
-    kind/secret.yaml            # gitignored — written by gen-secrets.sh kind
+    kind/secret.yaml            # gitignored — written by kiban.sh secrets kind
     production/kustomization.yaml # SAMPLE — GHCR image refs, real domain, cert-manager Ingress
                                     # annotations, a real StorageClass — every value a placeholder
-    production/secret.yaml      # gitignored — written by gen-secrets.sh production
-  gen-secrets.sh              # write-once secret generator (same approach as infra/setup.sh)
-  apply.sh                    # staged apply + kubectl wait, in compose's own depends_on order
+    production/secret.yaml      # gitignored — written by kiban.sh secrets production
+  kiban.sh                    # `secrets <overlay>`: write-once secret generator; `apply <overlay>`: staged apply + kubectl wait
 ```
 
 ## Apply order (and why it's a plain script, not initContainers)
@@ -58,15 +57,15 @@ two ways to reproduce `infra/compose.yaml`'s `depends_on` chain (postgres -> key
    *progression*, not *creation*, on each stage's readiness.
 
 This directory uses (2). It needs no extra images or sidecars, and the ordering logic lives in
-one script you can read top to bottom (`apply.sh`). It also matches how the app services already
+one script you can read top to bottom (`kiban.sh apply`). It also matches how the app services already
 behave under `docker compose`. Most of them (`notification`/`timesheet`/`docs`/`helpdesk`)
 tolerate a temporarily unreachable `authz`/`org` at startup (lazy per-request calls that fail
 closed) instead of crash-looping. So having them exist briefly as unready Pods before
 `migrate`/`bootstrap` finish is the same startup-race tolerance compose already relies on.
 
 ```
-deploy/k8s/gen-secrets.sh kind                  # once, before the first apply (or: production)
-deploy/k8s/apply.sh kind                        # or: production
+deploy/k8s/kiban.sh secrets kind                  # once, before the first apply (or: production)
+deploy/k8s/kiban.sh apply kind                        # or: production
 ```
 
 ### Using the base from another repository
@@ -88,10 +87,10 @@ patches: [...]
 The Secret may come from anywhere that produces a `kiban-secrets` Secret in the `kiban` namespace
 (a Secret without a namespace lands in the kubeconfig's current one and every pod waits on it): a
 committed sealed-secret, an external-secrets resource, or a file written by a vault. Upgrading
-from 0.1.0, where the base listed `base/secret.yaml`: run `gen-secrets.sh <overlay>` once; it
+from 0.1.0, where the base listed `base/secret.yaml`: run `kiban.sh secrets <overlay>` once; it
 moves the existing file into the overlay unchanged, so the cluster's Secret is not re-issued.
 
-`apply.sh` first deletes any previous `migrate`/`bootstrap` Jobs (a Job's pod template is
+`kiban.sh apply` first deletes any previous `migrate`/`bootstrap` Jobs (a Job's pod template is
 immutable, so re-applying one with a new image tag fails, and a leftover completed Job would
 pass the wait without running the new migrations — this is what makes the script re-runnable for
 an upgrade), runs `kubectl apply -k <overlay>` once for the full manifest set, then waits in
@@ -133,7 +132,7 @@ rely on it in production.
 ```bash
 # 0. install kind + kubectl (both are static binaries; a user-owned bin dir is fine)
 
-# 1. build the images locally (13; kind needs the 12 below — gateway-devcert is compose-only)
+# 1. build the images locally (12)
 #    and load them into the kind cluster (no registry pull)
 make images-all VERSION=v0.1.1
 kind create cluster --name kiban
@@ -144,8 +143,8 @@ for img in kiban-registry kiban-identity kiban-org kiban-authz kiban-notificatio
 done
 
 # 2. secrets, then apply
-deploy/k8s/gen-secrets.sh kind
-deploy/k8s/apply.sh kind
+deploy/k8s/kiban.sh secrets kind
+deploy/k8s/kiban.sh apply kind
 
 # 3. reach the gateway (no Ingress controller on kind — see above)
 kubectl -n kiban port-forward svc/gateway 8090:8090
@@ -208,7 +207,7 @@ The `v0.1.1` tag must match the `newTag` values in `overlays/kind/kustomization.
 ## What's proven, what isn't
 
 Proven on kind:
-- The full 12-image build, `kind load`, and staged `apply.sh` bring-up.
+- The full 12-image build, `kind load`, and staged `kiban.sh apply` bring-up.
 - A password-grant login through the gateway, `GET /api/platform/capabilities` (200), one module
   API call (200), and `/metrics` reachable in-cluster with `kiban_build_info` carrying the built
   version.

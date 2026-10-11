@@ -61,7 +61,7 @@ first login makes you change it). `make dev-down` stops it and keeps data; `make
 removes the volumes.
 
 A checkout-free variant lives in `deploy/quickstart/`: it pulls the foundation images only
-(no `gateway-devcert`, no sample modules).
+(no sample modules).
 
 ## Requirements
 

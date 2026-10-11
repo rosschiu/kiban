@@ -76,9 +76,8 @@ func setBootstrapEnv(t *testing.T) {
 		"KEYCLOAK_MANAGEMENT_URL":      "",
 		"KEYCLOAK_REALM_DISCOVERY_URL": "http://127.0.0.1:" + kcHostPort + "/realms/" + realm + "/.well-known/openid-configuration",
 
-		"KIBAN_REPO_ROOT":                 repoRoot,
-		"KIBAN_MIGRATIONS_ROOT":           filepath.Join(repoRoot, "migrations"),
-		"KIBAN_SET_ROLE_PASSWORDS_SCRIPT": filepath.Join(repoRoot, "migrations", "registry", "set-role-passwords.sh"),
+		"KIBAN_REPO_ROOT":       repoRoot,
+		"KIBAN_MIGRATIONS_ROOT": filepath.Join(repoRoot, "migrations"),
 
 		// RealmStep/SuperadminStep both run for real here — safe because RealmStep's own
 		// writeServiceSecrets is a no-op whenever KIBAN_SECRETS_DIR is
@@ -228,7 +227,7 @@ func TestRun_OptionalServicePool_SkippedWhenPortAndNameEmpty(t *testing.T) {
 // TestRun_FullSuccess_ConvergesAgainstLiveStack is the full-wiring proof: real config, real
 // Postgres (the owner role plus all three optional per-service pools), a real Preflight
 // (Postgres + a real Keycloak realm-discovery fetch), a real (idempotent, no-op on this
-// already-migrated stack) Migrations step including the real set-role-passwords.sh subprocess, a
+// already-migrated stack) Migrations step including the real role-password step over the wire, a
 // real RealmStep/Superadmin/Seed/Verify pass (every sub-step converge-if-different against
 // state a prior real bootstrap run already created — see setBootstrapEnv's own comment) under
 // the real Postgres advisory lock, returning nil.
