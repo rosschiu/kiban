@@ -4,7 +4,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
-- Nothing yet
+- Kubernetes: the overlays set `namespace: kiban`, the generated and example Secrets carry it, and `make k8s-check` fails on any rendered resource outside it; in 0.1.1 the Secret moved to the overlay without a namespace, landed in the kubeconfig's current one, and every pod waited on it
 
 ## [0.1.1] — 2026-10-08
 
