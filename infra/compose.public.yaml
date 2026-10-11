@@ -147,5 +147,5 @@ services:
       # redirect URIs/web origins. Setting it here makes bootstrap reconcile the kiban-frontend
       # realm client's redirectUris/webOrigins to the public origin instead (internal/bootstrap/
       # realm.go's frontendOrigins) — safe to re-run any number of times (RealmStep
-      # create-or-reconciles, per infra/e2e-login.sh's own idempotency proof).
+      # create-or-reconciles; internal/bootstrap's live tests prove the idempotency).
       KIBAN_DOMAIN: ${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}

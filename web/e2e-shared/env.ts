@@ -273,8 +273,8 @@ export async function ensureKeycloakUser(
 // `RequireAuth` (internal/gateway/platform_routes.go — any valid bearer, no superadmin gate)
 // so proving the GATEWAY answers means presenting a real token with the "kiban-api" audience
 // every TokenVerifier in this codebase requires. The realm ships no client with both
-// direct-grant/service-account access AND that audience mapper by default — mirrors
-// modules/notification/curl-proof.sh's own precedent exactly (idempotent create-or-reuse
+// direct-grant/service-account access AND that audience mapper by default —
+// idempotent create-or-reuse
 // ephemeral client + "kiban-api-audience" mapper), except this uses a CLIENT CREDENTIALS grant
 // (serviceAccountsEnabled) rather than a user password grant, so this probe never needs to know
 // the superadmin's throwaway password — it only needs the Keycloak master-admin token
@@ -282,7 +282,7 @@ export async function ensureKeycloakUser(
 // setup, which talks to Keycloak's raw host port) must go through the GATEWAY's own `/auth/*`
 // proxy, never Keycloak's raw host port — every TokenVerifier in this codebase (KEYCLOAK_ISSUER_URL,
 // infra/compose.yaml) requires the token's `iss` claim to be the gateway's own public origin, the
-// same rule curl-proof.sh's own `password_grant` comment documents; a token minted straight from
+// same rule everywhere; a token minted straight from
 // Keycloak's host-published port carries the wrong issuer and is rejected 401 AUTH_TOKEN_INVALID.
 async function mintCatalogProbeToken(
   kcBase: string,

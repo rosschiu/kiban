@@ -86,7 +86,6 @@ anchor is the identifier that fixes the meaning.
 |---|---|
 | Gate | `make check` and `make test`; also a decision step ("the membership gate"). |
 | Guard | Code that refuses: `RequireSuperadmin`, the live-stack guard. |
-| Proof script | The `curl-proof.sh` and `e2e-*.sh` scripts that exercise a live stack. |
 | Browser end-to-end test | Playwright suites under `web/*/e2e`. |
 | Differential harness | The `make test` step that compares the authorization engine against OpenFGA (65 vectors, mutation and cycle proofs, 5000 generated checks). |
 | Live test | Go tests behind the `live` build tag. |

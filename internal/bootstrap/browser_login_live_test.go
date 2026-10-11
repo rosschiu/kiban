@@ -65,8 +65,8 @@ func TestBrowserLogin_InteractiveFlowIssuesAuthorizationCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cookiejar.New: %v", err)
 	}
-	// The gateway terminates TLS with a self-signed dev cert (infra/e2e-login.sh's own `curl
-	// -sk` precedent) — InsecureSkipVerify is scoped to this throwaway client only.
+	// The gateway terminates TLS with a self-signed dev cert (a throwaway
+	// test client) — InsecureSkipVerify is scoped to this throwaway client only.
 	client := &http.Client{
 		Jar:       jar,
 		Timeout:   20 * time.Second,
@@ -148,8 +148,8 @@ func TestBrowserLogin_InteractiveFlowIssuesAuthorizationCode(t *testing.T) {
 }
 
 // browserLoginTestUser creates (or resets) a throwaway Keycloak user with a real, non-temporary
-// password and no requiredActions/MFA-setup attributes (mirrors infra/e2e-login.sh step 7's
-// "regular_username" fixture precedent) — idempotent create-or-reuse so re-running this test
+// password and no requiredActions/MFA-setup attributes (the same fixture shape the
+// Playwright suites use) — idempotent create-or-reuse so re-running this test
 // against the same stack never fails on a duplicate-user conflict.
 func browserLoginTestUser(ctx context.Context, t *testing.T, kc *kcMasterClient) (username, password string) {
 	t.Helper()

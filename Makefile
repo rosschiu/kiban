@@ -16,7 +16,7 @@ setup: ## verify/report the host toolchain (docker+compose required; go/node/npm
 
 dev: ## bring up the full stack (postgres + keycloak + migrate + bootstrap + the gateway edge + registry/identity/org/authz); set KIBAN_IMAGE_TAG=vX.Y.Z to run FROM images `make images` already built, instead of building from source
 	@# Dev mode is never public mode — drop the marker `make public-up` writes so
-	@# live-tagged test helpers and infra/e2e-*.sh / modules/*/curl-proof.sh stop refusing to run.
+	@# live-tagged test helpers and the Playwright suites stop refusing to run.
 	@rm -f infra/.public-mode
 	@# The one-time superadmin's initial password (secrets never live in env-visible places,
 	@# so it's a 0600 FILE bootstrap's compose service bind-mounts — never .env).
@@ -49,9 +49,8 @@ public-up: ## bring the stack up behind the HOST's shared Traefik edge at https:
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra up -d $(if $(KIBAN_IMAGE_TAG),--no-build,--build) --wait
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra run --rm bootstrap
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra ps
-	@# Mark public mode so live-tagged test helpers and infra/e2e-*.sh /
-	@# modules/*/curl-proof.sh refuse to run against this deployment (`make dev`/`make dev-clean`
-	@# remove this marker; see their own comments).
+	@# Mark public mode so live-tagged test helpers and the Playwright suites refuse to run
+	@# against this deployment (`make dev`/`make dev-clean` remove this marker).
 	@touch infra/.public-mode
 
 # The nine first-party app-service images `make images` builds and `KIBAN_IMAGE_TAG` deploys from.

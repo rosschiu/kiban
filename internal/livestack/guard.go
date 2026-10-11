@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Package livestack is a shared guard that live-dependent test helpers and the infra/e2e-*.sh /
-// modules/*/curl-proof.sh scripts use to detect when the deployment they would otherwise mutate
+// Package livestack is a shared guard that live-dependent test helpers use to detect when the
+// deployment they would otherwise mutate
 // is the PUBLIC stack (`make public-up`) rather than an
 // isolated one: `make check`/`make test` must never mutate a deployment a human is using (test
 // runs against a public deployment can revert realm redirect URIs, restore required actions, and
@@ -31,8 +31,7 @@ func PublicModeMarkerPath() string {
 }
 
 // InPublicMode reports whether the live stack is currently running in PUBLIC mode, per the
-// marker file above. infra/e2e-*.sh and modules/*/curl-proof.sh (which always target the live
-// stack's own fixed ports — they have no "isolated stack" mode) refuse outright on this alone.
+// marker file above. The Playwright suites (web/e2e-shared/env.ts) refuse outright on this alone.
 func InPublicMode() bool {
 	return inPublicModeAt(PublicModeMarkerPath())
 }
@@ -41,7 +40,7 @@ func InPublicMode() bool {
 // exercise every branch against a throwaway t.TempDir() marker file instead of ever touching the
 // REAL infra/.public-mode (a test mutating the live stack is exactly what this package prevents,
 // so its own tests must never do it). The public zero-arg functions below are
-// the only thing any real caller (test helpers, e2e/curl-proof scripts' compiled Go, if any) ever
+// the only thing any real caller (test helpers) ever
 // uses; the parameterized versions are test-only surface, unexported on purpose.
 func inPublicModeAt(markerPath string) bool {
 	_, err := os.Stat(markerPath)
@@ -109,6 +108,6 @@ func targetsLiveStackAt(markerPath, envPath, currentPort string) bool {
 	return currentPort == "" || currentPort == livePort
 }
 
-// RefusalMessage is what live-dependent test helpers and infra/e2e-*.sh / modules/*/curl-proof.sh
-// scripts fail with when InPublicMode() / TargetsLiveStack() is true.
+// RefusalMessage is what live-dependent test helpers fail with when InPublicMode() /
+// TargetsLiveStack() is true.
 const RefusalMessage = "refusing to run against the live stack: it is in PUBLIC mode (infra/.public-mode present) — use `make test-stack-up` and target that isolated stack instead"
