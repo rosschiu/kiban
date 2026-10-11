@@ -31,8 +31,10 @@
 #             changelog and the documentation site's limitations page. Idempotent: re-running
 #             on an existing release edits it in place rather than failing.
 #
-# Auth: the built-in GITHUB_TOKEN for GHCR and the Release; NPM_TOKEN and PYPI_APIKEY repository
-# secrets for the two package registries (each publish step skips when its secret is absent).
+# Auth: the built-in GITHUB_TOKEN for GHCR and the Release; npm and PyPI by trusted publishing
+# (OIDC): each registry trusts this repository's release.yml, so no long-lived token is stored
+# anywhere. Register the publisher once on npmjs.com and pypi.org (owner rosschiu, repo kiban,
+# workflow release.yml) before the first tag that publishes.
 #
 # No CI-only logic: `make images` and `make check` are the exact targets a human runs by hand;
 # this workflow automates running them, not what they do.
@@ -218,6 +220,9 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC); no NPM_TOKEN
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -228,9 +233,12 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: web/package-lock.json
+      # Trusted publishing needs npm 11.5.1 or newer; Node 24 ships npm 11 but pin to be sure.
+      - name: npm with trusted-publishing support
+        run: npm install -g npm@11 && npm --version
 
       # GUARD (non-negotiable): version/tag drift must break the release, not ship
       # a mismatched artifact. Runs BEFORE any build/publish step.
@@ -258,24 +266,17 @@ jobs:
           path: ${{ runner.temp }}/npm-dist/*.tgz
 
       # The public npm registry, so `npm i @rossbsol/kiban-sdk` needs no .npmrc and no token.
-      # Runs only when the repository holds NPM_TOKEN (an npm token that may publish under the
-      # @rossbsol scope); without it the step says so and the release still succeeds.
-      - name: Publish to registry.npmjs.org (when NPM_TOKEN is set; idempotent)
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted publishing: npm exchanges this job's OIDC token for a short-lived publish
+      # credential because the package's settings on npmjs.com name this repository and
+      # workflow. Nothing to configure here; provenance is attached automatically.
+      - name: Publish to registry.npmjs.org (trusted publishing; idempotent)
         run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "sdk: NPM_TOKEN not set — not publishing to registry.npmjs.org (artifact only)"
-            exit 0
-          fi
           cd web/sdk
           PKG_VERSION="$(node -p "require('./package.json').version")"
           if npm view "@rossbsol/kiban-sdk@$PKG_VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
             echo "sdk: @rossbsol/kiban-sdk@$PKG_VERSION already on registry.npmjs.org — skipping"
           else
-            printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$RUNNER_TEMP/.npmrc"
-            npm publish --registry=https://registry.npmjs.org --access public --userconfig "$RUNNER_TEMP/.npmrc"
-            rm -f "$RUNNER_TEMP/.npmrc"
+            npm publish --registry=https://registry.npmjs.org --access public
             echo "sdk: published @rossbsol/kiban-sdk@$PKG_VERSION to registry.npmjs.org"
           fi
 
@@ -284,6 +285,9 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # PyPI trusted publishing (OIDC); no PYPI_APIKEY
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -318,24 +322,14 @@ jobs:
           name: kiban-sdk-python
           path: dist/*
 
-      # Runs only when the repository holds PYPI_APIKEY (a PyPI API token scoped to the
-      # kiban-sdk project); without it the step says so and the release still succeeds.
-      - name: Publish to PyPI (when PYPI_APIKEY is set; idempotent)
-        env:
-          PYPI_APIKEY: ${{ secrets.PYPI_APIKEY }}
-        run: |
-          if [ -z "$PYPI_APIKEY" ]; then
-            echo "sdk-python: PYPI_APIKEY not set — not publishing to PyPI (artifact only)"
-            exit 0
-          fi
-          PKG_VERSION="${RELEASE_TAG#v}"
-          if curl -fsS "https://pypi.org/pypi/kiban-sdk/$PKG_VERSION/json" >/dev/null 2>&1; then
-            echo "sdk-python: kiban-sdk $PKG_VERSION already on PyPI — skipping"
-            exit 0
-          fi
-          python3 -m pip install --quiet twine
-          TWINE_USERNAME=__token__ TWINE_PASSWORD="$PYPI_APIKEY" python3 -m twine upload --non-interactive dist/*
-          echo "sdk-python: published kiban-sdk $PKG_VERSION to PyPI"
+      # Trusted publishing: PyPI exchanges this job's OIDC token for a short-lived upload
+      # credential because the project's settings on pypi.org name this repository and
+      # workflow. skip-existing keeps a re-run of the same tag idempotent.
+      - name: Publish to PyPI (trusted publishing; idempotent)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true
 
   release:
     name: GitHub Release
