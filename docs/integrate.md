@@ -670,7 +670,7 @@ All on the gateway origin. The full contract is the [Platform API](api/platform.
 |---|---|---|
 | `POST /api/auth/effective-access/can`, `.../batch-can` | The access decision for the bearer, one or many objects | Any bearer, for itself only |
 | `GET /api/auth/effective-access/summary?companyId=` | Feature keys, role bindings and object grants the bearer holds | Any bearer, for itself only |
-| `POST /api/auth/grants` | Write or remove relation tuples, bound to one company and one app or module | A registered app's backend, on its own object types; or a superadmin |
+| `POST /api/auth/grants` | Write or remove relation tuples, bound to one company and one app or module | A registered app's backend, on its own object types; an app's backend that holds the company's `admin` relation, on any app's types there; or a superadmin |
 | `GET /api/org/companies/{id}/members/by-subject/{sub}` | Is this subject an active member, and which member | A registered app's backend, or a superadmin |
 | `GET /api/org/me/companies` | Companies the bearer is an active member of | Any bearer |
 | `GET /api/org/companies/{id}/members?q=&page=&pageSize=` | Member directory of one company | Active members of that company, or a superadmin |
