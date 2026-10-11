@@ -9,6 +9,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - App registration refuses a fragment whose object type lacks the `company_module` anchor with `422`, nothing stored; before, it registered and every authorization check for every module failed once the app was enabled, because authz validates the anchor only when it loads the fragment
 - Grants: an app's service account that is a member of a company can no longer write tuples on another app's object types there; a non-owner app needs the company's `admin` relation (`403 COMPANY_ROLE_REQUIRED` otherwise), the superadmin exception and the owning app's own types are unchanged
 - Release gate no longer runs the advisory scan at the tag (`make check VULNCHECK=0`); `govulncheck` stays on every PR and runs weekly (`vulncheck.yml`), opening a `security` issue on a finding, so a release never races the advisory feed
+- API docs pages load Redoc from Redocly's CDN through one pinned, integrity-checked `<script>` instead of inlining the bundle into `docs/api/*.html`; the backend SDK trims the gateway origin's trailing slashes without a regex; the remaining code-scanning alerts were triaged with a written reason each
 
 ## [0.1.1] — 2026-10-08
 
