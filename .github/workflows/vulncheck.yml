@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+# Weekly advisory scan. govulncheck runs on every PR (ci.yml, via `make check`) and here on a
+# schedule; it does NOT run at the tag (release.yml) so a release never races the advisory feed.
+# A finding opens one issue (or comments on the open one) labelled `security`; the maintainer
+# decides: critical, fix and re-tag; otherwise it batches into the next release.
+name: vulncheck
+
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  scan:
+    name: govulncheck (weekly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: govulncheck
+        id: scan
+        run: |
+          set +e
+          make vulncheck > vulncheck.txt 2>&1
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat vulncheck.txt
+      - name: Open or update the issue
+        if: steps.scan.outputs.status != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="govulncheck: reachable advisories on main"
+          body_file="$(mktemp)"
+          {
+            echo "Weekly scan on \`main\` at $(git rev-parse --short HEAD), $(date -u +%Y-%m-%d)."
+            echo
+            echo '```'
+            sed -n '/=== Symbol Results ===/,$p' vulncheck.txt | head -120
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > "$body_file"
+          existing="$(gh issue list --repo "${{ github.repository }}" --state open --label security --search "\"$title\" in:title" --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "${{ github.repository }}" --body-file "$body_file"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$title" --label security --body-file "$body_file"
+          fi
+      - name: Fail the run when advisories are reachable
+        if: steps.scan.outputs.status != '0'
+        run: exit 1

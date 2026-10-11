@@ -5,6 +5,7 @@
 # image store, so no registry pull is needed.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: kiban # the base's `namespace:` covers only the base's resources; the Secret below needs this one
 resources:
   - ../../base
   - secret.yaml # gitignored; written by ../../gen-secrets.sh kind

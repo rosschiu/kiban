@@ -46,6 +46,19 @@ func TestHTTP_RegisterApp(t *testing.T) {
 			t.Fatalf("status = %d, want 422: %s", rec.Code, rec.Body.String())
 		}
 	})
+	t.Run("fragment without the company anchor is 422 and stores nothing", func(t *testing.T) {
+		rec := post(svc, strings.Replace(good, `"company_module":{"this":true},`, ``, 1))
+		if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "company_module") {
+			t.Fatalf("status = %d, want 422 naming company_module: %s", rec.Code, rec.Body.String())
+		}
+		var n int
+		if err := admin.QueryRow(context.Background(), `SELECT count(*) FROM authz.model_fragment WHERE module_key = $1`, key).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("model_fragment rows for %q = %d (%v), want 0: the registration must roll back", key, n, err)
+		}
+		if err := admin.QueryRow(context.Background(), `SELECT count(*) FROM platform.app_registration WHERE module_key = $1`, key).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("app_registration rows for %q = %d (%v), want 0", key, n, err)
+		}
+	})
 	t.Run("registered: installed, external, not enabled", func(t *testing.T) {
 		rec := post(svc, good)
 		if rec.Code != http.StatusOK {
