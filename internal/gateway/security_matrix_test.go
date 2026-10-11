@@ -81,7 +81,7 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "platform_admin_mfa_user_set", Pattern: "PUT /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodPut, Path: "/api/platform/admin/mfa-policy/users/sub-1", Body: `{"required":true,"method":"otp"}`},
 	{Name: "platform_admin_mfa_user_clear", Pattern: "DELETE /api/platform/admin/mfa-policy/users/{subject}", Method: http.MethodDelete, Path: "/api/platform/admin/mfa-policy/users/sub-1"},
 	{Name: "platform_admin_mfa_sync", Pattern: "POST /api/platform/admin/mfa-policy/sync", Method: http.MethodPost, Path: "/api/platform/admin/mfa-policy/sync"},
-	{Name: "platform_admin_app_register", Pattern: "POST /api/platform/admin/apps", Method: http.MethodPost, Path: "/api/platform/admin/apps", Body: `{"key":"tokidesk","displayName":"TokiDesk","version":"1.0.0","serviceClientId":"tokidesk-backend","authzFragment":{}}`},
+	{Name: "platform_admin_app_register", Pattern: "POST /api/platform/admin/apps", Method: http.MethodPost, Path: "/api/platform/admin/apps", Body: `{"key":"sampleapp","displayName":"Sample App","version":"1.0.0","serviceClientId":"sampleapp-backend","authzFragment":{"sampleapp_doc":{"company_module":{"this":true}}}}`},
 	{Name: "platform_metrics", Pattern: "GET /api/platform/metrics", Method: http.MethodGet, Path: "/api/platform/metrics"},
 
 	// Bearer-only (no additional gateway-side authorization decision — subject enforcement lives

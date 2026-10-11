@@ -141,6 +141,11 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}
 
 	// --- 1. the superadmin registers and enables the app, creates the company and the member. ---
+	step("registerApp/422-no-anchor", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{
+		"key": appKey, "displayName": "Live Story", "version": "1.0.0", "serviceClientId": clientID,
+		"features":      []string{appKey + ".ticket.view"},
+		"authzFragment": map[string]any{"livestory_ticket": map[string]any{"viewer": map[string]any{"this": true}}},
+	}, http.StatusUnprocessableEntity)
 	step("registerApp", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{
 		"key": appKey, "displayName": "Live Story", "version": "1.0.0", "serviceClientId": clientID,
 		"features":      []string{appKey + ".ticket.view"},
