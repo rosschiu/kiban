@@ -105,6 +105,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 			_, _ = adminPool.Exec(ctx, `DELETE FROM org.org_unit WHERE id = $1`, companyBID)
 		}
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
+		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id = $1`, "story-ch-"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.grant_ledger WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.default_grant WHERE module_key = $1`, appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.model_fragment WHERE module_key = $1`, appKey)
@@ -141,6 +142,11 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}
 
 	// --- 1. the superadmin registers and enables the app, creates the company and the member. ---
+	step("registerApp/422-no-anchor", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{
+		"key": appKey, "displayName": "Live Story", "version": "1.0.0", "serviceClientId": clientID,
+		"features":      []string{appKey + ".ticket.view"},
+		"authzFragment": map[string]any{"livestory_ticket": map[string]any{"viewer": map[string]any{"this": true}}},
+	}, http.StatusUnprocessableEntity)
 	step("registerApp", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{
 		"key": appKey, "displayName": "Live Story", "version": "1.0.0", "serviceClientId": clientID,
 		"features":      []string{appKey + ".ticket.view"},
@@ -270,6 +276,24 @@ func TestLive_AppBesideKiban(t *testing.T) {
 		t.Fatalf("directory kinds = %v; want the service account as service and the person as person", kinds)
 	}
 
+	// Membership does not widen the app's write surface: on another module's type the member
+	// service account is still refused, now for the missing company admin relation. Only once
+	// the superadmin appoints it company administrator does the write pass.
+	otherType := sdk.Tuple{ObjectType: "notification_channel", ObjectID: "story-ch-" + appKey, Relation: "company_module", SubjectType: "company_module", SubjectID: companyID + "/notification"}
+	if err := app.Grant(ctx, companyID, otherType); !asAPIError(err, &apiErr) || apiErr.Status != http.StatusForbidden || !strings.Contains(err.Error(), "COMPANY_ROLE_REQUIRED") {
+		t.Fatalf("member service account on another module's type: err = %v, want 403 COMPANY_ROLE_REQUIRED", err)
+	}
+	step("appointServiceAccountAdmin", http.MethodPost, "/api/auth/grants", adminBearer, map[string]any{"op": "grant", "companyId": companyID,
+		"tuples": []map[string]string{{"objectType": "company", "objectId": companyID, "relation": "admin", "subjectType": "user", "subjectId": serviceSub}}}, http.StatusOK)
+	if err := app.Grant(ctx, companyID, otherType); err != nil {
+		t.Fatalf("company-admin service account on another module's type: %v, want 200", err)
+	}
+	if err := app.Revoke(ctx, companyID, otherType); err != nil {
+		t.Fatalf("revoke on another module's type as company admin: %v", err)
+	}
+	step("revokeServiceAccountAdmin", http.MethodPost, "/api/auth/grants", adminBearer, map[string]any{"op": "revoke", "companyId": companyID,
+		"tuples": []map[string]string{{"objectType": "company", "objectId": companyID, "relation": "admin", "subjectType": "user", "subjectId": serviceSub}}}, http.StatusOK)
+
 	// --- 6. the org reads through the SDK, as the app (a member now) and as the user. ---
 	if page, err := app.MemberDirectory(ctx, companyID, "", 1, 25); err != nil || page.Total != 2 {
 		t.Fatalf("MemberDirectory as the app = %+v, %v; want both members", page, err)
@@ -292,6 +316,26 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}
 	if results, err := app.BatchCan(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID}, []sdk.BatchItem{sdk.NewBatchItem("livestory_ticket", "t-1", "viewer")}); err != nil || len(results) != 1 || results[0].Decision.Allowed {
 		t.Fatalf("BatchCan after revoke = %+v, %v; want one denied item", results, err)
+	}
+	// The echoed object on the wire, as the Node and Python SDKs read it (case-sensitive). The
+	// Go SDK cannot catch this: encoding/json matches "Type" to `json:"type"` case-insensitively,
+	// which is how 0.1.1 shipped with "Type"/"ID" here while every Go test stayed green.
+	{
+		_, rec := doPlatformRequest(t, tlsClient, http.MethodPost, gwBase+"/api/auth/effective-access/batch-can", userBearer, mustJSON(t, map[string]any{
+			"featureKey": appKey + ".ticket.view", "moduleKey": appKey, "scope": "company", "companyId": companyID,
+			"items": []map[string]any{{"object": map[string]string{"type": "livestory_ticket", "id": "t-1"}, "relation": "viewer"}},
+		}))
+		var env struct {
+			Data []struct {
+				Object map[string]any `json:"object"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil || rec.Code != http.StatusOK || len(env.Data) != 1 {
+			t.Fatalf("batch-can raw = HTTP %d %s (%v); want 200 with one item", rec.Code, rec.Body.String(), err)
+		}
+		if obj := env.Data[0].Object; obj["type"] != "livestory_ticket" || obj["id"] != "t-1" {
+			t.Fatalf("batch-can echoed object = %v; want {\"type\":\"livestory_ticket\",\"id\":\"t-1\"} (0.1.1 wrote Go field names)", obj)
+		}
 	}
 
 }
