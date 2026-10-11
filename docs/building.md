@@ -351,8 +351,8 @@ validator fails when a file is missing from it, a listed file is missing on disk
 changed: a shipped migration is never edited, a new one is added. Record a new file with
 
 ```
-go run ./cmd/modvalidate -write-checksums modules/<key>/
-go run ./cmd/modvalidate -write-checksums migrations/registry
+go run ./tools/dev modvalidate -write-checksums modules/<key>/
+go run ./tools/dev modvalidate -write-checksums migrations/registry
 ```
 
 **What a module migration may not do.** The validator tokenizes each statement (strings,
@@ -490,7 +490,7 @@ linked user.
 
 ```
 make validate-modules            # every modules/*/
-go run ./cmd/modvalidate modules/<key>/
+go run ./tools/dev modvalidate modules/<key>/
 make validate-migrations         # the foundation trees, including migrations/registry
 ```
 
@@ -516,7 +516,7 @@ Every item is needed; the platform has no runtime registration in 0.1.
    existing four. A key in `KIBAN_INSTALLED_MODULES` that the list does not know stops the
    registry at startup.
 3. `migrations/registry/00NN_<key>_role.sql` as above, then
-   `go run ./cmd/modvalidate -write-checksums migrations/registry`.
+   `go run ./tools/dev modvalidate -write-checksums migrations/registry`.
 4. `infra/Dockerfile.service`: a `go build ... -o /out/<key> ./modules/<key>/service/cmd` line
    in the builder stage and a `FROM runtime-base AS <key>` stage that copies the binary and sets
    it as the entrypoint.

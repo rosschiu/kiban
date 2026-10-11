@@ -25,7 +25,7 @@ every `LICENSE` file in this tree and in the root `NOTICE` file.
 | `modulekit/` | [Apache-2.0](modulekit/LICENSE) | Ecosystem, module kit |
 | `sdk/` | [Apache-2.0](sdk/LICENSE) | Go SDK for applications |
 | `web/shell/` | [Apache-2.0](web/shell/LICENSE) | Ecosystem, sample shell |
-| `internal/modvalidate/`, `cmd/modvalidate/` | Apache-2.0 | Ecosystem, module validator |
+| `internal/modvalidate/`, `tools/dev/` | Apache-2.0 | Ecosystem, module validator and the developer tool |
 | `internal/authz/harness/` | Apache-2.0 | Trust artifact, differential authorization harness |
 | `docs/` | Apache-2.0 | Documentation |
 

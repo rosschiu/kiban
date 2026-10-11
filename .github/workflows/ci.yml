@@ -19,7 +19,7 @@
 #   `t.Skip`) if one isn't reachable; there is no build tag gating them out of a bare
 #   `go test ./...`. On top of that, `make check` itself calls `coverage-gate`, which runs Go
 #   tests `-tags live` (needs the full compose stack, Keycloak included — see
-#   scripts/coverage-gate.sh's own header). So a bare `go test ./...` with no stack was never
+#   tools/dev's coverage subcommand). So a bare `go test ./...` with no stack was never
 #   going to pass `make check` here — the fast tier brings the isolated `kiban-test` compose
 #   stack up (`make test-stack-up`) BEFORE `make check`, same as any developer following the
 #   Makefile's own error messages would.

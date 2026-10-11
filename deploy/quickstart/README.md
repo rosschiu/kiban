@@ -104,7 +104,7 @@ TLS-terminating reverse proxy, or set `KIBAN_IMAGE_TAG=vX.Y.Z` to deploy from pr
 ## Design notes (why this file looks the way it does)
 
 `docker-compose.yml` is GENERATED from the source repo's `infra/compose.yaml` by
-`scripts/gen-quickstart-compose.sh` (`make quickstart-compose`; `make docs-freshness-check` fails
+`go run ./tools/dev quickstart-compose` (`make quickstart-compose`; `make docs-freshness-check` fails
 when the committed file drifts). Never edit it by hand. `infra/compose.yaml` runs the 5 foundation
 services, the `migrate`/`bootstrap` one-shot jobs, a `gateway-devcert` self-signed TLS generator,
 the four sample modules behind the `samples` profile, and a custom `keycloak-build` image (Keycloak plus

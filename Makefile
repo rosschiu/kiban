@@ -106,8 +106,8 @@ images-devcert: ## build+tag kiban-gateway-devcert:$(VERSION) — the self-signe
 
 images-all: images images-quickstart images-devcert ## the full 13-image set release.yml pushes to GHCR (9 app services + migrate/bootstrap/keycloak + gateway-devcert)
 
-pin-images: ## refresh the @sha256 digest pin on every third-party base image (Dockerfiles, compose, k8s postgres) to the tag's current index digest — scripts/pin-images.sh; run `make quickstart-compose` after
-	./scripts/pin-images.sh
+pin-images: ## refresh the @sha256 digest pin on every third-party base image (Dockerfiles, compose, k8s postgres) to the tag's current index digest (`tools/dev pin-images`); run `make quickstart-compose` after
+	go run ./tools/dev pin-images
 
 docs-site: ## build the public documentation site (MkDocs Material, pinned in docs/requirements.txt) into the gitignored docs-site-build/ — the generated docs/api + docs/sdk trees are served as static reference pages; the root CHANGELOG.md is copied in as the changelog page
 	@python3 -m venv .venv-docs >/dev/null
@@ -184,22 +184,22 @@ secret-scan: ## gitleaks full-history + uncommitted-working-tree secret scan (.g
 	@echo "secret-scan: PASS — no leaks in history or the uncommitted working tree" >&2
 
 license-check: ## SPDX header sweep (Go/TS/TSX/SQL/shell first-party files) per LICENSING.md's zone map; `-fix` inserts missing headers (see tools/licensecheck)
-	go run ./tools/licensecheck/cmd
+	go run ./tools/dev license-check
 
 license-scan: ## third-party dependency license scan (Go via go-licenses, npm via license-checker) — fails on GPL/AGPL/SSPL in any distributed component
-	./scripts/license-scan.sh
+	go run ./tools/dev license-scan
 
 ratchet-guard: ## coverage/ratchet.json may only ever increase a scope's min, never decrease (or remove a scope) relative to HEAD — mechanical, not review-only
-	go run ./tools/ratchetguard/cmd
+	go run ./tools/dev ratchet-guard
 
 validate-modules: ## module artifact validator (static, no live stack needed) over every modules/*/ directory
-	go run ./cmd/modvalidate modules/*/
+	go run ./tools/dev modvalidate modules/*/
 
-k8s-check: ## render the Kustomize base and overlays without a cluster — base carries no Secret, every overlay supplies one (deploy/k8s/kustomize-check.sh)
-	./deploy/k8s/kustomize-check.sh
+k8s-check: ## render the Kustomize base and overlays without a cluster — base carries no Secret, every overlay supplies one in the kiban namespace (`tools/dev k8s-check`)
+	go run ./tools/dev k8s-check
 
-validate-migrations: ## foundation migration trees (migrations/*/): filename/order rules + checksums.json ledger completeness and immutability (static; `go run ./cmd/modvalidate -write-checksums migrations/<tree>` records a new file)
-	go run ./cmd/modvalidate migrations/*/
+validate-migrations: ## foundation migration trees (migrations/*/): filename/order rules + checksums.json ledger completeness and immutability (static; `go run ./tools/dev modvalidate -write-checksums migrations/<tree>` records a new file)
+	go run ./tools/dev modvalidate migrations/*/
 
 sdk-python-check: ## sdk/python gate — install into a local venv and run its unit tests (no live stack needed)
 	@python3 -m venv .venv-sdk >/dev/null
@@ -210,9 +210,9 @@ web-check: ## web/sdk + web/shell gate — npm ci + typecheck + unit tests + bui
 	cd web && npm ci && npm run -w sdk typecheck && npm run -w sdk test && npm run -w sdk build
 	cd web && npm run -w shell typecheck && npm run -w shell test && npm run -w shell build
 
-docs-api: ## bundle every modules/*/openapi.yaml + internal/gateway/platform-openapi.yaml into standalone, offline-viewable HTML under docs/api/ (Redocly build-docs + local redoc.standalone.js inlining, see scripts/build-api-docs.mjs)
+docs-api: ## bundle every modules/*/openapi.yaml + internal/gateway/platform-openapi.yaml into HTML under docs/api/ (Redocly build-docs, renderer by pinned integrity-checked CDN script; `tools/dev api-docs`)
 	cd web && npm ci
-	node scripts/build-api-docs.mjs --out docs/api
+	go run ./tools/dev api-docs --out docs/api
 
 docs-sdk: ## typedoc over web/sdk/src into docs/sdk/ (fails on any undocumented exported symbol — web/sdk/typedoc.json's requiredToBeDocumented gate), plus the SDK recipe catalog
 	cd web && npm ci && npm run -w sdk docs
@@ -223,11 +223,11 @@ docs: docs-api docs-sdk ## regenerate the full generated docs tree (API referenc
 docs-freshness-check: ## regenerate docs/api, docs/sdk and the quickstart compose into a temp dir and diff against the committed files — fails if any has drifted from its source
 	@rm -rf /tmp/kiban-docs-freshness
 	@mkdir -p /tmp/kiban-docs-freshness/api /tmp/kiban-docs-freshness/sdk
-	node scripts/build-api-docs.mjs --out /tmp/kiban-docs-freshness/api
+	go run ./tools/dev api-docs --out /tmp/kiban-docs-freshness/api
 	cd web/sdk && npx typedoc --out /tmp/kiban-docs-freshness/sdk
 	cp web/sdk/RECIPES.md /tmp/kiban-docs-freshness/sdk/recipes.md
-	./scripts/gen-quickstart-compose.sh > /tmp/kiban-docs-freshness/docker-compose.yml
-	./scripts/gen-quickstart-compose.sh --public > /tmp/kiban-docs-freshness/compose.public.yaml
+	go run ./tools/dev quickstart-compose > /tmp/kiban-docs-freshness/docker-compose.yml
+	go run ./tools/dev quickstart-compose --public > /tmp/kiban-docs-freshness/compose.public.yaml
 	diff -rq docs/api /tmp/kiban-docs-freshness/api
 	diff -rq docs/sdk /tmp/kiban-docs-freshness/sdk
 	diff -u deploy/quickstart/docker-compose.yml /tmp/kiban-docs-freshness/docker-compose.yml
@@ -235,17 +235,17 @@ docs-freshness-check: ## regenerate docs/api, docs/sdk and the quickstart compos
 	@rm -rf /tmp/kiban-docs-freshness
 	@echo "docs-freshness-check: docs/api, docs/sdk and deploy/quickstart/{docker-compose,compose.public}.yaml match their sources"
 
-quickstart-compose: ## regenerate deploy/quickstart/{docker-compose,compose.public}.yaml from infra/compose{,.public}.yaml (scripts/gen-quickstart-compose.sh; docs-freshness-check diffs them)
-	./scripts/gen-quickstart-compose.sh > deploy/quickstart/docker-compose.yml
-	./scripts/gen-quickstart-compose.sh --public > deploy/quickstart/compose.public.yaml
+quickstart-compose: ## regenerate deploy/quickstart/{docker-compose,compose.public}.yaml from infra/compose{,.public}.yaml (`tools/dev quickstart-compose`; docs-freshness-check diffs them)
+	go run ./tools/dev quickstart-compose > deploy/quickstart/docker-compose.yml
+	go run ./tools/dev quickstart-compose --public > deploy/quickstart/compose.public.yaml
 
 coverage-gate: ## coverage ratchet — fails if any scope drops below coverage/ratchet.json's min (needs the isolated test stack, `make test-stack-up`, not `make dev`)
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }
-	set -a; . ./.env.test; set +a; ./scripts/coverage-gate.sh gate
+	set -a; . ./.env.test; set +a; go run ./tools/dev coverage gate
 
 coverage-report: ## same scope table as coverage-gate, plus gap-to-floor, never fails
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }
-	set -a; . ./.env.test; set +a; ./scripts/coverage-gate.sh report
+	set -a; . ./.env.test; set +a; go run ./tools/dev coverage report
 
 fmt: ## auto-format (gofmt over every tracked .go file; web/ has no formatter script or prettier dependency, so TS is not formatted here)
 	gofmt -l -w $$(git ls-files '*.go')

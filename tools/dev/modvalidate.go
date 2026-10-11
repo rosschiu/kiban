@@ -23,14 +23,17 @@ func isModuleDir(dir string) bool {
 	return err == nil
 }
 
-func main() {
-	catalogPath := flag.String("catalog", "", "optional external catalog snapshot JSON (cross-catalog duplicate and dependency checks against modules outside this batch)")
-	writeChecksums := flag.String("write-checksums", "", "write/refresh the migration checksum ledger for the named module directory (or bare migrations directory), then exit (no validation run)")
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "usage: %s [-catalog snapshot.json] <module-dir|migrations-dir> [...]\n", os.Args[0])
-		flag.PrintDefaults()
+func runModvalidate(args []string) int {
+	fs := flag.NewFlagSet("modvalidate", flag.ContinueOnError)
+	catalogPath := fs.String("catalog", "", "optional external catalog snapshot JSON (cross-catalog duplicate and dependency checks against modules outside this batch)")
+	writeChecksums := fs.String("write-checksums", "", "write/refresh the migration checksum ledger for the named module directory (or bare migrations directory), then exit (no validation run)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: dev modvalidate [-catalog snapshot.json] [-write-checksums dir] <module-dir|migrations-dir> [...]")
+		fs.PrintDefaults()
 	}
-	flag.Parse()
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
 
 	if *writeChecksums != "" {
 		dir := filepath.Clean(*writeChecksums)
@@ -42,7 +45,7 @@ func main() {
 				for _, e := range loadErrs {
 					fmt.Fprintln(os.Stderr, e.Error())
 				}
-				os.Exit(1)
+				return 1
 			}
 			n, err = len(mod.Migrations), modvalidate.WriteChecksumLedger(dir, mod)
 		} else {
@@ -51,28 +54,28 @@ func main() {
 				for _, e := range loadErrs {
 					fmt.Fprintln(os.Stderr, e.Error())
 				}
-				os.Exit(1)
+				return 1
 			}
 			n, err = len(files), modvalidate.WriteChecksumLedgerDir(dir, files)
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "write-checksums: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Printf("wrote checksum ledger for %s (%d migrations)\n", dir, n)
-		return
+		return 0
 	}
 
-	dirs := flag.Args()
+	dirs := fs.Args()
 	if len(dirs) == 0 {
-		flag.Usage()
-		os.Exit(2)
+		fs.Usage()
+		return 2
 	}
 
 	snapshot, err := modvalidate.LoadCatalogSnapshot(*catalogPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 
 	var modules []*modvalidate.Module
@@ -125,5 +128,5 @@ func main() {
 	} else {
 		fmt.Println("modvalidate: FAIL")
 	}
-	os.Exit(exitCode)
+	return exitCode
 }

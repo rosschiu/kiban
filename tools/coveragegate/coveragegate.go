@@ -15,7 +15,7 @@
 //     `make check`'s coverage-gate target).
 //   - "report": always exits 0; prints the same table plus a gap-to-floor column (used by
 //     `make coverage-report`).
-package main
+package coveragegate
 
 import (
 	"encoding/json"
@@ -289,35 +289,39 @@ func loadRatchet(path_ string) (map[string]ratchetEntry, error) {
 	return out, nil
 }
 
-func main() {
-	mode := flag.String("mode", "gate", `"gate" (fail below ratchet min) or "report" (always exit 0, show gap-to-floor)`)
-	ratchetPath := flag.String("ratchet", "coverage/ratchet.json", "path to coverage/ratchet.json")
-	goProfile := flag.String("go-profile", "coverage/go.out", "path to the go test -coverprofile output")
-	webSummary := flag.String("web-summary", "web/sdk/coverage/coverage-summary.json", "path to vitest's json-summary coverage output")
-	webSrcDir := flag.String("web-src-dir", "web/sdk/src", "the web/sdk src directory (must match the prefix used in coverage-summary.json)")
-	webShellSummary := flag.String("web-shell-summary", "web/shell/coverage/coverage-summary.json", "path to web/shell's vitest json-summary coverage output")
-	webShellSrcDir := flag.String("web-shell-src-dir", "web/shell/src", "the web/shell src directory (must match the prefix used in its coverage-summary.json)")
-	flag.Parse()
+// Run evaluates the coverage profiles against the ratchet; exit code semantics as before.
+func Run(args []string) int {
+	fs := flag.NewFlagSet("coverage-eval", flag.ContinueOnError)
+	mode := fs.String("mode", "gate", `"gate" (fail below ratchet min) or "report" (always exit 0, show gap-to-floor)`)
+	ratchetPath := fs.String("ratchet", "coverage/ratchet.json", "path to coverage/ratchet.json")
+	goProfile := fs.String("go-profile", "coverage/go.out", "path to the go test -coverprofile output")
+	webSummary := fs.String("web-summary", "web/sdk/coverage/coverage-summary.json", "path to vitest's json-summary coverage output")
+	webSrcDir := fs.String("web-src-dir", "web/sdk/src", "the web/sdk src directory (must match the prefix used in coverage-summary.json)")
+	webShellSummary := fs.String("web-shell-summary", "web/shell/coverage/coverage-summary.json", "path to web/shell's vitest json-summary coverage output")
+	webShellSrcDir := fs.String("web-shell-src-dir", "web/shell/src", "the web/shell src directory (must match the prefix used in its coverage-summary.json)")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
 
 	ratchet, err := loadRatchet(*ratchetPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "coveragegate:", err)
-		os.Exit(2)
+		return 2
 	}
 	goFiles, err := loadGoProfile(*goProfile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "coveragegate:", err)
-		os.Exit(2)
+		return 2
 	}
 	webFiles, err := loadWebSummary(*webSummary, *webSrcDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "coveragegate:", err)
-		os.Exit(2)
+		return 2
 	}
 	webShellFiles, err := loadWebSummary(*webShellSummary, *webShellSrcDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "coveragegate:", err)
-		os.Exit(2)
+		return 2
 	}
 
 	type row struct {
@@ -347,7 +351,7 @@ func main() {
 		})
 	}
 	if missing {
-		os.Exit(2)
+		return 2
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 
@@ -375,6 +379,7 @@ func main() {
 
 	if *mode == "gate" && !allPass {
 		fmt.Fprintln(os.Stderr, "\ncoverage-gate: one or more scopes fell below their ratchet minimum")
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
