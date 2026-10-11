@@ -37,7 +37,8 @@ const capabilities = await createCapabilitiesClient(api).list();
 ```
 
 The session runs the OpenID Connect authorization-code flow with PKCE, validates state and nonce,
-refreshes tokens once at a time, survives a reload while a refresh token is still valid, and
+refreshes tokens once at a time, survives a reload when created with `persistTokens: true`
+(off by default: tokens are memory-only) while a refresh token is still valid, and
 logs out at the identity provider. The API client speaks the platform envelope: every success is
 `{ data }`, every failure `{ error: { code, message } }`, surfaced as a `KibanApiError` with the
 HTTP status and code.
@@ -48,7 +49,7 @@ answer common questions in one call:
 
 - `canI({ featureKey, companyId })` returns `{ allowed, reason }` and never throws for a denial.
 - `grantObjectAccess` / `revokeObjectAccess` write one tuple, for a user or for a position or
-  group userset. Superadmin only.
+  group userset. From a browser login, superadmin only.
 
 The SDK has no runtime dependencies and no dependency on the sample shell. Everything talks to
 the gateway origin; never call Keycloak or a module directly.
@@ -79,8 +80,7 @@ known modules is a Go literal. A module in another language, or one built outsid
 repository, cannot be installed. The list of edits that turns a directory into a running module
 is at the end of this section.
 
-This section is the reference. The numbered walk-through, with what you should see at each
-step, is the backend track of [Integrate your app](integrate.md#backend-track).
+This section is the reference; the sample modules under `modules/` are the worked examples.
 
 The contract in plain terms:
 
@@ -104,7 +104,7 @@ The contract in plain terms:
 For a Go service, import `github.com/rosschiu/kiban/modulekit` (Apache-2.0). It provides a
 JWKS-backed bearer token verifier; JSON decoding, UUID path parameters, paging and unique-violation
 helpers; an authorization client (`Can`, grant and revoke, the anchor tuple for a new object);
-an organization client (member lookup by login or id); and a notification client (post a module
+an organization client (member lookup by `kcSub` or member id); and a notification client (post a module
 custom event). A module is then its handlers, its store and its wrappers. The sample modules
 under `modules/` show the shape.
 
@@ -113,7 +113,8 @@ under `modules/` show the shape.
 **What the gateway sends.** For `/api/<key>/...` the gateway validates the bearer, provisions
 the identity record on a subject's first request, checks the catalog (installed, enabled,
 dependencies present; otherwise `403` with `MODULE_NOT_INSTALLED`, `MODULE_DISABLED` or
-`MODULE_DEPENDENCY_MISSING` and your service is never called) and then reverse-proxies the
+`MODULE_DEPENDENCY_MISSING` and your service is never called; an unknown key is
+`404 NOT_FOUND`, an unreachable catalog `503 MODULE_UNAVAILABLE`) and then reverse-proxies the
 request to `http://<host>:<service.port>`, where `<host>` is `KIBAN_MODULE_HOST_<KEY>` on the
 gateway or `127.0.0.1` when unset.
 
@@ -121,7 +122,7 @@ gateway or `127.0.0.1` when unset.
 |---|---|
 | Path and query | Byte for byte the client's, so your service sees the full `/api/<key>/v1/...`, never a stripped path |
 | `Authorization` | The client's bearer, verbatim. The gateway has already checked issuer, audience `kiban-api` and signature, but your service verifies it again |
-| `x-correlation-id` | Set by the gateway: the client's value if it sent one, otherwise a generated id. Put it on your audit rows and your grants requests |
+| `x-correlation-id` | Set by the gateway: the client's value if it sent one of at most 128 characters, otherwise a generated id. Put it on your audit rows and your grants requests |
 | `X-Forwarded-For` | The client address, appended to an upstream proxy's list when the gateway is configured to trust one |
 | `Host` | The client's `Host` header, preserved |
 | `x-user-*` | Never present. A client sending one gets `400` from the gateway. Your service must not read any identity header; the bearer is the only identity source |
@@ -147,14 +148,16 @@ them the client gets `503 MODULE_UNAVAILABLE`.
 | `KIBAN_ORG_BASE_URL` | `http://org:8130` | Default `http://127.0.0.1:8130` |
 
 Anything else is module-specific (the notification module also reads its SMTP host and port, a
-webhook HMAC secret and a delivery claim group) and is yours to add to the Compose block.
+webhook HMAC secret and a delivery claim group; `docs` and `helpdesk` read
+`KIBAN_NOTIFICATION_BASE_URL`, default `http://127.0.0.1:8150`, Compose
+`http://notification:8150`) and is yours to add to the Compose block.
 
 **Listeners and probes.** One process, one port, `service.port` from the manifest. Serve on it:
 
 | Path | Who calls it | Response |
 |---|---|---|
-| `GET /health` | Compose healthchecks, operators | `200`. This is `service.healthPath` in the manifest; the registry stores it, the gateway does not probe it |
-| `GET /ready` | The Compose healthcheck (`curl -sf http://127.0.0.1:<port>/ready`) | `{ "data": { "status": "ok" } }` after a database ping; `503` with `INTERNAL_ERROR` when the ping fails (`modulekit`'s `httpx.Ready` does exactly this) |
+| `GET /health` | Operators (liveness; the Compose healthcheck uses `/ready`) | `200`. This is `service.healthPath` in the manifest; the registry stores it, the gateway does not probe it |
+| `GET /ready` | The Compose healthcheck (`curl -sf http://127.0.0.1:<port>/ready`) | `{ "data": { "status": "ok" } }` after a database ping; `503` with `INTERNAL_ERROR` when the ping fails (`internal/httpx`'s `Ready` does exactly this) |
 | `GET /metrics` | The gateway's `GET /api/platform/metrics`, which scrapes every enabled module at `http://<host>:<port>/metrics` with a 2 second budget | Prometheus text format |
 | `/api/<key>/v1/...` | The gateway | Your API, every route behind your own bearer check and an authorization decision |
 
@@ -166,14 +169,17 @@ the JWKS once; `Verify(ctx, token)` parses the JWT against it, requires `iss` to
 `KEYCLOAK_ISSUER_URL` and `aud` to contain `KEYCLOAK_AUDIENCE`, checks expiry and signature, and
 returns the `sub` claim. `azp` is never accepted in place of `aud`. An unknown `kid` triggers one
 JWKS refetch and one retry; every other failure is `modulekit.ErrTokenInvalid`. Run
-`RefreshPeriodically` (10 minutes by default) so a rotated key is picked up. `sub` is the only
+`RefreshPeriodically(ctx, logger, modulekit.DefaultJWKSRefreshInterval)` (10 minutes) so a
+rotated key is picked up. `sub` is the only
 claim a module may use: it is the `kcSub` every internal endpoint takes. Roles or groups in the
 token are never authority; authorization is always the decision below.
 
 ### Manifest: `module.manifest.json`
 
-Every key is required unless marked optional; the validator rejects unknown keys, except keys
-starting with `_`, which are author comments. `notification`'s file is the template.
+Write every key. The validator rejects unknown keys (except keys starting with `_`, which are
+author comments) and the values the table refuses; it does not check that `displayName`,
+`mandatory`, `service.image`, `dependencies`, `org`, `data.migrationsPath`,
+`license.entitlementRequired` or `events` are present. `notification`'s file is the template.
 
 | Key | Allowed values | Rule |
 |---|---|---|
@@ -186,16 +192,16 @@ starting with `_`, which are author comments. `notification`'s file is the templ
 | `service.basePath` | exactly `/api/<moduleKey>` | Also `servers[0].url` of the OpenAPI file |
 | `service.port` | 1..65535, unique across the catalog | The port the gateway dials. Shipped: 8150, 8160, 8170, 8180 |
 | `service.healthPath` | an absolute path | Stored in the catalog |
-| `service.image` | `null` | Not read by anything in 0.1; the image comes from the Dockerfile stage named after the key |
-| `dependencies[]` | `{ "moduleKey", "versionRange", "required": true }` | Each names a module in the same validate batch (or the `-catalog` snapshot); `versionRange` is a semver range the target's `version` must satisfy; `required` must be `true`; no cycles. The gateway refuses your routes with `MODULE_DEPENDENCY_MISSING` while a dependency is not enabled |
-| `org.requiredOrgUnitTypes` | list of type keys | `["company"]` for every shipped module; copied into the catalog |
+| `service.image` | `null` in every shipped module; not validated | Not read by anything in 0.1; the image comes from the Dockerfile stage named after the key |
+| `dependencies[]` | `{ "moduleKey", "versionRange", "required": true }` | Each names a module in the same validate batch (or the `-catalog` snapshot); `versionRange` is a semver range the target's `version` must satisfy; `required` must be `true`; no cycles. Validated only in 0.1: the registry does not load a manifest's dependencies, so the gateway's `MODULE_DEPENDENCY_MISSING` check has nothing to act on |
+| `org.requiredOrgUnitTypes` | list of type keys | `["company"]` for every shipped module. The registry refuses to start when the deployment's org-unit taxonomy lacks a listed type |
 | `org.usesMembers`, `org.usesPositions` | bool | Declarative; not enforced |
 | `data.postgresSchema` | exactly `<moduleKey>` | The schema your migrations create |
-| `data.migrationsPath` | `"migrations"` | The directory the validator and tern read |
+| `data.migrationsPath` | `"migrations"` | Declarative; not read. The validator and tern use `modules/<key>/migrations` regardless |
 | `license.class` | `foundation`, `open` | `foundation` requires `license.spdx` `Apache-2.0`; `open` requires `Apache-2.0` or `MIT` |
-| `license.spdx` | see above | The module's `LICENSE` file must match the canonical text for that id, whitespace aside |
+| `license.spdx` | see above | The module's `LICENSE` file must match the canonical text for that id, line endings and leading or trailing whitespace aside |
 | `license.entitlementRequired` | bool | Declarative; nothing checks entitlements in 0.1 |
-| `events` | `null` | Reserved |
+| `events` | `null` in every shipped module; not validated | Reserved |
 
 ### Authorization fragment: `authz.fragment.json`
 
@@ -203,11 +209,12 @@ The top-level keys are `moduleKey`, `roles`, `objects`, `relations`, `features`,
 `fieldSets`, `rowScopes` and `bootstrapPolicy`. `moduleKey` must equal the manifest's.
 Unknown keys are refused; `_`-prefixed keys are comments.
 
-What runs at runtime: the registry embeds the file and installs only its `relations` section
-into the authorization engine, where it is merged with the base model. Everything else in the
-file is validated for consistency with that model but is not loaded by any service in 0.1:
-feature keys are enforced by the string your own handlers pass to the decision endpoint, and
-the flags on `roles[]` drive no grant.
+What runs at runtime: the registry embeds the file, installs its `relations` section into the
+authorization engine, where it is merged with the base model, and stores each
+`features[].featureKey` in the catalog. The decision endpoint answers `422 VALIDATION_FAILED`
+for a feature key your module does not declare (`<moduleKey>.access` is always accepted).
+Everything else in the file is validated for consistency with that model but is not loaded by
+any service in 0.1; the flags on `roles[]` drive no grant.
 
 **`relations`** (optional; omit the key when every tier you need already exists on the base
 model, as `timesheet` and `helpdesk` do). Object type, then relation name, then one expression:
@@ -257,12 +264,12 @@ catalog.
 
 | Key | Values | Rule |
 |---|---|---|
-| `featureKey` | `<moduleKey>.<scope>.<action>` | Must start with `<moduleKey>.`; unique across the catalog. `<moduleKey>.access` is reserved: the platform synthesizes it for every enabled module |
+| `featureKey` | `<moduleKey>.<name>`, e.g. `docs.create`, `helpdesk.tickets.work` | Must start with `<moduleKey>.`; unique across the catalog. `<moduleKey>.access` is reserved: the platform synthesizes it for every enabled module |
 | `label` | string | |
 | `scopeType` | `global`, `company` | Validated |
 | `requiresCompany` | bool | Declarative |
 | `accessRuleKind` | `relation`, `platform_role`, `module_eligibility` | Validated; every shipped feature is `relation` |
-| `accessRulePayload` | `{ "objectType", "relation" }` or `{}` | When both are set, `relation` must be defined on `objectType` in the effective model. `{}` means membership only, no relation leg |
+| `accessRulePayload` | `{ "objectType", "relation" }` or `{}` | Both or neither: when either is set, `relation` must be defined on `objectType` in the effective model. `{}` means membership only, no relation leg |
 | `sortOrder` | int | |
 | `isSidebarEntry` | bool | Declarative; a shell may use it for navigation |
 
@@ -302,7 +309,7 @@ sslmode = disable
 ```
 
 Files are named `NNNN_description.sql` (four digits, lowercase, `[a-z0-9_]`), numbered without
-gaps or duplicates, and each holds the up statements, the line
+gaps or duplicates (the validator refuses a duplicate, tern refuses a gap when it runs), and each holds the up statements, the line
 `---- create above / drop below ----`, and the down statements. `0001` creates the schema and
 grants the runtime role its way in:
 
@@ -357,8 +364,10 @@ go run ./cmd/modvalidate -write-checksums migrations/registry
 
 **What a module migration may not do.** The validator tokenizes each statement (strings,
 comments, dollar quotes and quoted identifiers are real tokens, so nothing hides in them) and
-applies a positive rule table. Allowed: `CREATE`, `ALTER`, `DROP` and `COMMENT ON` for schema,
-extension, table, index, function, procedure, trigger, type, sequence, view, policy and domain;
+applies a positive rule table. Allowed: `CREATE` of a schema, extension, table, index, function,
+procedure, trigger, type, sequence, view, policy or domain; `ALTER` of the same except schema
+and extension; `DROP` of the same except extension; `COMMENT ON` a table, column, constraint,
+index, function, procedure, trigger, type, sequence, view, policy or domain;
 `GRANT` and `REVOKE` with an `ON` clause; `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`; a `WITH`
 query. Within those, the following are refused by name:
 
@@ -371,7 +380,7 @@ query. Within those, the following are refused by name:
 - `CREATE EXTENSION` other than a bare `pgcrypto`; `SECURITY DEFINER`; setting `search_path`;
   `ALTER ... OWNER TO`; `ALTER ... SET SCHEMA`.
 - `GRANT`/`REVOKE` without `ON` (role membership); `WITH GRANT OPTION`; grants on a database,
-  tablespace, language, type, domain, parameter or foreign object; grants on a schema other than
+  tablespace, language, type, domain, parameter, large object or foreign object; grants on a schema other than
   `<key>` or `audit`; grants to, or revokes from, any role but `kiban_<key>`.
 - `TRUNCATE` outside schema `<key>` (audit tables are append-only).
 - Any other statement: `DO`, `SET`, `CREATE ROLE`, `VACUUM`, `COPY` and so on.
@@ -382,8 +391,8 @@ and grant on shared schemas.
 ### Default grants
 
 Nothing in the fragment grants anyone anything. When a module becomes installed and enabled
-(registry start with the key in `KIBAN_INSTALLED_MODULES`, or `POST
-/api/platform/admin/modules/<key>/enable`), the registry writes, for every active company, two
+(the registry's first start with the key in `KIBAN_INSTALLED_MODULES`, or re-enabling an
+installed module with `POST /api/platform/admin/modules/<key>/enable`), the registry writes, for every active company, two
 tuples on the object `company_module:<companyId>/<key>` through the authorization service's
 audited store: the anchor `#company @ company:<companyId>`, which is what lets a company's
 members resolve `member` and its administrators resolve `admin` on your module, and
@@ -397,8 +406,7 @@ grants itself, through the grants endpoint, when it decides to.
 
 ### Internal endpoints
 
-The three calls a module makes. The walk-through in [Integrate your app](integrate.md#backend-track)
-shows each in context; here is every field. All three are reachable only inside the Compose
+The three calls a module makes, with every field. All three are reachable only inside the Compose
 network, which is one reason a module container must never publish a host port.
 
 **`POST /internal/authz/effective-access/can`** on `KIBAN_AUTHZ_BASE_URL`, with the user's
@@ -406,9 +414,9 @@ bearer. The subject is always the bearer's `sub`.
 
 | Request field | Type | Meaning |
 |---|---|---|
-| `featureKey` | string | Recorded as evidence and in the denial audit row. Use your fragment's key |
+| `featureKey` | string | Recorded as evidence and in the denial audit row. Must be a key your fragment declares, or `<key>.access`; anything else is `422` |
 | `moduleKey` | string | Your key. Step 6 requires this module to be installed and enabled |
-| `scope` | `"company"` or `"global"` | `global` skips the company steps and needs `requiredPlatformRole` |
+| `scope` | `"company"` or `"global"` | `global` is decided by `requiredPlatformRole` alone: no company, module-state or relation step runs |
 | `companyId` | uuid | Required for company scope; the company from your URL |
 | `object` | `{ "type", "id" }` | Optional. With `relation`, the object of the relation check. `company_module` ids are `<companyId>/<moduleKey>` |
 | `relation` | string | Optional. Empty means no relation check: the decision stops after membership and module state |
@@ -420,8 +428,9 @@ bearer. The subject is always the bearer's `sub`.
 | `correlationId` | string | Forward your request's `x-correlation-id` |
 
 The steps, in order: subject exists; Keycloak account enabled; lifecycle active; for global
-scope, platform role held; for company scope, company active, then membership (or the operator
-exception), then `requiredCompanyRole`; module enabled; relation check when `relation` is set.
+scope, platform role held, and the decision ends there; for company scope, company active,
+then membership (or the operator exception, which also skips `requiredCompanyRole`), then
+`requiredCompanyRole`, module enabled, and the relation check when `relation` is set.
 An object check is bound to `companyId`: a `company_module` object must be that company's, and a
 module object must be anchored to that company's module or the answer is a denial.
 
@@ -431,6 +440,7 @@ module object must be anchored to that company's module or the answer is a denia
 | `503` `AUTHORIZATION_UNAVAILABLE` | A dependency could not answer; `details` carries `dependency`, `step` and `evidence`. Refuse the request, never fail open |
 | `400` | Malformed body, `actorId` mismatch, `requiresEligibility`, or global scope without `requiredPlatformRole` |
 | `401` | No or invalid bearer |
+| `422` `VALIDATION_FAILED` | A `featureKey` the module does not declare |
 
 `reason` is one of `ALLOWED`, `AUTH_USER_NOT_FOUND`, `KEYCLOAK_DISABLED`,
 `USER_LIFECYCLE_DISABLED`, `COMPANY_INACTIVE`, `COMPANY_MEMBERSHIP_REQUIRED`,
@@ -440,7 +450,9 @@ module object must be anchored to that company's module or the answer is a denia
 
 `modulekit.AuthzClient.Can(ctx, bearer, featureKey, companyID, relation)` sends
 `scope: "company"` with your key and, when `relation` is not empty, the object
-`company_module:<companyId>/<key>`; `DoCan` sends any request.
+`company_module:<companyId>/<key>`; `DoCan` sends a `modulekit.CanRequest` you build (`featureKey`,
+`moduleKey`, `scope`, `companyId`, `object`, `relation`; the other request fields, `correlationId`
+included, are not on that struct).
 
 **`POST /internal/authz/grants`** on `KIBAN_AUTHZ_BASE_URL`, with the user's bearer.
 
@@ -464,11 +476,12 @@ anchor and the owner together); a tuple on `company_module` itself requires the 
 
 | Response | Shape |
 |---|---|
-| `200` | `{ "data": { "status": "ok", "count": <tuples written> } }` |
+| `200` | `{ "data": { "status": "ok", "count": <tuples in the request> } }` |
 | `422` `VALIDATION_FAILED` | An object type, anchor, `company_module` id or `subjectRelation` the rules above refuse |
 | `403` `AUTHORIZATION_DENIED` | The bearer failed the decision or lacks `admin`; `details.reason` says which |
 | `503` `AUTHORIZATION_UNAVAILABLE` | The decision or the anchor check could not run |
 | `400` | Bad JSON, bad `op`, empty `tuples`, `companyId` not a UUID |
+| `401` | No or invalid bearer |
 
 `modulekit.AuthzClient.AnchorTuple(objectType, objectID, companyID)` builds the anchor and
 `GrantOrRevoke(ctx, bearer, companyID, op, tuples, correlationID)` sends the request.
@@ -494,12 +507,15 @@ go run ./cmd/modvalidate modules/<key>/
 make validate-migrations         # the foundation trees, including migrations/registry
 ```
 
-The validator loads the five artifacts plus `frontend/frontend.manifest.json` when present,
+The validator loads the four required artifacts, `LICENSE`, and `frontend/frontend.manifest.json`
+when present,
 applies every rule above, then the cross-module rules: `moduleKey`, `service.basePath`,
 `service.port`, frontend route ids, feature keys and object types are unique across the batch
 (pass `-catalog snapshot.json` to include modules outside it), dependencies resolve and form no
-cycle. A frontend manifest needs `routeBase` equal to `/app/<key>`, a semver `sdkVersionRange`,
-unique route ids and paths, `:param` segments that are identifiers, and each route's
+cycle. A frontend manifest needs `moduleKey` equal to the manifest's, `routeBase` equal to
+`/app/<key>`, a semver `sdkVersionRange`, unique route ids and paths (two paths that differ only
+in a parameter's name collide), literal segments of `[a-zA-Z0-9_-]`, `:param` segments that are
+identifiers, and each route's
 `featureKey` declared in the fragment or equal to `<key>.access`. `make check` runs all of it.
 
 ### Adding a module to the platform
@@ -512,7 +528,7 @@ Every item is needed; the platform has no runtime registration in 0.1.
 2. `internal/registry/builtin.go`: an entry in `BuiltinModules` mirroring the manifest
    (`ModuleKey`, `DisplayName`, `ScopeType`, `Mandatory`, `BasePath`, `HealthPath`, `Port`,
    `LicenseClass`, `ManifestVersion` and `RequiredOrgUnitTypes` from `mustManifest`,
-   `AuthzFragment` from `mustAuthzRelations`), plus the `var <key>AuthzRelations` next to the
+   `AuthzFragment` from `mustAuthzRelations`, `Features` from `mustFeatureKeys`), plus the `var <key>AuthzRelations` next to the
    existing four. A key in `KIBAN_INSTALLED_MODULES` that the list does not know stops the
    registry at startup.
 3. `migrations/registry/00NN_<key>_role.sql` as above, then
@@ -530,17 +546,23 @@ Every item is needed; the platform has no runtime registration in 0.1.
    variable on the `migrate` service's environment.
 8. `infra/compose.yaml`: a `<key>` service copied from `notification`'s block (build target
    `<key>`, the environment table above, the `/ready` healthcheck, `depends_on` `postgres`,
-   `migrate`, `bootstrap`, `org` and `registry`), and `<key>` appended to
-   `KIBAN_INSTALLED_MODULES` on the `registry` service.
-9. `infra/compose.yaml`, `gateway` service: `KIBAN_MODULE_HOST_<KEY>: <key>` and `<key>` under
-   `depends_on`. Without the variable the gateway dials `127.0.0.1:<port>`, which is not your
+   `migrate`, `bootstrap`, `org` and `registry`; it carries `profiles: ["samples"]`, so it starts
+   only with `COMPOSE_PROFILES=samples`). Add `<key>` to `KIBAN_INSTALLED_MODULES` in `.env`
+   (Compose passes it to the `registry` service) and to the list `make test-stack-up` writes
+   into `.env.test` in the `Makefile`.
+9. `infra/compose.yaml`, `gateway` service: `KIBAN_MODULE_HOST_<KEY>: <key>`. Without the variable the gateway dials `127.0.0.1:<port>`, which is not your
    container.
 10. `make validate-modules`, `make validate-migrations`, then `make dev` to rebuild the images
-    and start the stack. Enable the module for a company with
-    `POST /api/platform/admin/modules/<key>/enable` or the sample shell.
+    and start the stack. A module listed in `KIBAN_INSTALLED_MODULES` at the registry's first
+    boot is installed and enabled for the whole deployment;
+    `POST /api/platform/admin/modules/<key>/disable` and `.../enable` (or the sample shell)
+    toggle it. There is no per-company switch.
 
-A module missing from `KIBAN_INSTALLED_MODULES` at the registry's first boot is not installed
-later without a registry restart with the updated list.
+A module's installation row is written once, the first time a registry that knows the key
+boots. If the key was not in `KIBAN_INSTALLED_MODULES` at that boot, the module stays not
+installed: a later restart with an updated list does not change the row, and the enable route
+answers `409 MODULE_NOT_INSTALLED`. Put the key in the list before the first boot, or start from
+a clean database (`make dev-clean`).
 
 The four sample modules are the worked examples. `notification` is the smallest complete one;
 `helpdesk` shows position- and group-based assignment; `docs` (DocShare) shows per-object
@@ -549,7 +571,8 @@ sharing as live tuples.
 ## Contributing
 
 Gates are `make check` (format, vet, vulnerability check, unit tests, module and migration
-validation, web checks, coverage ratchet over 40 scopes, licence checks, secret scan) and
-`make test` (full tests including the OpenFGA differential harness). Both need the isolated test
+validation, web checks, the Python SDK's tests, coverage ratchet over 40 scopes and its guard,
+licence checks, secret scan, generated-docs freshness) and
+`make test` (Go tests under the race detector and the OpenFGA differential harness). Both need the isolated test
 stack: `make test-stack-up` first. Coverage minimums only ever rise. See `CONTRIBUTING.md` in
 the repository.

@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // `make docs-api` — bundles every module's openapi.yaml plus the
-// platform-openapi.yaml fragment into standalone HTML under docs/api/, one page per module + the
-// platform page, using @redocly/cli's `build-docs` (the actively-maintained successor to the
-// abandoned redoc-cli) as a single-file
-// renderer with NO external CDN reference at view time.
+// platform-openapi.yaml fragment into HTML under docs/api/, one page per module + the platform
+// page, using @redocly/cli's `build-docs` (the actively-maintained successor to the abandoned
+// redoc-cli).
 //
-// @redocly/cli's default output embeds a <script src="https://cdn.redocly.com/..."> reference to
-// load the Redoc renderer (confirmed by inspecting its generated output) — there is no CLI flag
-// to inline it. This script post-processes that one <script> tag, replacing it with the SAME
-// redoc version's own bundles/redoc.standalone.js content inlined verbatim (the `redoc` npm
-// package, pinned to the exact version @redocly/cli's own build-docs targets, installed as a
-// devDependency for exactly this purpose — see web/package.json). Everything else in the
-// generated page (styles, the pre-rendered spec data) is already inline; this is the only
-// network-at-view-time reference to strip.
+// The generated page loads the Redoc renderer from Redocly's CDN through ONE <script> tag that
+// pins the exact version and carries a Subresource Integrity hash, so the browser refuses any
+// other bytes. Until 0.1.2 this script inlined the same bundle verbatim for offline viewing;
+// that put a vendored minified bundle into the repository, where code scanning flagged its
+// internals on every page. The spec itself (the raw YAML next to each page) stays offline.
 //
 // Usage: node scripts/build-api-docs.mjs [--out <dir>]   (default --out docs/api)
 import { execFileSync } from "node:child_process";
@@ -32,36 +28,9 @@ function arg(name, fallback) {
 const outDir = resolve(repoRoot, arg("--out", "docs/api"));
 mkdirSync(outDir, { recursive: true });
 
-const redocBundlePath = join(repoRoot, "web", "node_modules", "redoc", "bundles", "redoc.standalone.js");
-if (!existsSync(redocBundlePath)) {
-  console.error(
-    `build-api-docs: ${redocBundlePath} not found — run \`npm --prefix web install\` first (redoc is a devDependency of web/, installed alongside @redocly/cli specifically to provide this offline bundle).`
-  );
-  process.exit(1);
-}
-// Escape any literal "</script>" inside the bundle's own source (it contains string constants
-// that embed one, e.g. its own HTML-escaping helpers) — inlined raw, that substring would
-// terminate this file's actual <script> tag early and let the browser's HTML parser start
-// re-interpreting the REST of the bundle's JS text as literal markup, resurrecting exactly the
-// external <script src="https://cdn..."> tag this whole post-processing step exists to remove
-// (confirmed empirically: an HTMLParser pass over the naive inlining found MULTIPLE real
-// <script src="cdn.redocly.com/..."> elements, not just inert text, for exactly this reason).
-const redocBundleJS = readFileSync(redocBundlePath, "utf8").replace(/<\/script/gi, "<\\/script");
-const cdnScriptRe = /<script src="https:\/\/cdn\.redocly\.com\/redoc\/[^"]*" integrity="[^"]*" crossorigin="anonymous"><\/script>/;
-
-// Generated pages reference "redoc.standalone.js.LICENSE.txt" in their own header comment (see
-// the `/*! For license information please see redoc.standalone.js.LICENSE.txt */` banner every
-// bundled minified chunk carries), so that file must be copied into the output directory — it is
-// the attribution notice a bundled third-party dependency legally requires.
-// Copy it in verbatim (never regenerate/rewrite it — it's redoc's own file, not ours).
-const redocLicenseNoticePath = join(repoRoot, "web", "node_modules", "redoc", "bundles", "redoc.standalone.js.LICENSE.txt");
-if (!existsSync(redocLicenseNoticePath)) {
-  console.error(
-    `build-api-docs: ${redocLicenseNoticePath} not found — run \`npm --prefix web install\` first (same redoc devDependency the bundle inline above needs).`
-  );
-  process.exit(1);
-}
-writeFileSync(join(outDir, "redoc.standalone.js.LICENSE.txt"), readFileSync(redocLicenseNoticePath));
+// The page must reference the renderer exactly this way: pinned version, integrity hash,
+// anonymous CORS. Anything else means redocly's output shape changed and needs a look.
+const cdnScriptRe = /<script src="https:\/\/cdn\.redocly\.com\/redoc\/v[0-9.]+\/bundles\/redoc\.standalone\.js" integrity="sha[0-9]+-[^"]+" crossorigin="anonymous"><\/script>/;
 
 // pages: [{ name, title, specPath }] — one per module's openapi.yaml, plus the platform surface.
 const modulesDir = join(repoRoot, "modules");
@@ -93,20 +62,11 @@ for (const page of pages) {
     stdio: "inherit"
   });
 
-  let html = readFileSync(outFile, "utf8");
+  const html = readFileSync(outFile, "utf8");
   if (!cdnScriptRe.test(html)) {
-    console.error(`build-api-docs: ${outFile} does not contain the expected CDN <script> tag — redocly's output shape may have changed; refusing to publish a page that might still reference a CDN.`);
+    console.error(`build-api-docs: ${outFile} does not carry the pinned, integrity-checked Redoc <script> tag — redocly's output shape may have changed; refusing to publish the page.`);
     process.exit(1);
   }
-  // A FUNCTION replacer, never a string one: redoc.standalone.js's own minified source contains
-  // literal "$&"/"$1"-shaped substrings (ordinary regex-replace calls within its own code) that
-  // String.replace's STRING-replacement form would reinterpret as special patterns — confirmed
-  // empirically: a string-replacement version of this line reinserted the matched CDN <script>
-  // tag verbatim at every "$&" occurrence inside the bundle, silently resurrecting the exact CDN
-  // reference this post-processing step exists to remove. A function replacer's return value is
-  // used verbatim, with no such reinterpretation.
-  html = html.replace(cdnScriptRe, () => `<script>\n${redocBundleJS}\n</script>`);
-  writeFileSync(outFile, html);
 }
 
 const indexPath = join(outDir, "index.html");

@@ -7,7 +7,7 @@ pulls published images and needs no checkout.
 
 - Linux on x86_64 (what the project builds and tests on; other platforms are untested).
 - Docker Engine with the Compose plugin. The project is tested against Docker 29 and Compose v5.
-- `make` for the checkout path.
+- `make` and `openssl` for the checkout path.
 - Roughly 4 GB of RAM and 2 CPU cores as a practical floor, and 10 GB of free disk. The idle
   stack uses about 1.2 GB, most of it Keycloak.
 
@@ -22,7 +22,9 @@ make dev     # builds and starts every container, waits until all are healthy
 
 `make dev` ends by printing the container list. "Healthy" means every service answered `/ready`,
 so its database connection is up too. Kiban is then at `https://127.0.0.1:8443` with a
-self-signed certificate, so expect a browser warning. Plain HTTP is on `http://127.0.0.1:8090`.
+self-signed certificate, so expect a browser warning.
+Port 8090 is published too, but nothing answers on it in this mode: the gateway serves either
+TLS or plain HTTP, never both.
 
 Log in as the user named by `KIBAN_SUPERADMIN_USERNAME` in `.env` (default `superadmin`),
 with the password in `infra/secrets-in/superadmin-password`. That file is generated once with
@@ -84,7 +86,8 @@ through the admin routes on the gateway; the administration pages cover position
    it.
 3. Bring up one sample module (`COMPOSE_PROFILES=docs` and `KIBAN_INSTALLED_MODULES=docs` in
    `.env`, then `make dev` again; `samples` and the full list bring up all four), enable it
-   for the company, and grant it to the position rather than to the person.
+   for the company, and grant it to the position rather than to the person. The registry installs sample modules only at its first boot: on
+   a stack that has already started, `make dev-clean` first (this deletes its data).
 4. Change the position holder and watch access move with the chair.
 
 ## Next

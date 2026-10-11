@@ -20,9 +20,9 @@ anchor is the identifier that fixes the meaning.
 | Term | Meaning | Code anchor | Instead of |
 |---|---|---|---|
 | Superadmin | The platform-wide operator role. Its one record is the tuple `system:platform#superadmin @ user:<sub>`, granted and revoked through `/api/platform/admin/platform-roles`. | role `kiban-superadmin`, guard `RequireSuperadmin`, SDK `createSuperadminClient` | platform admin |
-| Company Superadmin | Full administrative access over one module within one company. There is no company-wide relation yet. | relation `company_module#admin` | company admin, module admin |
+| Company administrator | Administrative access over one company: the `company:<id>#admin` relation, which also makes the holder administrator of every module in that company (`company_module#admin`). | relation `company#admin` | company admin, module admin |
 | Keycloak Admin | The identity provider's master administrator, used by bootstrap and operators only, never at runtime. | `KC_BOOTSTRAP_ADMIN_USERNAME` / `_PASSWORD` | master admin |
-| Demo Superadmin | The superadmin account of the public demo (`admin` / `DemoAdmin!2026`). | `KIBAN_DEMO_ADMIN_PASSWORD` | demo admin |
+| Demo Superadmin | The superadmin account of the public demo (`admin` / `DemoAdmin!2026`). | `KIBAN_DEMO_MODE` (the demo banner) | demo admin |
 | Superuser | The Postgres cluster superuser (`POSTGRES_USER`, default `postgres`), used only at initialisation and by backup tooling. Not a Kiban role. | `POSTGRES_USER` | |
 | Owner role | The non-superuser Postgres role `kiban` that owns the application database; migrations and bootstrap connect as it. | `KIBAN_DB_PASSWORD` | |
 
@@ -37,12 +37,12 @@ anchor is the identifier that fixes the meaning.
 | Decision | The ordered, fail-closed evaluation of a `can` question. | `decision.Evaluate` | |
 | Effective-access API | The HTTP surface for decisions: `can`, batch decisions, summary. Say "batch decision" in prose. | `/api/auth/effective-access/*` | batchCan |
 | Scope | `global` or `company`: the reach of a decision or a module. List filters use `view`, never `scope`. | `decision.Request.Scope`, manifest `scopeType` | |
-| Base model | The relation graph embedded in the engine: system, company, company module, member, position, group. | `internal/authz/engine/model.json` | reference model |
-| Member relation | `company#member` and `company_module#member`: a company's active, linked members, administrators included. Written by org on member create and deactivate. | relation `company#member` | |
+| Base model | The relation graph embedded in the engine: system, company, company module, member, position and group, plus the module, role-binding, access-bundle, directory, project, timesheet, submission and document types `model.json` defines. | `internal/authz/engine/model.json` | reference model |
+| Member relation | `company#member` is a company's active, linked members; `company_module#member` is those members plus the module's administrators. Written by org on member create and deactivate. | relation `company#member` | |
 | Anchor | The `company_module` tuple every module object carries, written by the module at creation; binds the object to one company for every decision. | relation `<type>#company_module` | |
 | Authorization fragment | A module's own object types, relations and feature keys, layered on the base model. | `authz.fragment.json` | |
 | Effective model | The base model merged with every enabled module's fragment. | `fragment.Load` | |
-| Feature key | `module.scope.action`, declared in a fragment. | | |
+| Feature key | `<moduleKey>.<name>` (by convention `module.scope.action`), declared in a module's fragment or an app's manifest. | | |
 | Capability | A module's installed and enabled state, and the three capability errors the gateway can answer with. | | |
 | Entitlement | Licensing state; dormant in 0.1. | | |
 | Policy | Always qualified by its subject: MFA policy, password policy, webhook target rules. Field and row policy are not built. | | |
