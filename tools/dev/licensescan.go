@@ -89,12 +89,14 @@ func runLicenseScan(args []string) int {
 
 	fmt.Fprintln(os.Stderr, "license-scan: checking for copyleft-incompatible and unknown/unclassified licenses...")
 	var goViolations, goUnknown, npmViolations, npmUnknown []string
+	// The licence column decides, never the URL: go-licenses answers "Unknown" there for a module
+	// it cannot map to a repository (gopkg.in/yaml.v3) while still classifying its licence.
 	for _, d := range goDeps {
 		row := d.module + "," + d.url + "," + d.license
-		if forbiddenLicense.MatchString(row) {
+		if forbiddenLicense.MatchString(d.license) {
 			goViolations = append(goViolations, row)
 		}
-		if unknownLicense.MatchString(row) {
+		if unknownLicense.MatchString(d.license) {
 			goUnknown = append(goUnknown, row)
 		}
 	}
