@@ -2,20 +2,17 @@
 
 // Playwright globalSetup: prepares the fixtures the SDK e2e flow needs against the ISOLATED
 // `kiban-test` stack (`make test-stack-up`, .env.test; never .env's live/public
-// stack, see ../../e2e-shared/env.ts's loadTestEnv), mirroring infra/e2e-login.sh rather than
-// reinventing it:
+// stack, see ../../e2e-shared/env.ts's loadTestEnv):
 //   1. Keycloak master-admin token (same KC_BOOTSTRAP_ADMIN_USERNAME/PASSWORD bootstrap itself
 //      uses, read from .env.test).
 //   2. The SEEDED superadmin (infra/secrets-in/superadmin-password, bootstrap-created) has a
 //      forced temporary password — a real browser can complete Keycloak's interactive
-//      UPDATE_PASSWORD page, but that's Keycloak UX, not anything this SDK owns proving. Same
-//      workaround e2e-login.sh uses: clear requiredActions + set a fresh, non-temporary,
+//      UPDATE_PASSWORD page, but that's Keycloak UX, not anything this SDK owns proving. The
+//      workaround: clear requiredActions + set a fresh, non-temporary,
 //      THROWAWAY password for this test run only (infra/secrets-in/'s stored secret is never
 //      read or touched).
-//   3. Idempotently upsert a fixture module catalog row distinct from e2e-login.sh's
-//      `kiban_e2e_fake` (installed, disabled) so the superadmin enable/disable round trip
-//      has a real, safe-to-toggle target — same idempotent upsert SQL shape as
-//      infra/e2e-login.sh step 5.
+//   3. Idempotently upsert a fixture module catalog row (installed, disabled) so the superadmin
+//      enable/disable round trip has a real, safe-to-toggle target.
 //   4. A fixture company the superadmin is a member of, with the docs module's default
 //      module-access rows — the grants route binds every tuple to a company and one enabled
 //      module (internal/authz/http.go handleGrants), so the grant/revoke recipe proof needs a
@@ -138,8 +135,8 @@ export default async function globalSetup(): Promise<void> {
      ON CONFLICT DO NOTHING`
   );
 
-  // Fixture module catalog row (idempotent upsert — same shape as infra/e2e-login.sh step 5,
-  // a distinct module_key so the two suites never fight over the same row). `make check`'s
+  // Fixture module catalog row (idempotent upsert, a module_key of its own so suites never
+  // fight over the same row). `make check`'s
   // registry dbtest_test.go truncates platform.module_catalog/module_installation, so this must
   // re-run every time, not just on a cold stack.
   const fixtureModuleKey = "kiban_e2e_sdk_fixture";
