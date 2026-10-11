@@ -699,6 +699,18 @@ func TestHandleBatchCan(t *testing.T) {
 		if len(items) != 3 {
 			t.Fatalf("got %d items, want 3 (body=%s)", len(items), rec.Body.String())
 		}
+		for i, it := range items {
+			obj, _ := it["object"].(map[string]any)
+			if obj["type"] != "company" || obj["id"] == "" || obj["id"] == nil {
+				t.Fatalf("item %d: object must echo the request as {type,id}, got %+v (body=%s)", i, it["object"], rec.Body.String())
+			}
+			if _, capitalised := obj["Type"]; capitalised {
+				t.Fatalf("item %d: object echoed with Go field names, got %+v", i, obj)
+			}
+		}
+		if items[2]["object"].(map[string]any)["id"] != "some-other-company" {
+			t.Fatalf("item 2: object id not echoed, got %+v", items[2]["object"])
+		}
 		d0 := items[0]["decision"].(map[string]any)
 		if d0["allowed"] != true {
 			t.Fatalf("item 0: want allowed=true, got %+v", d0)

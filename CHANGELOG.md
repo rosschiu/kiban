@@ -4,8 +4,10 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Kubernetes: the overlays set `namespace: kiban`, the generated and example Secrets carry it, and `make k8s-check` fails on any rendered resource outside it; in 0.1.1 the Secret moved to the overlay without a namespace, landed in the kubeconfig's current one, and every pod waited on it
+- `batch-can` echoes each result's `object` as `{type, id}` again; 0.1.1 wrote the Go field names `Type`/`ID`, so the Node and Python SDKs returned an empty object on every row (decisions were right; the Go SDK was unaffected because its decoder matches field names case-insensitively); the OpenAPI object reference is now exactly `{type, id}` and the live OpenAPI run validates it
+- App registration refuses a fragment whose object type lacks the `company_module` anchor with `422`, nothing stored; before, it registered and every authorization check for every module failed once the app was enabled, because authz validates the anchor only when it loads the fragment
 - Grants: an app's service account that is a member of a company can no longer write tuples on another app's object types there; a non-owner app needs the company's `admin` relation (`403 COMPANY_ROLE_REQUIRED` otherwise), the superadmin exception and the owning app's own types are unchanged
-- Nothing yet
 
 ## [0.1.1] — 2026-10-08
 
