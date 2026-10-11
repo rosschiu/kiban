@@ -7,8 +7,8 @@ the platform-wide release notes this package version ships alongside.
 
 ## [Unreleased]
 
-### Changed (breaking — pre-1.0)
-- Vocabulary alignment: `createPlatformAdminClient` → `createSuperadminClient`, `PlatformAdminClient` → `SuperadminClient`, `queryKeys.platformAdmin` → `queryKeys.superadmin` (source file `src/superadmin.ts`); `EffectiveAccessSummary.authUserId` → `subjectId`.
+### Added
+- `MemberDirectoryEntry.kind` (`person` or `service`).
 
 ## [0.1.0] — 2026-09-25
 
@@ -24,7 +24,7 @@ First tagged version of the SDK, released with Kiban 0.1.0.
   platform's `{ data }` / `{ error: { code, message, details? } }` envelope conventions, with
   `KibanApiError` carrying the canonical error code.
 - Typed clients for organization data (`src/org.ts`), platform-admin operations
-  (`src/platformAdmin.ts`), module capability checks (`src/capabilities.ts`), and effective-access
+  (`src/superadmin.ts`), module capability checks (`src/capabilities.ts`), and effective-access
   summaries (`src/effectiveAccess.ts`).
 - Recipes (`src/recipes/`): `canI` (feature/relation access checks) and
   `grantObjectAccess` (the standard grant-a-relation-on-an-object flow), each with an e2e proof
@@ -33,6 +33,8 @@ First tagged version of the SDK, released with Kiban 0.1.0.
   `contracts/wire-enums.json` (the same golden the Go side's `internal/errenv` and
   `internal/authz/decision` check against) — a change to either language's enum without updating
   the golden fails that language's own test.
+- The `@rosschiu/kiban-sdk/server` entry (`src/server/`) for a Node backend, and
+  `createDemoModeClient` (`src/demoMode.ts`).
 - React Query key factory (`src/queryKeys.ts`) for consistent cache invalidation across consumers.
 
 ### License

@@ -4,8 +4,15 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
-- One developer tool, `go run ./tools/dev <subcommand>`, replaces the five gate and generator scripts (`coverage-gate.sh`, `kustomize-check.sh`, `license-scan.sh`, `pin-images.sh`, `gen-quickstart-compose.sh`), `build-api-docs.mjs`, `cmd/modvalidate` and the three `tools/*/cmd` binaries; every `make` target is one line and nothing is CI-only
 - Kubernetes: the overlays set `namespace: kiban`, the generated and example Secrets carry it, and `make k8s-check` fails on any rendered resource outside it; in 0.1.1 the Secret moved to the overlay without a namespace, landed in the kubeconfig's current one, and every pod waited on it
+- `batch-can` echoes each result's `object` as `{type, id}` again; 0.1.1 wrote the Go field names `Type`/`ID`, so the Node and Python SDKs returned an empty object on every row (decisions were right; the Go SDK was unaffected because its decoder matches field names case-insensitively); the OpenAPI object reference is now exactly `{type, id}` and the live OpenAPI run validates it
+- App registration refuses a fragment whose object type lacks the `company_module` anchor with `422`, nothing stored; before, it registered and every authorization check for every module failed once the app was enabled, because authz validates the anchor only when it loads the fragment
+- Grants: an app's service account that is a member of a company can no longer write tuples on another app's object types there; a non-owner app needs the company's `admin` relation (`403 COMPANY_ROLE_REQUIRED` otherwise), the superadmin exception and the owning app's own types are unchanged
+- Release gate no longer runs the advisory scan at the tag (`make check VULNCHECK=0`); `govulncheck` stays on every PR and runs weekly (`vulncheck.yml`), opening a `security` issue on a finding, so a release never races the advisory feed
+- API docs pages load Redoc from Redocly's CDN through one pinned, integrity-checked `<script>` instead of inlining the bundle into `docs/api/*.html`; the backend SDK trims the gateway origin's trailing slashes without a regex; the remaining code-scanning alerts were triaged with a written reason each
+- SDKs publish to npm and PyPI by trusted publishing (OIDC from `release.yml`); the `NPM_TOKEN` and `PYPI_APIKEY` secrets are no longer read and can be deleted once the publishers are registered on npmjs.com and pypi.org
+- The nine manual proof scripts (`infra/e2e-*.sh`, `modules/*/curl-proof.sh`, the restart-survival proof, org's `smoke.sh`) are removed; the `-tags live` Go tests and the Playwright suites cover those journeys in the gate. The Python SDK's build output is no longer tracked
+- One developer tool, `go run ./tools/dev <subcommand>`, replaces the five gate and generator scripts (`coverage-gate.sh`, `kustomize-check.sh`, `license-scan.sh`, `pin-images.sh`, `gen-quickstart-compose.sh`), `build-api-docs.mjs`, `cmd/modvalidate` and the three `tools/*/cmd` binaries; every `make` target is one line and nothing is CI-only
 
 ## [0.1.1] — 2026-10-08
 
@@ -50,13 +57,13 @@ serves its own API; the sample modules are examples, off by default.
 - Position- and group-based access: rights follow the position holder or group membership with zero permission edits
 - Audit: every mutation writes an append-only audit row in the same transaction
 - Module runtime: manifest, fragment, OpenAPI file, checksummed migrations; validated by `make validate-modules`, routed by a version-blind gateway
-- Gateway: single origin, bearer-only `/api/*`, CORS, security headers, request limits, `/ready` health
+- Gateway: single origin, bearer-only `/api/*`, CORS, security headers, request limits; every service behind it answers `/ready`
 - Sample modules: notification, docs (DocShare), helpdesk, timesheet
 - SDK `@rossbsol/kiban-sdk`: session with PKCE and refresh, API client, org and effective-access clients, `canI` and grant recipes
 - Sample shell: React, CSP enforced, company switcher, administration pages
 - Platform role is one tuple (`system:platform#superadmin`) with grant and revoke routes
 - `GET /api/platform/metrics` aggregates every service's metrics for one scrape target
-- Postgres roles: non-superuser owner `kiban`, per-service roles, secrets read from files
+- Postgres roles: non-superuser owner `kiban`, per-service roles; the superadmin password, identity client secret and Keycloak admin password read from files
 - Containers run as uid 65532, read-only root, no capabilities; base images digest-pinned
 - Compose is the supported deployment; Kubernetes manifests proven on kind only
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`

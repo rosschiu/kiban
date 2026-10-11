@@ -25,15 +25,17 @@ superadmin (see the `_comment` in `authz.fragment.json`).
 
 The fragment declares one object type, `docs_document`, with `owner`/`editor`/`viewer` relations
 (an owner is also an editor, and an editor is also a viewer) and a `company_module` tupleset
-pointer. `docs.manage` (module-level: audit trail, orphan cleanup) and `docs.create`
+pointer. `docs.manage` (module-level: the audit trail) and `docs.create`
 (membership-gated) never grant read access to file content; `authz.fragment.json`'s `_comment`
 explains why.
 
 ## Running it
 
-Run `make migrate-docs` after `make migrate-registry` (which creates the `kiban_docs` role in
-`migrations/registry/0010_docs_role.sql` and `0011_docs_audit_usage.sql`). Then `make dev` or
-`make test-stack-up` starts the `docs` compose service with the rest of the stack.
+`make test-stack-up` always starts the `docs` service. `make dev` starts it only when `.env` has
+`COMPOSE_PROFILES=samples` and `KIBAN_INSTALLED_MODULES` lists `docs` before the stack's first
+boot. Both apply the migrations themselves. `make migrate-registry` (which creates the
+`kiban_docs` role) and then `make migrate-docs` are for a host-run service against the
+published Postgres port.
 
 ## Testing
 

@@ -1,4 +1,4 @@
-// Fixed test-stack config for the e2e harness. Mirrors infra/e2e-login.sh: hardcoded to the
+// Fixed test-stack config for the e2e harness: hardcoded to the
 // known topology (the `kiban` realm, the `kiban-frontend` client) EXCEPT gatewayOrigin's port,
 // which static-server.mjs's serveConfigJs() rewrites at serve time from
 // KIBAN_GATEWAY_TLS_HOST_PORT (the isolated kiban-test stack's port, never .env's live
@@ -10,8 +10,7 @@ export const HARNESS_CONFIG = {
   realm: "kiban",
   clientId: "kiban-frontend",
   redirectUri: "http://localhost:5173/callback.html",
-  // Distinct from infra/e2e-login.sh's `kiban_e2e_fake` fixture key so the two suites never
-  // fight over the same catalog row when run against the same `make dev` stack.
+  // A fixture key of its own so suites never fight over the same catalog row.
   fixtureModuleKey: "kiban_e2e_sdk_fixture",
   // Fixture company/object/subject for the grantObjectAccess/revokeObjectAccess recipe proof.
   // The grants route binds every tuple to a company and one enabled module (authz's

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import { stripTrailingSlashes } from "./origin";
+
 /** Configuration for {@link createTokenVerifier}. */
 export interface TokenVerifierConfig {
   /** Gateway origin; the realm's JWKS and issuer hang off it. */
@@ -61,7 +63,7 @@ export function createTokenVerifier(config: TokenVerifierConfig): TokenVerifier 
   const fetchImpl = config.fetchFn ?? fetch;
   const realm = config.realm ?? "kiban";
   const audience = config.audience ?? "kiban-api";
-  const origin = config.gatewayOrigin.replace(/\/+$/, "");
+  const origin = stripTrailingSlashes(config.gatewayOrigin);
   const issuer = `${origin}/realms/${realm}`;
   const jwksUrl = `${issuer}/protocol/openid-connect/certs`;
   const skew = config.clockSkewSeconds ?? 30;

@@ -3,7 +3,7 @@
 import { expect, test } from "@playwright/test";
 
 // Full SDK flow: real browser login as the seeded superadmin (temp password cleared by
-// global-setup.ts, e2e-login.sh's own workaround) -> OIDC/PKCE callback -> effective-access
+// global-setup.ts) -> OIDC/PKCE callback -> effective-access
 // summary -> SDK capabilities fetch -> canI recipe -> grantObjectAccess/revokeObjectAccess recipe
 // (superadmin bearer) -> superadmin module enable/disable -> logout. Video is always on for this
 // run — must be top-level (Playwright forces a new worker for a per-file video override).

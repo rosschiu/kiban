@@ -30,9 +30,10 @@ Every route family, in one place. Everything under `/api/` needs a bearer unless
 |---|---|---|
 | `/api/platform/*` | `GET capabilities`, `GET capabilities/{module}`, `GET catalog`; `POST admin/apps`; `POST admin/modules/{key}/enable`, `.../disable`; `POST admin/platform-roles`, `DELETE admin/platform-roles/{role}/{subjectId}`; `GET`/`PUT admin/mfa-policy/global`, `GET`/`PUT`/`DELETE admin/mfa-policy/users/{subject}`, `POST admin/mfa-policy/sync`; `GET metrics`; `GET demo-mode` (no bearer) | Any user for reads; superadmin for `admin/*` and `metrics` |
 | `/api/auth/effective-access/*` | `POST can`, `POST batch-can`, `GET summary?companyId=` | Any user, for the bearer only |
-| `/api/auth/grants` | `POST` (grant or revoke tuples) | Superadmin |
+| `/api/auth/grants` | `POST` (grant or revoke tuples) | Superadmin, or a registered app's backend (service-client token) on its own types |
 | `/api/org/me/companies` | `GET` | Any user |
 | `/api/org/companies/{id}/members` | `GET ?q=&page=&pageSize=` | Active members of the company, or a superadmin |
+| `/api/org/companies/{id}/members/by-subject/{subject}` | `GET` | Superadmin, or a registered app's backend |
 | `/api/org/companies/{id}/positions/{positionId}/holder` | `GET ?date=YYYY-MM-DD` | Active members of the company, or a superadmin |
 | `/api/org/companies/{id}/groups/{groupId}/members` | `GET` | Active members of the company, or a superadmin |
 | `/api/org/admin/units*` | `POST units`, `GET units/{id}`, `GET units/{id}/subtree` | Superadmin |
