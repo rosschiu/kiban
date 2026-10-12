@@ -2,7 +2,11 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
-## [Unreleased]
+## [0.1.2] — 2026-10-12
+Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
+fields, registration of a fragment without the company anchor and the grants rule for other apps'
+types; plus trusted publishing, the release gate off the advisory feed, and the glue scripts
+reduced to one Go tool.
 
 - Kubernetes: the overlays set `namespace: kiban`, the generated and example Secrets carry it, and `make k8s-check` fails on any rendered resource outside it; in 0.1.1 the Secret moved to the overlay without a namespace, landed in the kubeconfig's current one, and every pod waited on it
 - `batch-can` echoes each result's `object` as `{type, id}` again; 0.1.1 wrote the Go field names `Type`/`ID`, so the Node and Python SDKs returned an empty object on every row (decisions were right; the Go SDK was unaffected because its decoder matches field names case-insensitively); the OpenAPI object reference is now exactly `{type, id}` and the live OpenAPI run validates it
@@ -70,5 +74,7 @@ serves its own API; the sample modules are examples, off by default.
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`
 - Documentation site: quickstart, integrate, concepts, building, SDK guide, operating, security, limitations
 
-[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/rosschiu/kiban/releases/tag/v0.1.2
+[0.1.1]: https://github.com/rosschiu/kiban/releases/tag/v0.1.1
 [0.1.0]: https://github.com/rosschiu/kiban/releases/tag/v0.1.0

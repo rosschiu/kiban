@@ -37,7 +37,7 @@ deploy/k8s/
                                # service's name, image, port and env (parity with infra/compose.yaml)
     ingress.yaml               # class-agnostic Ingress — see "Ingress vs. port-forward" below
   overlays/
-    kind/kustomization.yaml    # retags images to :v0.1.1 (or whatever `make images-all
+    kind/kustomization.yaml    # retags images to :v0.1.2 (or whatever `make images-all
                                 # VERSION=...` built), imagePullPolicy: Never (no registry pull)
     kind/secret.yaml            # gitignored — written by kiban.sh secrets kind
     production/kustomization.yaml # SAMPLE — GHCR image refs, real domain, cert-manager Ingress
@@ -79,7 +79,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: kiban         # the base's namespace covers only its own resources; yours need it too
 resources:
-  - github.com/rosschiu/kiban//deploy/k8s/base?ref=v0.1.1
+  - github.com/rosschiu/kiban//deploy/k8s/base?ref=v0.1.2
   - secret.yaml            # your own `kiban-secrets` (base/secret.example.yaml lists the keys)
 images: [...]              # as in overlays/production/kustomization.yaml
 patches: [...]
@@ -140,12 +140,12 @@ rely on it in production.
 
 # 1. build the images locally (12)
 #    and load them into the kind cluster (no registry pull)
-make images-all VERSION=v0.1.1
+make images-all VERSION=v0.1.2
 kind create cluster --name kiban
 for img in kiban-registry kiban-identity kiban-org kiban-authz kiban-notification \
            kiban-timesheet kiban-docs kiban-helpdesk kiban-gateway kiban-migrate \
            kiban-bootstrap kiban-keycloak; do
-  kind load docker-image "$img:v0.1.1" --name kiban
+  kind load docker-image "$img:v0.1.2" --name kiban
 done
 
 # 2. secrets, then apply
@@ -159,10 +159,10 @@ kubectl -n kiban port-forward svc/gateway 8090:8090
 
 # 4. teardown
 kind delete cluster --name kiban
-docker image rm $(docker images 'kiban-*:v0.1.1' -q)
+docker image rm $(docker images 'kiban-*:v0.1.2' -q)
 ```
 
-The `v0.1.1` tag must match the `newTag` values in `overlays/kind/kustomization.yaml`.
+The `v0.1.2` tag must match the `newTag` values in `overlays/kind/kustomization.yaml`.
 
 ## Production notes (what a real cluster changes)
 
