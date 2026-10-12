@@ -1,7 +1,7 @@
 # The two one-shot jobs (infra/compose.yaml's `migrate`/`bootstrap`, `restart: "no"`)
 # as plain K8s Jobs rather than initContainers on every Deployment (see README.md "Apply order"
 # for the reasoning): everything
-# is applied together (`deploy/k8s/apply.sh` does one `kubectl apply -k`, then GATES on
+# is applied together (`deploy/k8s/kiban.sh apply` does one `kubectl apply -k`, then GATES on
 # `kubectl wait`), so these Jobs start racing their dependencies (postgres/keycloak) immediately.
 #
 # `restartPolicy: OnFailure` with a generous `backoffLimit`, not `Never` + a small limit:

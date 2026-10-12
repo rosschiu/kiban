@@ -25,10 +25,12 @@ revoke followed by a grant.
 A grant names the company and may only write tuples on object types the caller owns: an
 app's backend, identified by the verified `azp` of its service-client token matching the app's
 registered service client id, on the app's own types in any company where the app is enabled;
-a superadmin, or a member who passes the module's company-scope decision, on a built-in module's
-types; module-tier tuples additionally need the company-module administrator relation. Every
+a superadmin, or a caller who passes the module's company-scope decision (membership of the
+company, the module enabled), on any other enabled module's or app's types, which includes
+another app's backend whose service account is a member of that company (see limitations); module-tier tuples additionally need the company-module administrator relation. Every
 object must carry its company anchor. Base-model tuples cannot be written through the grants
-route at all. A registered app's checks are limited to the feature keys its manifest declares.
+route, with one exception: a superadmin may grant or revoke `company:<id>#admin` for a user to
+appoint a company administrator. A registered app's checks are limited to the feature keys its manifest declares.
 
 The superadmin role is a single authorization tuple. Grant and revoke are immediate and audited,
 and the last superadmin cannot be revoked.
@@ -56,8 +58,10 @@ for a passkey policy does not yet (see limitations).
 Bootstrap enforces brute-force protection (temporary lockout after ten failures) and the
 password policy `length(12) and notUsername and notEmail`. The realm binds one browser flow
 (`kiban browser`): password form, conditional one-time code, then Kiban's MFA-setup
-authenticator as a required step, so every interactive login passes through it. There is no
-direct-grant or client-credentials client that issues a Kiban token (see limitations).
+authenticator as a required step, so every interactive login passes through it. By default no
+client issues a Kiban token outside the browser flow: there is no direct-grant client, and the
+only client-credentials clients are the confidential service clients an operator names in
+`KIBAN_SERVICE_CLIENTS`.
 
 ### Deployment
 
@@ -67,8 +71,10 @@ the non-superuser owner of the application database and runs migrations and boot
 only at initialisation.
 
 The superadmin's initial password, the identity client secret and the Keycloak admin password
-reach Kiban's services as mounted files (`_FILE` variables), never as process environment. See
-the limitations page for Keycloak's own container.
+reach Kiban's services as mounted files (`_FILE` variables), never as process environment. Each
+service's own database role password is an environment variable, and in the image quickstart's
+compose file so is the Keycloak admin password on the `bootstrap` job. See the limitations page
+for Keycloak's own container.
 
 Gateway responses carry `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and (over
 TLS) `Strict-Transport-Security`; the shell is served with an enforced Content-Security-Policy.

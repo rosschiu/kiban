@@ -120,7 +120,6 @@ func TestMigrate_FreshDatabase_AppliesAllServicesInDependencyOrder(t *testing.T)
 			"org":      "fresh-org-pw",
 			"authz":    "fresh-authz-pw",
 		},
-		SetRolePasswordsScript: bootstrapRepoRoot(t) + "/migrations/registry/set-role-passwords.sh",
 	}
 
 	ownerDSN := fmt.Sprintf("postgres://kiban:%s@%s:%s/kiban?sslmode=disable", password, host, port)

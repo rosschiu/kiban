@@ -25,7 +25,7 @@ every `LICENSE` file in this tree and in the root `NOTICE` file.
 | `modulekit/` | [Apache-2.0](modulekit/LICENSE) | Ecosystem, module kit |
 | `sdk/` | [Apache-2.0](sdk/LICENSE) | Go SDK for applications |
 | `web/shell/` | [Apache-2.0](web/shell/LICENSE) | Ecosystem, sample shell |
-| `internal/modvalidate/`, `cmd/modvalidate/` | Apache-2.0 | Ecosystem, module validator |
+| `internal/modvalidate/`, `tools/dev/` | Apache-2.0 | Ecosystem, module validator and the developer tool |
 | `internal/authz/harness/` | Apache-2.0 | Trust artifact, differential authorization harness |
 | `docs/` | Apache-2.0 | Documentation |
 
@@ -37,7 +37,7 @@ licensed modules are not part of this repository.
 Every `module.manifest.json` carries a `license` object (`class`, `spdx`, `entitlementRequired`)
 declared when the module is created. `class` is `foundation` (Apache-2.0) or `open` (Apache-2.0
 or MIT); `entitlementRequired` is reserved and must be `false`. The module's own `LICENSE` file
-must match the canonical text for its declared `spdx`; `make license-check` enforces this. For an
+must match the canonical text for its declared `spdx`; `make validate-modules` enforces this. For an
 `open`-class module, Apache-2.0 is recommended for patent-grant consistency with the rest of the
 tree.
 

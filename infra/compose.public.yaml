@@ -23,7 +23,7 @@ services:
   # Public exposure means the stack must survive host reboots: the shared Traefik restarts
   # itself, but compose.yaml's services carry no restart policy (fine for `make dev`), so a
   # reboot would leave the public origin serving Traefik's bare 404. Long-lived
-  # services get unless-stopped here; one-shot jobs (migrate/bootstrap/gateway-devcert) keep
+  # services get unless-stopped here; one-shot jobs (migrate/bootstrap) keep
   # compose.yaml's run-once semantics.
   postgres:
     restart: unless-stopped
@@ -85,11 +85,12 @@ services:
     environment:
       # The public origin for the CORS allow-list (bootstrap gets the same value below).
       KIBAN_DOMAIN: ${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}
-      # Turn off the operator-cert TLS mode compose.yaml configures (gateway-devcert) so
+      # Turn off the self-signed TLS mode compose.yaml configures so
       # buildTLSConfig falls through to the plain-HTTP branch below; the shared Traefik — not
       # this container — owns the host's :80/:443 and terminates TLS.
       KIBAN_TLS_CERT_FILE: ""
       KIBAN_TLS_KEY_FILE: ""
+      KIBAN_TLS_SELF_SIGNED_DIR: ""
       KIBAN_INSECURE_HTTP: "true"
       # The shared Traefik terminates TLS and overwrites X-Forwarded-* itself, so the gateway
       # must pass the edge's X-Forwarded-Proto/-Host through instead of self-deriving `http`
@@ -147,5 +148,5 @@ services:
       # redirect URIs/web origins. Setting it here makes bootstrap reconcile the kiban-frontend
       # realm client's redirectUris/webOrigins to the public origin instead (internal/bootstrap/
       # realm.go's frontendOrigins) — safe to re-run any number of times (RealmStep
-      # create-or-reconciles, per infra/e2e-login.sh's own idempotency proof).
+      # create-or-reconciles; internal/bootstrap's live tests prove the idempotency).
       KIBAN_DOMAIN: ${KIBAN_PUBLIC_HOST:?KIBAN_PUBLIC_HOST is required}

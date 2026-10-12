@@ -19,7 +19,7 @@
 #   `t.Skip`) if one isn't reachable; there is no build tag gating them out of a bare
 #   `go test ./...`. On top of that, `make check` itself calls `coverage-gate`, which runs Go
 #   tests `-tags live` (needs the full compose stack, Keycloak included — see
-#   scripts/coverage-gate.sh's own header). So a bare `go test ./...` with no stack was never
+#   tools/dev's coverage subcommand). So a bare `go test ./...` with no stack was never
 #   going to pass `make check` here — the fast tier brings the isolated `kiban-test` compose
 #   stack up (`make test-stack-up`) BEFORE `make check`, same as any developer following the
 #   Makefile's own error messages would.
@@ -33,11 +33,10 @@
 #
 # What this workflow does NOT run, and why (a gate that can't run in CI is recorded here with
 # the reason and the local command, never silently skipped):
-#   - `make dev` / `make public-up` and the scripts that target them (infra/e2e-smoke.sh,
-#     infra/e2e-login.sh, modules/*/curl-proof.sh) — these are manual end-to-end proofs
-#     against the LIVE/public stack, not part of `make check`/`make test`; CI only ever brings up
-#     the isolated `kiban-test` stack, matching internal/livestack's own public-mode
-#     guard. Run locally: `make dev && bash infra/e2e-login.sh`.
+#   - `make dev` / `make public-up` — the live and public stacks a human uses; CI only ever
+#     brings up the isolated `kiban-test` stack, matching internal/livestack's own public-mode
+#     guard. The end-to-end journeys run as the `-tags live` Go tests and the Playwright suites
+#     against that isolated stack.
 #   - `make images` / GHCR publish — handled by release.yml on `v*` tags. Run locally:
 #     `make images`.
 #   - `make bench-authz` — a 1M-tuple, `-timeout 20m` benchmark, not a
@@ -47,6 +46,10 @@
 # Go/Node versions come from go.mod / web/package.json — never hardcoded here twice.
 
 name: CI
+
+# Least privilege: nothing here writes to the repository (artifacts need no permission).
+permissions:
+  contents: read
 
 on:
   push:

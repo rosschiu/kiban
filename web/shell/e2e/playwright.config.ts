@@ -10,8 +10,7 @@ import { loadTestEnv } from "../../e2e-shared/env.js";
 // KIBAN_GATEWAY_TLS_HOST_PORT — KIBAN_STATIC_DIR points at web/shell's built dist,
 // infra/compose.yaml). Unlike web/sdk's own e2e harness (a standalone static server on
 // localhost:5173), there is no `webServer` here: the shell IS the thing the stack already
-// serves, so this suite only needs the isolated stack up first (`make test-stack-up`), same
-// requirement as infra/e2e-login.sh had for `make dev`. `npm run -w shell e2e`'s `pree2e` script
+// serves, so this suite only needs the isolated stack up first (`make test-stack-up`). `npm run -w shell e2e`'s `pree2e` script
 // builds the shell so a local dev loop matches what's actually running in the container, but the
 // container's own bundle (baked in at image-build time) is what a real run against the isolated
 // stack exercises. baseURL is resolved from .env.test (KIBAN_GATEWAY_TLS_HOST_PORT) here,

@@ -13,6 +13,10 @@
 
 name: Full tier
 
+# Least privilege: nothing here writes to the repository (artifacts need no permission).
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

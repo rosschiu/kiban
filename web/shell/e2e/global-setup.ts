@@ -9,8 +9,7 @@
 // password for this run only).
 //
 // It also creates a company + an org member linking it to the superadmin
-// (org.org_unit / org.member, direct `psql`, same technique modules/notification/curl-proof.sh
-// already uses) — org has no gateway-mounted company/member-create route (only
+// (org.org_unit / org.member, direct `psql`) — org has no gateway-mounted company/member-create route (only
 // `GET /api/org/me/companies` is exposed), so this is test-fixture plumbing, not something the
 // notification module itself needed. Without it the superadmin has no company membership at all,
 // so the company-scoped notification module could never appear in the nav (compose.ts's
@@ -125,7 +124,7 @@ export default async function globalSetup(): Promise<void> {
   await convergeModuleRegistration(env, repoRoot, kcBase, realm, token, ["notification", "timesheet", "docs", "helpdesk"]);
 
   // Company + member fixture — idempotent create-or-reuse, same posture as every
-  // other fixture in this file and in curl-proof.sh. Reused by timesheet.spec.ts
+  // other fixture in this file. Reused by timesheet.spec.ts
   // rather than a second company: the superadmin is already an active member here, and the
   // default module-access grant (below) already covers any enabled module for this company, so a
   // second fixture identity only needs its OWN org.member row in the SAME company.

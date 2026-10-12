@@ -4,8 +4,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoCSPViolations, watchCSPViolations } from "./csp.js";
 
 // Shell smoke flow: cold browse of the gateway-served shell ->
-// real login as the seeded superadmin (global-setup.ts's throwaway-password workaround, same
-// precedent as infra/e2e-login.sh) -> the sidebar nav renders -> a direct-URL module route with
+// real login as the seeded superadmin (global-setup.ts's throwaway-password workaround) -> the sidebar nav renders -> a direct-URL module route with
 // an unknown module key resolves to module-unavailable (the other three designed states —
 // route-not-found/access-denied/module-error — need an installed+registered module to reach
 // live and are covered by routes/states.test.tsx's unit table instead) -> logout. Video

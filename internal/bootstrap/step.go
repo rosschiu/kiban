@@ -52,7 +52,7 @@ type Deps struct {
 	Logger *slog.Logger
 
 	// Pool connects as the migration-owner role (`kiban`, the non-superuser app-DB
-	// owner — infra/postgres-init/02-kiban-owner.sh) — the only role with DDL rights. Preflight pings it; MigrationsStep reads schema_version_*
+	// owner — infra/postgres-init/01-roles.sh) — the only role with DDL rights. Preflight pings it; MigrationsStep reads schema_version_*
 	// tables through it (before/after comparisons never need elevated DDL, just SELECT);
 	// SuperadminStep writes the one-time superadmin's identity row and platform-role tuple
 	// through it in one transaction (the only role that may write both schemas); VerifyStep
@@ -71,23 +71,21 @@ type Deps struct {
 	// the check.
 	KeycloakRealmDiscoveryURL string
 
-	// RepoRoot is the working directory `go tool tern` and set-role-passwords.sh run from (a
+	// RepoRoot is the working directory `go tool tern` and the role-password step run from (a
 	// module-rooted directory so `go tool` resolves the go.mod tool directive).
 	RepoRoot string
 	// MigrationsRoot is the absolute path to the migrations/ directory (contains the
 	// registry/identity/org/authz subdirectories, each with its own tern.conf).
 	MigrationsRoot string
-	// DBEnv is passed verbatim as extra environment to every tern/set-role-passwords.sh
+	// DBEnv is passed verbatim as extra environment to every tern/the role-password step
 	// subprocess: KIBAN_DB_HOST, KIBAN_DB_PORT, POSTGRES_DB, KIBAN_DB_PASSWORD (the owner
 	// role's own connection info — tern.conf's own {{env "..."}} templates read
 	// exactly these names).
 	DBEnv map[string]string
 	// RolePasswords maps service name ("registry"|"identity"|"org"|"authz") to its runtime
-	// DB role's password — used both to drive set-role-passwords.sh (KIBAN_<SVC>_DB_PASSWORD)
+	// DB role's password — used both to drive the role-password step (KIBAN_<SVC>_DB_PASSWORD)
 	// and to open real (non-superuser) connections for the grant-matrix spot-check.
 	RolePasswords map[string]string
-	// SetRolePasswordsScript is the path to migrations/registry/set-role-passwords.sh.
-	SetRolePasswordsScript string
 
 	// --- realm reconciliation + service accounts ---
 

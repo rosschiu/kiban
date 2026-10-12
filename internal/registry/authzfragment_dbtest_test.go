@@ -8,8 +8,12 @@ import (
 	"testing"
 )
 
-const validFragment = `{"widget":{"owner":{"this":true}}}`
-const invalidFragment = `{"widget":{"owner":{"intersection":[{"this":true}]}}}`
+const validFragment = `{"widget":{"company_module":{"this":true},"owner":{"this":true}}}`
+const invalidFragment = `{"widget":{"company_module":{"this":true},"owner":{"intersection":[{"this":true}]}}}`
+
+// noAnchorFragment passes the subset wall but lacks the company anchor; fragment.Load would
+// refuse it at every request once active, so the seed must refuse it at the write.
+const noAnchorFragment = `{"widget":{"owner":{"this":true}}}`
 
 // TestSeed_InstallsAuthzFragment_ActiveMirrorsEnabled proves Seed
 // upserts a fragment-carrying module's authz.fragment.json relations into authz.model_fragment,
@@ -86,6 +90,25 @@ func TestSeed_InvalidFragment_RefusesLoudly(t *testing.T) {
 
 	if _, _, found := getModelFragment(t, admin, "widget"); found {
 		t.Error("an invalid fragment must never be written")
+	}
+}
+
+func TestSeed_FragmentWithoutCompanyAnchor_Refuses(t *testing.T) {
+	admin := adminPool(t)
+	resetRegistryFixtures(t, admin)
+
+	store := NewStore(registryPool(t))
+	manifests := []ModuleManifest{
+		{ModuleKey: "widget", DisplayName: "Widget", ScopeType: "company", BasePath: "/api/widget",
+			HealthPath: "/health", Port: 8300, LicenseClass: "foundation", ManifestVersion: "0.1.0",
+			AuthzFragment: []byte(noAnchorFragment)},
+	}
+	err := store.Seed(context.Background(), manifests, map[string]bool{"widget": true})
+	if err == nil || !strings.Contains(err.Error(), "company_module") {
+		t.Fatalf("Seed = %v; want a refusal naming company_module", err)
+	}
+	if _, _, found := getModelFragment(t, admin, "widget"); found {
+		t.Error("a fragment without the company anchor must never be written")
 	}
 }
 

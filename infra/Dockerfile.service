@@ -32,8 +32,8 @@ FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec4
 # Every app stage below inherits USER 65532 (a fixed uid so k8s `runAsUser` can pin the same
 # number); the binaries are COPY'd root-owned 0755, and no service writes to disk, so the root
 # filesystem is mounted read-only by infra/compose.yaml and deploy/k8s. `migrate`/`bootstrap`/
-# `gateway-devcert` are not built from this stage and stay root (they write to their volumes
-# and need the toolchain image).
+# are not built from this stage and stay root (they write to their volumes and need the
+# toolchain image).
 RUN apk add --no-cache ca-certificates curl \
  && addgroup -g 65532 kiban && adduser -D -u 65532 -G kiban kiban
 USER 65532:65532
@@ -88,30 +88,26 @@ COPY --from=builder /out/gateway /usr/local/bin/gateway
 # arbitrary (never referenced from outside this image); infra/compose.yaml's gateway service sets
 # KIBAN_STATIC_DIR to match.
 COPY --from=shell-build /src/web/shell/dist /var/www/kiban-shell
+# /certs: where the gateway keeps the self-signed development certificate it generates itself
+# (KIBAN_TLS_SELF_SIGNED_DIR, cmd/gateway/tls.go). Owned by the service user so a fresh named
+# volume mounted here (infra/compose.yaml's kiban-gateway-tls) inherits that ownership.
+USER 0
+RUN mkdir -p /certs && chown 65532:65532 /certs
+USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/gateway"]
 
 # migrate: NOT a final service — a one-shot compose job (infra/compose.yaml's `migrate` service,
-# restart: "no") that applies all four services' tern migrations + sets DB role passwords
-# against the compose-internal `postgres` host, before any app service starts (depends_on:
-# condition: service_completed_successfully). Keeps the full Go toolchain + module source
+# restart: "no") that applies every service's and module's tern migrations and sets the DB role
+# passwords (`go run ./tools/dev migrate`, tools/dev/migrate.go) against the compose-internal
+# `postgres` host, before any app service starts. Keeps the full Go toolchain + module source
 # (needed for `go tool tern`, a go.mod tool dependency) rather than a slim runtime image.
 FROM builder AS migrate
-ENTRYPOINT ["/bin/sh", "/src/infra/migrate-entrypoint.sh"]
+ENTRYPOINT ["go", "run", "./tools/dev", "migrate"]
 
 # bootstrap: the one-shot kiban-bootstrap job (infra/compose.yaml's `bootstrap` service,
 # restart: "no"). FROM builder (not runtime-base), same
 # rationale as `migrate`: it shells out to `go tool tern` (a go.mod tool dependency needing the
-# full Go toolchain + module source) and migrations/registry/set-role-passwords.sh, both under
-# its WORKDIR (/src, matching Deps.RepoRoot's own default in cmd/bootstrap/main.go). psql isn't
-# needed here (bootstrap talks to Postgres over the wire via pgx, never shells out to psql).
+# full Go toolchain + module source) under its WORKDIR (/src, matching Deps.RepoRoot's own
+# default in cmd/bootstrap/main.go); role passwords are set over the wire (internal/dbrole).
 FROM builder AS bootstrap
 ENTRYPOINT ["/out/bootstrap"]
-
-# gateway-devcert: another one-shot compose job — generates the gateway's self-signed dev TLS
-# cert (infra/gateway-devcert-entrypoint.sh) onto a shared volume the `gateway` service mounts.
-# Deliberately its own minimal stage (not `builder`-based): needs only openssl, not the Go
-# toolchain.
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS gateway-devcert
-RUN apk add --no-cache openssl
-COPY infra/gateway-devcert-entrypoint.sh /gateway-devcert-entrypoint.sh
-ENTRYPOINT ["/bin/sh", "/gateway-devcert-entrypoint.sh"]

@@ -8,8 +8,8 @@ name: kiban
 # (infra/Dockerfile.service's runtime-base) and write nothing to disk, so the root filesystem is
 # read-only, every capability is dropped and setuid escalation is refused; /tmp is a tmpfs so
 # anything that consults os.TempDir still has a writable path. postgres/keycloak/migrate/
-# bootstrap/gateway-devcert are deliberately not hardened this way: they write to their volumes
-# (and migrate/bootstrap run the toolchain image as root).
+# bootstrap are deliberately not hardened this way: they write to their volumes (and
+# migrate/bootstrap run the toolchain image as root).
 x-hardened: &hardened
   read_only: true
   cap_drop: [ALL]
@@ -199,20 +199,6 @@ services:
         condition: service_healthy
     restart: "no"
 
-  gateway-devcert:
-    build:
-      context: ..
-      dockerfile: infra/Dockerfile.service
-      target: gateway-devcert
-    # Tagged like the other one-shots so a `KIBAN_IMAGE_TAG=vX make dev` (`up --no-build`) never
-    # builds this from whatever checkout happens to be present: `make images-all` builds it and
-    # release.yml pushes it with the other 12. The quickstart drops it by name
-    # (scripts/gen-quickstart-compose.sh: its gateway runs in plain-HTTP mode, no cert needed).
-    image: kiban-gateway-devcert:${KIBAN_IMAGE_TAG:-latest}
-    volumes:
-      - kiban-gateway-tls:/certs
-    restart: "no"
-
   # --- the four foundation services + the gateway edge ---
 
   registry:
@@ -283,8 +269,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
@@ -383,8 +369,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
@@ -677,8 +663,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
@@ -700,15 +686,15 @@ services:
       KIBAN_MODULE_HOST_TIMESHEET: timesheet
       KIBAN_MODULE_HOST_DOCS: docs
       KIBAN_MODULE_HOST_HELPDESK: helpdesk
-      # Operator-certs TLS mode, fed a locally-generated self-signed dev
-      # cert (gateway-devcert) rather than a real operator-supplied one.
-      KIBAN_TLS_CERT_FILE: /certs/dev.crt
-      KIBAN_TLS_KEY_FILE: /certs/dev.key
+      # TLS with a self-signed development certificate the gateway generates itself on first
+      # start and keeps on the volume below (cmd/gateway/tls.go); a real deployment sets
+      # KIBAN_TLS_CERT_FILE/KEY_FILE (operator certificate) or runs behind a TLS edge.
+      KIBAN_TLS_SELF_SIGNED_DIR: /certs
       # Serves web/shell's built bundle at `/` (internal/gateway/static.go) — baked
       # into the `gateway` image by infra/Dockerfile.service's `shell-build` stage.
       KIBAN_STATIC_DIR: /var/www/kiban-shell
     volumes:
-      - kiban-gateway-tls:/certs:ro
+      - kiban-gateway-tls:/certs
     ports:
       # Env-var-driven (with the original literals as defaults) so .env.test
       # can point `make test-stack-up`'s isolated stack at different host ports without a
@@ -730,8 +716,6 @@ services:
         condition: service_healthy
       # The sample modules are not dependencies: the gateway routes only what the registry's
       # catalog installs, and answers 503 for an installed module that is down.
-      gateway-devcert:
-        condition: service_completed_successfully
     healthcheck:
       # KIBAN_STATIC_DIR is configured (above), so `/` serves web/shell's index.html (200)
       # rather than the "no static dir configured" 404 — see
@@ -755,7 +739,7 @@ volumes:
 
 # Compose secrets: values from .env, mounted as files under /run/secrets/ in the services
 # that list them — never in those containers' env (`docker inspect`). The quickstart's generated
-# compose keeps the plain env vars instead (scripts/gen-quickstart-compose.sh: a zero-clone user
+# compose keeps the plain env vars instead (tools/dev quickstart-compose: a zero-clone user
 # has no secrets volume story beyond .env), which is its documented weaker posture.
 secrets:
   kc-bootstrap-admin-password:

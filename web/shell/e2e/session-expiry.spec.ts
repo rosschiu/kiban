@@ -8,8 +8,8 @@ import path from "node:path";
 // Session expiry + refresh mid-journey. Sets a SHORT `access.token.lifespan`
 // per-client override on `kiban-frontend` (the shell's own public OIDC client, kiban-test realm
 // ONLY — Keycloak admin API, restored in `afterAll` no matter how the tests finish) rather than
-// touching the realm's own default lifetime, so nothing else sharing this realm (curl-proofs,
-// other e2e clients) is affected. Two cases:
+// touching the realm's own default lifetime, so nothing else sharing this realm (other e2e
+// clients) is affected. Two cases:
 //   1. Login, wait past the short access-token expiry, perform an authenticated action — it must
 //      succeed via SILENT refresh (a token-endpoint POST is observed on the wire; no re-login
 //      page is ever shown).
