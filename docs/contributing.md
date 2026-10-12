@@ -71,9 +71,9 @@ from tests that assert real behaviour; assertion-free padding is rejected in rev
   integration test against the real stack, not a mock.
 - **Licence headers.** Every first-party Go, TypeScript, SQL and shell file starts with an
   `SPDX-License-Identifier` line matching its directory's licence; `make license-check` sweeps
-  for missing or wrong headers and `go run ./tools/licensecheck/cmd -fix` inserts them.
+  for missing or wrong headers and `go run ./tools/dev license-check -fix` inserts them.
 - **Migrations are ledgered.** A migration touches only its own schema and is listed with its
-  checksum in its tree's ledger (`go run ./cmd/modvalidate -write-checksums modules/<key>/` for
+  checksum in its tree's ledger (`go run ./tools/dev modvalidate -write-checksums modules/<key>/` for
   a module); `make validate-migrations` checks file names, order and the ledger of the
   foundation trees, and `make validate-modules` also parses every statement of a module's
   migrations and refuses the dangerous shapes (see [Building on Kiban](building.md)).

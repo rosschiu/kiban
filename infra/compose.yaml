@@ -207,7 +207,7 @@ services:
     # Tagged like the other one-shots so a `KIBAN_IMAGE_TAG=vX make dev` (`up --no-build`) never
     # builds this from whatever checkout happens to be present: `make images-all` builds it and
     # release.yml pushes it with the other 12. The quickstart drops it by name
-    # (scripts/gen-quickstart-compose.sh: its gateway runs in plain-HTTP mode, no cert needed).
+    # (tools/dev quickstart-compose: its gateway runs in plain-HTTP mode, no cert needed).
     image: kiban-gateway-devcert:${KIBAN_IMAGE_TAG:-latest}
     volumes:
       - kiban-gateway-tls:/certs
@@ -755,7 +755,7 @@ volumes:
 
 # Compose secrets: values from .env, mounted as files under /run/secrets/ in the services
 # that list them — never in those containers' env (`docker inspect`). The quickstart's generated
-# compose keeps the plain env vars instead (scripts/gen-quickstart-compose.sh: a zero-clone user
+# compose keeps the plain env vars instead (tools/dev quickstart-compose: a zero-clone user
 # has no secrets volume story beyond .env), which is its documented weaker posture.
 secrets:
   kc-bootstrap-admin-password:

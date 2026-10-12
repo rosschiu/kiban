@@ -12,6 +12,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - API docs pages load Redoc from Redocly's CDN through one pinned, integrity-checked `<script>` instead of inlining the bundle into `docs/api/*.html`; the backend SDK trims the gateway origin's trailing slashes without a regex; the remaining code-scanning alerts were triaged with a written reason each
 - SDKs publish to npm and PyPI by trusted publishing (OIDC from `release.yml`); the `NPM_TOKEN` and `PYPI_APIKEY` secrets are no longer read and can be deleted once the publishers are registered on npmjs.com and pypi.org
 - The nine manual proof scripts (`infra/e2e-*.sh`, `modules/*/curl-proof.sh`, the restart-survival proof, org's `smoke.sh`) are removed; the `-tags live` Go tests and the Playwright suites cover those journeys in the gate. The Python SDK's build output is no longer tracked
+- One developer tool, `go run ./tools/dev <subcommand>`, replaces the five gate and generator scripts (`coverage-gate.sh`, `kustomize-check.sh`, `license-scan.sh`, `pin-images.sh`, `gen-quickstart-compose.sh`), `build-api-docs.mjs`, `cmd/modvalidate` and the three `tools/*/cmd` binaries; every `make` target is one line and nothing is CI-only
 
 ## [0.1.1] — 2026-10-08
 

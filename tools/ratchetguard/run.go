@@ -22,7 +22,7 @@
 // exist at the ref being compared against — is NOT a violation. ratchetguard prints a loud
 // warning and skips that specific comparison (never failing OR silently passing without saying
 // why); the other comparison still runs normally.
-package main
+package ratchetguard
 
 import (
 	"fmt"
@@ -30,17 +30,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/rosschiu/kiban/tools/ratchetguard"
 )
 
 const ratchetPath = "coverage/ratchet.json"
 
-func main() {
-	os.Exit(run())
-}
-
-func run() int {
+// Run is the `ratchet-guard` subcommand: coverage/ratchet.json never decreases.
+func Run() int {
 	repoRoot, err := findRepoRoot()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not locate repo root ("+err.Error()+") — skipping both never-decrease checks rather than failing or passing silently")
@@ -58,7 +53,7 @@ func runAt(repoRoot string) int {
 		fmt.Fprintln(os.Stderr, "ratchetguard: ERROR: could not read working-tree "+ratchetPath+": "+err.Error())
 		return 1
 	}
-	workingTree, err := ratchetguard.Parse(newData)
+	workingTree, err := Parse(newData)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: ERROR: "+err.Error())
 		return 1
@@ -79,7 +74,7 @@ func runAt(repoRoot string) int {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not resolve a parent commit to compare HEAD against ("+err.Error()+") — skipping the committed-regression check rather than failing or passing silently. Expected on a repo's first commit (no parent exists yet); investigate if you see this on an established branch.")
 	} else if headData, err := gitShowRef(repoRoot, "HEAD", ratchetPath); err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not read "+ratchetPath+" from HEAD ("+err.Error()+") — skipping the committed-regression check rather than failing or passing silently. Expected on a fresh checkout before any commit.")
-	} else if headRatchet, err := ratchetguard.Parse(headData); err != nil {
+	} else if headRatchet, err := Parse(headData); err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not parse HEAD's "+ratchetPath+" ("+err.Error()+") — skipping the committed-regression check rather than failing or passing silently")
 	} else if !checkAgainstRef(repoRoot, ref, desc, headRatchet) {
 		failed = true
@@ -99,19 +94,19 @@ func runAt(repoRoot string) int {
 // as "this particular comparison did not run"; callers of checkAgainstRef only ever call it after
 // already confirming the ref they're passing resolves, so in practice this return value is a
 // synonym for "violations found" here).
-func checkAgainstRef(repoRoot, gitRef, refDesc string, candidate map[string]ratchetguard.Entry) bool {
+func checkAgainstRef(repoRoot, gitRef, refDesc string, candidate map[string]Entry) bool {
 	oldData, err := gitShowRef(repoRoot, gitRef, ratchetPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not read "+ratchetPath+" from "+refDesc+" ("+err.Error()+") — skipping this check rather than failing or passing silently. Expected on a fresh checkout before any commit, or the ratchet's own first commit; investigate if you see this on an established branch.")
 		return true
 	}
-	oldRatchet, err := ratchetguard.Parse(oldData)
+	oldRatchet, err := Parse(oldData)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "ratchetguard: WARNING: could not parse "+refDesc+"'s "+ratchetPath+" ("+err.Error()+") — skipping this check rather than failing or passing silently")
 		return true
 	}
 
-	violations := ratchetguard.Compare(oldRatchet, candidate)
+	violations := Compare(oldRatchet, candidate)
 	if len(violations) == 0 {
 		return true
 	}
