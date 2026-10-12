@@ -13,6 +13,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - SDKs publish to npm and PyPI by trusted publishing (OIDC from `release.yml`); the `NPM_TOKEN` and `PYPI_APIKEY` secrets are no longer read and can be deleted once the publishers are registered on npmjs.com and pypi.org
 - The nine manual proof scripts (`infra/e2e-*.sh`, `modules/*/curl-proof.sh`, the restart-survival proof, org's `smoke.sh`) are removed; the `-tags live` Go tests and the Playwright suites cover those journeys in the gate. The Python SDK's build output is no longer tracked
 - One developer tool, `go run ./tools/dev <subcommand>`, replaces the five gate and generator scripts (`coverage-gate.sh`, `kustomize-check.sh`, `license-scan.sh`, `pin-images.sh`, `gen-quickstart-compose.sh`), `build-api-docs.mjs`, `cmd/modvalidate` and the three `tools/*/cmd` binaries; every `make` target is one line and nothing is CI-only
+- No shell in the images: the migrate job and bootstrap set database role passwords over the wire (`go run ./tools/dev migrate`, `internal/dbrole`), the gateway generates its own self-signed development certificate (`KIBAN_TLS_SELF_SIGNED_DIR`; no `gateway-devcert` image, 12 images), the two Postgres init scripts are one, and `deploy/k8s/kiban.sh secrets|apply` replaces `gen-secrets.sh` and `apply.sh`
 
 ## [0.1.1] — 2026-10-08
 

@@ -52,7 +52,7 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		{Name: "KIBAN_DB_HOST", Default: "127.0.0.1"},
 		{Name: "KIBAN_DB_PORT", Required: true},
 		{Name: "POSTGRES_DB", Required: true},
-		// The app-DB owner role `kiban` (non-superuser; infra/postgres-init/02-kiban-owner.sh):
+		// The app-DB owner role `kiban` (non-superuser; infra/postgres-init/01-roles.sh):
 		// bootstrap writes across schemas (identity + authz + audit) in one transaction, which
 		// only the owner can. The name is fixed by the migrations' `AUTHORIZATION kiban`.
 		{Name: "KIBAN_DB_PASSWORD", Required: true},
@@ -67,9 +67,8 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		{Name: "KEYCLOAK_MANAGEMENT_URL", Default: ""},
 		{Name: "KEYCLOAK_REALM_DISCOVERY_URL", Default: ""},
 
-		{Name: "KIBAN_REPO_ROOT", Default: "/src"}, // infra/Dockerfile.service's WORKDIR (matches infra/migrate-entrypoint.sh's `cd /src`)
+		{Name: "KIBAN_REPO_ROOT", Default: "/src"}, // infra/Dockerfile.service's WORKDIR (matches the migrate image's WORKDIR)
 		{Name: "KIBAN_MIGRATIONS_ROOT", Default: "/src/migrations"},
-		{Name: "KIBAN_SET_ROLE_PASSWORDS_SCRIPT", Default: "/src/migrations/registry/set-role-passwords.sh"},
 
 		// --- realm reconciliation + service accounts ---
 		// Optional: an empty KeycloakAdminBaseURL skips RealmStep entirely (test-only escape
@@ -175,7 +174,6 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 			"org":      values["KIBAN_ORG_DB_PASSWORD"],
 			"authz":    values["KIBAN_AUTHZ_DB_PASSWORD"],
 		},
-		SetRolePasswordsScript: values["KIBAN_SET_ROLE_PASSWORDS_SCRIPT"],
 
 		KeycloakAdminBaseURL:     values["KEYCLOAK_ADMIN_BASE_URL"],
 		KeycloakRealm:            values["KEYCLOAK_REALM"],

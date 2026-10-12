@@ -1,5 +1,5 @@
 # gateway (cmd/gateway) — the one edge service. Runs the dev-only plain-HTTP
-# listener (KIBAN_INSECURE_HTTP=true, :8090) rather than porting `gateway-devcert`
+# listener (KIBAN_INSECURE_HTTP=true, :8090) rather than the self-signed certificate mode
 # (infra/compose.yaml's self-signed-cert one-shot job) into K8s — same choice
 # deploy/quickstart/docker-compose.yml already made and infra/compose.public.yaml's own shared-
 # Traefik override independently converged on: a real K8s deployment terminates TLS at the

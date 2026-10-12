@@ -8,8 +8,8 @@
 # and `kiban-keycloak` — the one-shot jobs deploy/quickstart/docker-compose.yml
 # (the zero-clone quickstart) needs as GHCR images since it has no `build:` blocks at all (see
 # that file's own header comment and Makefile's `images-quickstart` target) — and
-# `kiban-gateway-devcert` (13 images total), so a `KIBAN_IMAGE_TAG=<tag>` deploy of the TLS
-# `make dev` shape never builds anything from the checkout (Makefile's `images-devcert`).
+# (12 images total), so a `KIBAN_IMAGE_TAG=<tag>` deploy never builds anything from the
+# checkout.
 #
 # Four jobs, in dependency order:
 #   gate    — the SAME fast-tier gate ci.yml's own `fast` job runs (`make setup && make
@@ -166,9 +166,6 @@ jobs:
             || { echo "::error::kiban-bootstrap image does not embed commit $SHA in its binary" >&2; exit 1; }
           echo "verify: kiban-bootstrap embeds commit $SHA"
 
-      - name: make images-devcert VERSION=<tag> (builds kiban-gateway-devcert — openssl + a script, nothing to verify)
-        run: make images-devcert VERSION=${{ steps.classify.outputs.tag }}
-
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
 
@@ -187,10 +184,10 @@ jobs:
             fi
           done
 
-      - name: Retag + push the 4 one-shot images (migrate, bootstrap, keycloak, gateway-devcert) to GHCR
+      - name: Retag + push the 3 one-shot images (migrate, bootstrap, keycloak) to GHCR
         run: |
           TAG="${{ steps.classify.outputs.tag }}"
-          for s in migrate bootstrap keycloak gateway-devcert; do
+          for s in migrate bootstrap keycloak; do
             SRC="kiban-$s:$TAG"
             DST="$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:$TAG"
             docker tag "$SRC" "$DST"
@@ -206,7 +203,7 @@ jobs:
         run: |
           echo "### Images pushed to GHCR" >> "$GITHUB_STEP_SUMMARY"
           TAG="${{ steps.classify.outputs.tag }}"
-          for s in registry identity org authz gateway notification timesheet docs helpdesk migrate bootstrap keycloak gateway-devcert; do
+          for s in registry identity org authz gateway notification timesheet docs helpdesk migrate bootstrap keycloak; do
             echo "- \`$REGISTRY/$IMAGE_NAMESPACE/kiban-$s:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
           done
           if [ "${{ steps.classify.outputs.stable }}" = "true" ]; then

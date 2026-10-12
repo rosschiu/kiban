@@ -7,7 +7,7 @@ kind: Kustomization
 namespace: kiban # the base's `namespace:` covers only the base's resources; the Secret below needs this one
 resources:
   - ../../base
-  - secret.yaml # gitignored; written by ../../gen-secrets.sh production
+  - secret.yaml # gitignored; written by ../../kiban.sh secrets production
 images:
   - name: kiban-registry
     newName: ghcr.io/rosschiu/kiban-registry

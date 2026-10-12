@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/rosschiu/kiban/internal/dbrole"
 )
 
 // MigrationServiceOrder is the real dependency order tern migrations must run in: registry
@@ -19,8 +21,8 @@ import (
 // migrations/identity/0001_schema.sql immediately GRANTs USAGE to — running identity before
 // registry fails outright ("role kiban_identity does not exist"); authz BEFORE identity, because
 // migrations/authz/0010 backfills the superadmin tuples that migrations/identity/0005 requires
-// before it drops identity.platform_role. This matches infra/migrate-entrypoint.sh (the compose
-// migrate job's order).
+// before it drops identity.platform_role. This matches tools/dev/migrate.go (the compose migrate
+// job's order).
 var MigrationServiceOrder = []string{"registry", "authz", "identity", "org"}
 
 // schemaVersionTable is each service's tern version_table (migrations/<service>/tern.conf).
@@ -69,8 +71,8 @@ func (MigrationsStep) Run(ctx context.Context, deps *Deps) (Outcome, string, err
 		}
 
 		if service == "registry" {
-			if out, err := runSetRolePasswords(ctx, deps); err != nil {
-				return OutcomeFailed, strings.Join(details, "; "), fmt.Errorf("migrations: set-role-passwords: %w (output: %s)", err, out)
+			if err := setRolePasswords(ctx, deps); err != nil {
+				return OutcomeFailed, strings.Join(details, "; "), fmt.Errorf("migrations: set role passwords: %w", err)
 			}
 		}
 	}
@@ -122,28 +124,19 @@ func runTern(ctx context.Context, deps *Deps, service string) (string, error) {
 	return out.String(), err
 }
 
-func runSetRolePasswords(ctx context.Context, deps *Deps) (string, error) {
-	env := map[string]string{}
-	for k, v := range deps.DBEnv {
-		env[k] = v
-	}
+// setRolePasswords sets the four foundation roles' passwords over the wire as the owner
+// (internal/dbrole): idempotent ALTER ROLE in one transaction, never a shell and never a
+// migration (migrations are immutable and must not embed a secret).
+func setRolePasswords(ctx context.Context, deps *Deps) error {
+	passwords := map[string]string{}
 	for _, service := range []string{"registry", "identity", "org", "authz"} {
 		pw, ok := deps.RolePasswords[service]
 		if !ok {
-			return "", fmt.Errorf("no role password configured for %q", service)
+			return fmt.Errorf("no role password configured for %q", service)
 		}
-		env["KIBAN_"+strings.ToUpper(service)+"_DB_PASSWORD"] = pw
+		passwords["kiban_"+service] = pw
 	}
-
-	cmd := exec.CommandContext(ctx, deps.SetRolePasswordsScript)
-	cmd.Dir = deps.RepoRoot
-	cmd.Env = append(os.Environ(), envSlice(env)...)
-
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	err := cmd.Run()
-	return out.String(), err
+	return dbrole.SetPasswords(ctx, deps.Pool, passwords)
 }
 
 func envSlice(m map[string]string) []string {

@@ -7,7 +7,7 @@
 # The base carries NO Secret: it is a pure, referenceable manifest set, usable as a remote base
 # (`github.com/rosschiu/kiban//deploy/k8s/base?ref=v0.1.1`) from an overlay in another
 # repository. The `kiban-secrets` Secret comes from the overlay — the shipped ones list a
-# gitignored `secret.yaml` written by ../gen-secrets.sh <overlay>; a remote overlay supplies its
+# gitignored `secret.yaml` written by ../kiban.sh secrets <overlay>; a remote overlay supplies its
 # own (vault, sealed-secrets, ...). Every workload below mounts or reads `kiban-secrets` by name,
 # so an overlay without it fails at pod start, never silently.
 apiVersion: kustomize.config.k8s.io/v1beta1

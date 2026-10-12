@@ -22,7 +22,7 @@ import (
 //     every namespaced resource lands in `kiban`: the base's `namespace:` covers only the
 //     base's own resources, so an overlay Secret without one lands in the kubeconfig's
 //     current namespace and every pod waits on it (the 0.1.1 regression);
-//  3. the 0.1.0 upgrade path: a Secret left in base/ is moved by gen-secrets.sh, not regenerated;
+//  3. the 0.1.0 upgrade path: a Secret left in base/ is moved by kiban.sh secrets, not regenerated;
 //  4. an overlay in the shipped shape but outside the tree (one kept in another repository)
 //     renders against the base with its own Secret, in the namespace.
 func runK8sCheck(args []string) int {
@@ -91,7 +91,7 @@ func runK8sCheck(args []string) int {
 		return bad
 	}
 	genSecrets := func(overlay string) error {
-		_, err := output("", filepath.Join(k8s, "gen-secrets.sh"), overlay)
+		_, err := output("", filepath.Join(k8s, "kiban.sh"), "secrets", overlay)
 		return err
 	}
 
@@ -106,10 +106,10 @@ func runK8sCheck(args []string) int {
 	// 2. shipped overlays
 	for _, ov := range []string{"kind", "production"} {
 		if err := genSecrets(ov); err != nil {
-			return fail("k8s-check", fmt.Errorf("gen-secrets.sh %s: %w", ov, err))
+			return fail("k8s-check", fmt.Errorf("kiban.sh secrets %s: %w", ov, err))
 		}
 		if _, err := os.Stat(filepath.Join(k8s, "overlays", ov, "secret.yaml")); err != nil {
-			return fail("k8s-check", fmt.Errorf("gen-secrets.sh %s wrote nothing", ov))
+			return fail("k8s-check", fmt.Errorf("kiban.sh secrets %s wrote nothing", ov))
 		}
 		docs, err := render(filepath.Join(k8s, "overlays", ov))
 		if err != nil {
@@ -129,11 +129,11 @@ func runK8sCheck(args []string) int {
 		return fail("k8s-check", err)
 	}
 	if err := genSecrets("kind"); err != nil {
-		return fail("k8s-check", fmt.Errorf("gen-secrets.sh kind (upgrade path): %w", err))
+		return fail("k8s-check", fmt.Errorf("kiban.sh secrets kind (upgrade path): %w", err))
 	}
 	moved, _ := os.ReadFile(filepath.Join(k8s, "overlays", "kind", "secret.yaml"))
 	if !bytes.Contains(moved, []byte("from-0.1.0")) {
-		return fail("k8s-check", errors.New("gen-secrets.sh did not move the 0.1.0 base secret"))
+		return fail("k8s-check", errors.New("kiban.sh secrets did not move the 0.1.0 base secret"))
 	}
 	if _, err := os.Stat(filepath.Join(k8s, "base", "secret.yaml")); err == nil {
 		return fail("k8s-check", errors.New("the 0.1.0 base secret was copied, not moved"))
@@ -174,7 +174,7 @@ func metaName(d map[string]any) string {
 	return n
 }
 
-// copyTree copies a directory recursively, preserving file modes (gen-secrets.sh stays executable).
+// copyTree copies a directory recursively, preserving file modes (kiban.sh secrets stays executable).
 func copyTree(src, dst string) error {
 	return filepath.Walk(src, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
