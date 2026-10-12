@@ -16,7 +16,7 @@ setup: ## verify/report the host toolchain (docker+compose required; go/node/npm
 
 dev: ## bring up the full stack (postgres + keycloak + migrate + bootstrap + the gateway edge + registry/identity/org/authz); set KIBAN_IMAGE_TAG=vX.Y.Z to run FROM images `make images` already built, instead of building from source
 	@# Dev mode is never public mode — drop the marker `make public-up` writes so
-	@# live-tagged test helpers and infra/e2e-*.sh / modules/*/curl-proof.sh stop refusing to run.
+	@# live-tagged test helpers and the Playwright suites stop refusing to run.
 	@rm -f infra/.public-mode
 	@# The one-time superadmin's initial password (secrets never live in env-visible places,
 	@# so it's a 0600 FILE bootstrap's compose service bind-mounts — never .env).
@@ -49,9 +49,8 @@ public-up: ## bring the stack up behind the HOST's shared Traefik edge at https:
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra up -d $(if $(KIBAN_IMAGE_TAG),--no-build,--build) --wait
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra run --rm bootstrap
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra ps
-	@# Mark public mode so live-tagged test helpers and infra/e2e-*.sh /
-	@# modules/*/curl-proof.sh refuse to run against this deployment (`make dev`/`make dev-clean`
-	@# remove this marker; see their own comments).
+	@# Mark public mode so live-tagged test helpers and the Playwright suites refuse to run
+	@# against this deployment (`make dev`/`make dev-clean` remove this marker).
 	@touch infra/.public-mode
 
 # The nine first-party app-service images `make images` builds and `KIBAN_IMAGE_TAG` deploys from.
@@ -144,13 +143,16 @@ test: ## full test suite (incl. the authz differential harness) — targets the 
 	$(MAKE) test-harness
 
 GOVULNCHECK_VERSION := v1.8.0
-vulncheck: ## fail on any reachable known vulnerability in the toolchain or dependencies
+VULNCHECK ?= 1
+vulncheck: ## fail on any reachable known vulnerability in the toolchain or dependencies (weekly in CI: .github/workflows/vulncheck.yml)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
 check: ## fast gate: lint + typecheck/vet + unit tests (CI runs this) — targets the isolated test stack (`make test-stack-up` first)
 	test -z "$$(gofmt -l .)"
 	go vet ./...
-	$(MAKE) vulncheck
+	@# VULNCHECK=0 skips the advisory scan: the tag gate (release.yml) re-checks what the PRs
+	@# proved and must not race the advisory feed; ci.yml and `make check` by hand keep it.
+	@if [ "$(VULNCHECK)" != 0 ]; then $(MAKE) vulncheck; fi
 	@test -f .env.test || { echo ".env.test not found — run \`make test-stack-up\` first" >&2; exit 1; }
 	set -a; . ./.env.test; set +a; go test -p 1 ./...
 	$(MAKE) web-check

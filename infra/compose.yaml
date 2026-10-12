@@ -269,8 +269,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
@@ -369,8 +369,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's
@@ -663,8 +663,8 @@ services:
       # CLIENT used to reach the token endpoint. A real interactive browser login always goes
       # through the gateway's own `/auth/*` proxy (clients never talk to Keycloak endpoints
       # directly), so its token's `iss` is the gateway's own public origin
-      # (`https://127.0.0.1:8443/...`); infra/e2e-login.sh and infra/e2e-smoke.sh mint their
-      # password-grant test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
+      # (`https://127.0.0.1:8443/...`); the live tests and Playwright suites mint their
+      # test tokens the SAME way (through the gateway `/auth` proxy, not Keycloak's
       # separately-published host port, which exists for admin-API/tooling convenience only) so
       # their tokens carry the identical issuer a real browser session would. This value is
       # a pure string compared against the `iss` claim (jwt.WithIssuer) — never dialed — so it's

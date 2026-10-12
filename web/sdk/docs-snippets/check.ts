@@ -40,7 +40,8 @@ export async function canISnippet(): Promise<void> {
   }
 
   const canViewCompany = await canI({
-    featureKey: "core.company.view",
+    featureKey: "notification.inbox.view",
+    moduleKey: "notification",
     companyId: "11111111-1111-1111-1111-111111111111"
   });
   if (!canViewCompany.allowed) {

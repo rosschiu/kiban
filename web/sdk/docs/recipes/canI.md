@@ -18,7 +18,7 @@ const apiClient = createApiClient({
 const effectiveAccess = createEffectiveAccessClient(apiClient);
 const canI = createCanI(effectiveAccess);
 
-// Global-scope check (no companyId): superadministration, module roles, ...
+// Global-scope check (no companyId; requiredPlatformRole is mandatory, else 400).
 const superadmin = await canI({
   featureKey: "auth.platform_administration.access",
   requiredPlatformRole: "kiban-superadmin"
@@ -27,9 +27,10 @@ if (superadmin.allowed) {
   // show the superadmin nav entry
 }
 
-// Company-scope check (companyId set): membership/company-role gated features.
+// Company-scope check (companyId set): the module must be enabled and the caller a member.
 const canViewCompany = await canI({
-  featureKey: "core.company.view",
+  featureKey: "notification.inbox.view",
+  moduleKey: "notification",
   companyId: "11111111-1111-1111-1111-111111111111"
 });
 if (!canViewCompany.allowed) {
@@ -39,8 +40,9 @@ if (!canViewCompany.allowed) {
 ```
 
 `canI` never throws for a *denial* — a denial is a normal `{allowed:false, reason}` result, same
-as authz's own wire contract (`decisionWire`). It throws a `KibanApiError` only for a transport/
-envelope failure (network error, 5xx, malformed response) — treat that the same as any other API
+as authz's own wire contract (`decisionWire`). It throws a `KibanApiError` for a non-2xx answer
+(400 for an invalid request such as a global check without `requiredPlatformRole`, 401, 422,
+5xx); a network failure rejects with the error `fetch` threw — treat that the same as any other API
 call failure (retry/backoff or a `FriendlyErrorAlert`), not as a denial.
 
 ## Gateway exposure and tests

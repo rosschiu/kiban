@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// This package is the interlock keeping infra/e2e-*.sh / modules/*/curl-proof.sh / every
+// This package is the interlock keeping every
 // live-dependent Go test helper off the PUBLIC deployment a human may be actively using. Every
 // case below drives the path-parameterized `*At` cores — NEVER the real infra/.public-mode or
 // .env — via t.TempDir() fixtures, so running this suite can never itself touch the live

@@ -66,7 +66,7 @@ var scopes = []scopeDef{
 		goOnlyFiles: set("token.go", "middleware.go", "proxy.go", "auth_proxy.go")},
 	{name: "internal/bootstrap.critical", floor: 95, goPkgDir: "internal/bootstrap",
 		goOnlyFiles: set("realm.go", "seed.go")},
-	// internal/livestack is the ONE interlock keeping infra/e2e-*.sh / modules/*/curl-proof.sh /
+	// internal/livestack is the ONE interlock keeping
 	// every live-dependent Go test helper from mutating a PUBLIC deployment a human may be
 	// actively using (realm redirect URIs reverted, superadmin required-action restored, org
 	// tables truncated). It is security-critical by consequence of failure, not by proximity to

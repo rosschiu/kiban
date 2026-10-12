@@ -32,7 +32,7 @@ Kiban embeds Keycloak as its OpenID Connect provider. Users log in through it; y
 identity provider (Entra ID, Okta, Google, any OIDC or SAML provider) is federated into it as a
 login source. Kiban never manages your provider's tenant.
 
-Two levels of administration exist:
+Three kinds of administrator exist:
 
 - The **Superadmin** is the platform-wide operator. There is one seeded at bootstrap. The role
   itself is one tuple, `system:platform#superadmin`, granted and revoked through the platform
@@ -59,16 +59,17 @@ relations exist on which object types and how they derive from one another (an e
 viewer, a company-module administrator is an administrator of the module's objects, and so on).
 
 The base model gives every company and every company module a **member** relation: the
-company's active, linked members, administrators included. Org writes that tuple when a member
+company's active, linked members (on a company module, its administrators too). Org writes that tuple when a member
 is created or deactivated, so "is an active member" is answered by the same graph as everything
 else.
 
 Every request a module handles becomes a **decision**, eight ordered steps: the subject exists;
 the login is enabled; the user lifecycle is active; for a global-scope question, the required
 platform role is held; for a company-scope question, the company is active, the subject is a
-member, not blocked, and holds any required company role; the module is enabled for that
-company; the object is bound to that company and the relation holds through the tuple graph;
-and, optionally, a business eligibility callback agrees. Any uncertainty (a dependency down, an
+member, not blocked, and holds any required company role; the module is enabled (for the
+whole deployment); the object is bound to that company and the relation holds through the tuple
+graph; and an eighth step, a business eligibility callback, which is not wired in 0.1 (a request
+that asks for it is refused). A global-scope question ends at the platform-role step. Any uncertainty (a dependency down, an
 unknown relation) is a refusal, never an allow.
 
 The binding step is what keeps one company's objects out of another's reach. Every object type a
