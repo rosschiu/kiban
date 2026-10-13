@@ -2,6 +2,10 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
+## [Unreleased]
+
+- Positions can be placed on an org unit: `POST /api/org/admin/companies/{id}/positions` accepts the `orgUnitId` the contract already required (under the company, root when absent), and `PUT /api/org/admin/positions/{id}` retitles or moves a position; 0.1.2 refused `orgUnitId` with `422` and had no update route, so every position sat on the company root
+
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
 fields, registration of a fragment without the company anchor and the grants rule for other apps'

@@ -948,11 +948,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [code, title, orgUnitId]
+              required: [code, title]
               properties:
                 code: { type: string }
                 title: { type: string }
-                orgUnitId: { type: string, format: uuid }
+                orgUnitId:
+                  type: string
+                  format: uuid
+                  description: An org unit under the company; absent, the company root.
       responses:
         "201":
           description: Created
@@ -968,6 +971,39 @@ paths:
         "422": { $ref: "#/components/responses/ValidationFailed" }
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
 
+  /api/org/admin/positions/{id}:
+    put:
+      operationId: adminUpdatePosition
+      summary: Retitle a position or move it to another org unit of its company (superadmin, or an administrator of the company)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                orgUnitId:
+                  type: string
+                  format: uuid
+                  description: An org unit under the position's company; absent, unchanged.
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgPosition" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
   /api/org/admin/positions/{id}/assignments:
     post:
       operationId: adminAssignPositionNow

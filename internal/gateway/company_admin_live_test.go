@@ -128,11 +128,36 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 	if st, _ = call(t, http.MethodGet, "/api/org/admin/members?companyId="+mine, carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol lists members: %d", st)
 	}
-	st, env = call(t, http.MethodPost, "/api/org/admin/companies/"+mine+"/positions", carolBearer, map[string]any{"code": "CFO", "title": "CFO"})
+	// Positions sit on org units: the superadmin adds a business unit to each company, Carol
+	// places a position on hers, retitles it, moves it, and cannot move it to the other company's.
+	st, env = call(t, http.MethodPost, "/api/org/admin/units", adminBearer, map[string]any{"typeKey": "business_unit", "parentId": mine, "code": "FIN" + suffix, "name": "Finance"})
 	if st != http.StatusCreated {
-		t.Fatalf("Carol creates a position: %d %v", st, env)
+		t.Fatalf("create business unit: %d %v", st, env)
+	}
+	finance := id(env)
+	st, env = call(t, http.MethodPost, "/api/org/admin/units", adminBearer, map[string]any{"typeKey": "business_unit", "parentId": other, "code": "OFIN" + suffix, "name": "Other finance"})
+	if st != http.StatusCreated {
+		t.Fatalf("create other business unit: %d %v", st, env)
+	}
+	otherFinance := id(env)
+	st, env = call(t, http.MethodPost, "/api/org/admin/companies/"+mine+"/positions", carolBearer, map[string]any{"code": "CFO", "title": "CFO", "orgUnitId": finance})
+	if st != http.StatusCreated {
+		t.Fatalf("Carol creates a position on a business unit: %d %v", st, env)
 	}
 	position := id(env)
+	if got, _ := data(env)["orgUnitId"].(string); got != finance {
+		t.Fatalf("position orgUnitId = %q, want %q", got, finance)
+	}
+	st, env = call(t, http.MethodPut, "/api/org/admin/positions/"+position, carolBearer, map[string]any{"title": "CFO (interim)", "orgUnitId": mine})
+	if st != http.StatusOK {
+		t.Fatalf("Carol retitles and moves a position: %d %v", st, env)
+	}
+	if got, _ := data(env)["orgUnitId"].(string); got != mine || data(env)["title"] != "CFO (interim)" {
+		t.Fatalf("position after update = %v, want title CFO (interim) on the company root", data(env))
+	}
+	if st, env = call(t, http.MethodPut, "/api/org/admin/positions/"+position, carolBearer, map[string]any{"orgUnitId": otherFinance}); st != http.StatusUnprocessableEntity {
+		t.Fatalf("move to another company's unit = %d %v, want 422", st, env)
+	}
 	st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/assignments", carolBearer, map[string]any{"memberId": dave})
 	if st != http.StatusCreated {
 		t.Fatalf("Carol assigns: %d %v", st, env)
