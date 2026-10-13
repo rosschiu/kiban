@@ -2,6 +2,10 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
+## [Unreleased]
+
+- Grants: the owning app can revoke a tuple from an object whose anchor is already gone, so revoking the anchor first no longer strands the object's other tuples; 0.1.2 refused every later revoke with `422` and re-anchoring the id revived them. The integrate page states the deletion order and the id-reuse hazard
+
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
 fields, registration of a fragment without the company anchor and the grants rule for other apps'

@@ -272,7 +272,10 @@ company; without it every check on the object is denied.
     )
     ```
 
-`revoke` removes what `grant` wrote. You should see `403 AUTHORIZATION_DENIED` if you name
+`revoke` removes what `grant` wrote. When your app deletes an object, revoke its relations
+and its anchor in one call, or relations first. Revoking the anchor first leaves the other
+tuples behind: only the owning app can still remove them, and anchoring the same id again
+would bring them back, so never reuse an object id. You should see `403 AUTHORIZATION_DENIED` if you name
 another enabled app's or module's object type: outside its own types an app's backend needs
 the company's `admin` relation (`company:<id>#admin`), and a service account that is only a
 member of the company (step 10) is refused with reason `COMPANY_ROLE_REQUIRED`. A base type
