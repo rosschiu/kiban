@@ -2,6 +2,10 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
+## [Unreleased]
+
+- Security: a grant naming another company's position, group or member as subject is refused with `422`, and a check bound to a company ignores such a subject while expanding; in 0.1.2 a tuple `viewer @ position:<B position>#holder` on company A's object let a user who is a member of both companies reach A's object
+
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
 fields, registration of a fragment without the company anchor and the grants rule for other apps'

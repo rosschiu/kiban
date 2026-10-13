@@ -82,7 +82,10 @@ func memoKey(objType, objID, rel string) string {
 type evalCtx struct {
 	engine           *Engine
 	subjType, subjID string
-	memo             memo
+	// companyID, when set, is the company the check is bound to: a position, group or member
+	// userset subject from another company is skipped during expansion (see subjectInCompany).
+	companyID string
+	memo      memo
 	// visiting marks the nodes on the CURRENT recursion path (the memo's in-progress
 	// marker): re-entering one is a tuple cycle, answered false for that path
 	// (the node contributes nothing to itself — OpenFGA's answer too), never DEPTH_EXCEEDED.
@@ -104,6 +107,47 @@ func (en *Engine) newEvalCtx(subjType, subjID string, m memo) *evalCtx {
 func (en *Engine) Check(ctx context.Context, objType, objID, rel, subjType, subjID string) (bool, error) {
 	ec := en.newEvalCtx(subjType, subjID, make(mapMemo))
 	return ec.check(ctx, objType, objID, rel, 0)
+}
+
+// CheckInCompany is Check bound to one company: a position, group or member userset met while
+// expanding resolves only if it belongs to companyID. A tuple that names another company's
+// position as viewer of this company's object therefore grants nothing here, however the tuple
+// got written. An empty companyID is plain Check.
+func (en *Engine) CheckInCompany(ctx context.Context, objType, objID, rel, subjType, subjID, companyID string) (bool, error) {
+	ec := en.newEvalCtx(subjType, subjID, make(mapMemo))
+	ec.companyID = companyID
+	return ec.check(ctx, objType, objID, rel, 0)
+}
+
+// subjectInCompany reports whether a userset subject belongs to ec.companyID. Positions and
+// groups carry `<type>:<id>#company @ company:<cid>` (org writes it at creation); a member is
+// in `company:<cid>#member @ member:<id>#mapped_user`. Any other subject type is not scoped.
+func (ec *evalCtx) subjectInCompany(ctx context.Context, subjType, subjID string) (bool, error) {
+	switch subjType {
+	case "position", "group":
+		rows, err := ec.engine.fetchRows(ctx, subjType, subjID, "company")
+		if err != nil {
+			return false, err
+		}
+		for _, r := range rows {
+			if r.subjectType == "company" && r.subjectID == ec.companyID && r.subjectRelation == "" {
+				return true, nil
+			}
+		}
+		return false, nil
+	case "member":
+		rows, err := ec.engine.fetchRows(ctx, "company", ec.companyID, "member")
+		if err != nil {
+			return false, err
+		}
+		for _, r := range rows {
+			if r.subjectType == "member" && r.subjectID == subjID && r.subjectRelation == "mapped_user" {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+	return true, nil
 }
 
 func (ec *evalCtx) check(ctx context.Context, objType, objID, rel string, depth int) (bool, error) {
@@ -179,7 +223,17 @@ func (ec *evalCtx) evalThis(ctx context.Context, objType, objID, rel string, dep
 			}
 			continue
 		}
-		// Userset subject: X#r. Recurse with the SAME final subject.
+		// Userset subject: X#r. Recurse with the SAME final subject, unless the check is bound
+		// to a company and X is another company's position, group or member.
+		if ec.companyID != "" {
+			in, err := ec.subjectInCompany(ctx, r.subjectType, r.subjectID)
+			if err != nil {
+				return false, err
+			}
+			if !in {
+				continue
+			}
+		}
 		ok, err := ec.check(ctx, r.subjectType, r.subjectID, r.subjectRelation, depth+1)
 		if err != nil {
 			return false, err

@@ -278,8 +278,10 @@ the company's `admin` relation (`company:<id>#admin`), and a service account tha
 member of the company (step 10) is refused with reason `COMPANY_ROLE_REQUIRED`. A base type
 such as `company`, or a type no enabled app declares, is `422 VALIDATION_FAILED`. A subject can also be a position (`subjectType:
 "position"`, `subjectRelation: "holder"`) or a group (`subjectType: "group"`, `subjectRelation:
-"member"`), so access follows the chair or the membership. Without the `subjectRelation` the
-tuple is stored and never matches.
+"member"`), so access follows the chair or the membership. The position, group or member
+must belong to the same company; another company's is `422 VALIDATION_FAILED`, and a check
+in this company never resolves through it. Without the `subjectRelation` the tuple is stored
+and never matches.
 
 ### 9. Look the member up
 

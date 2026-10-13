@@ -121,6 +121,17 @@ func AnchorOf(ctx context.Context, q Rower, objectType, objectID string) (string
 	return anchor, nil
 }
 
+// MemberOfCompany reports whether `company:<companyID>#member @ member:<memberID>#mapped_user`
+// exists: the member belongs to that company.
+func MemberOfCompany(ctx context.Context, q Rower, companyID, memberID string) (bool, error) {
+	var n int
+	err := q.QueryRow(ctx, `SELECT count(*) FROM authz.tuple WHERE object_type = 'company' AND object_id = $1 AND relation = 'member' AND subject_type = 'member' AND subject_id = $2 AND subject_relation = 'mapped_user'`, companyID, memberID).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("authz/store: member %s of company %s: %w", memberID, companyID, err)
+	}
+	return n > 0, nil
+}
+
 // Queryer is the minimal read interface ListDirectTuplesForSubject needs — satisfied by both
 // *pgxpool.Pool (a plain read outside any transaction, the summary composition's use case) and
 // pgx.Tx, without this package importing pgxpool (it stays pool-shape-agnostic, matching
