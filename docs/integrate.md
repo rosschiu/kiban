@@ -599,6 +599,9 @@ try {
     case ApiErrorCode.ModuleNotInstalled:
       // the module is off for this deployment
       break;
+    case ApiErrorCode.PositionHeld:
+      // someone holds the position: err.details.assignmentId is the tenure to end first
+      break;
     case ApiErrorCode.ValidationError: // org and the platform routes
     case ApiErrorCode.ValidationFailed: // the authorization service
     case ApiErrorCode.Conflict:
