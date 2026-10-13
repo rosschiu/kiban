@@ -2,6 +2,10 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
+## [Unreleased]
+
+- Assigning a member to a position that already has a holder answers `409 POSITION_HELD` with the current `assignmentId` and `memberId` in the details; 0.1.2 answered a bare `409 CONFLICT` from the database constraint, so the caller could not tell which tenure to end first
+
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
 fields, registration of a fragment without the company anchor and the grants rule for other apps'

@@ -156,3 +156,44 @@ func TestPosition_EndAssignment_AndValidityWindow(t *testing.T) {
 		t.Fatalf("expected ErrAssignmentNotFound for a date long before any assignment, got %v", err)
 	}
 }
+
+// TestPosition_AssignNow_HeldNamesCurrentHolder: a second assign while the position has a holder
+// today is refused with PositionHeldError naming that assignment and member, and nothing is
+// written; after the holder's tenure ends the same assign succeeds.
+func TestPosition_AssignNow_HeldNamesCurrentHolder(t *testing.T) {
+	admin := adminPool(t)
+	resetOrgFixtures(t, admin)
+	store := newTestStore(t)
+	ctx := context.Background()
+
+	company := mustCreateCompany(t, store, "HELD")
+	first := mustCreateMember(t, store, company.ID, "M801")
+	second := mustCreateMember(t, store, company.ID, "M802")
+	position := mustCreatePosition(t, store, company.ID, company.ID, "CFO")
+
+	current, err := store.AssignNow(ctx, "actor", position.ID, first.ID)
+	if err != nil {
+		t.Fatalf("first assign: %v", err)
+	}
+	_, err = store.AssignNow(ctx, "actor", position.ID, second.ID)
+	var held *PositionHeldError
+	if !errors.As(err, &held) {
+		t.Fatalf("second assign: got %v, want PositionHeldError", err)
+	}
+	if held.AssignmentID != current.ID || held.MemberID != first.ID {
+		t.Fatalf("held = %+v, want assignment %s member %s", held, current.ID, first.ID)
+	}
+	var n int
+	if err := store.pool.QueryRow(ctx, `SELECT count(*) FROM org.position_assignment WHERE position_id = $1`, pgFromUUID(position.ID)).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("assignments after refusal = %d, want 1", n)
+	}
+	if _, err := store.EndAssignment(ctx, "actor", current.ID); err != nil {
+		t.Fatalf("end: %v", err)
+	}
+	if _, err := store.AssignNow(ctx, "actor", position.ID, second.ID); err != nil {
+		t.Fatalf("assign after end: %v", err)
+	}
+}

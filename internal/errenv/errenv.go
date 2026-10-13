@@ -45,6 +45,9 @@ const (
 	// CodeAssignmentAlreadyEnded is the 409 for ending a position assignment whose window is
 	// already closed (valid_to set) — nothing is rewritten, no tuple is revoked.
 	CodeAssignmentAlreadyEnded = "ASSIGNMENT_ALREADY_ENDED"
+	// CodePositionHeld is the 409 for assigning a member to a position that has a holder today.
+	// Details carry the current assignmentId and memberId: the caller ends that assignment first.
+	CodePositionHeld = "POSITION_HELD"
 )
 
 // APIError is the wire shape of an error, nested under "error" in the
