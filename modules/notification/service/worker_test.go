@@ -82,7 +82,7 @@ func TestClaimJobs_SkipsLockedAndRespectsLeaseExpiry(t *testing.T) {
 	_, jobID := seedDeliveryJob(t, store, companyID)
 
 	// First claim succeeds (attempts becomes 2: 1 from the seed claim + 1 here).
-	jobs, err := store.ClaimJobs(ctx, 50*time.Millisecond, 10)
+	jobs, err := store.ClaimJobs(ctx, 5*time.Second, 10)
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
@@ -93,8 +93,9 @@ func TestClaimJobs_SkipsLockedAndRespectsLeaseExpiry(t *testing.T) {
 		t.Fatalf("expected attempts=2 (1 seed + 1 here), got %d", jobs[0].Attempts)
 	}
 
-	// Immediately re-claiming finds nothing: the lease hasn't expired yet.
-	again, err := store.ClaimJobs(ctx, 50*time.Millisecond, 10)
+	// Immediately re-claiming finds nothing: the lease is live. Five seconds, not milliseconds,
+	// so a slow CI runner cannot let it lapse between the two calls.
+	again, err := store.ClaimJobs(ctx, 5*time.Second, 10)
 	if err != nil {
 		t.Fatalf("re-claim: %v", err)
 	}

@@ -35,3 +35,7 @@ web/sdk/node_modules
 # Python SDK build output (make sdk-python-check, python -m build)
 sdk/python/build/
 sdk/python/*.egg-info/
+
+# Python bytecode
+__pycache__/
+*.pyc
