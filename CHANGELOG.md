@@ -2,6 +2,10 @@
 
 One line per change. Versions follow [Semantic Versioning](https://semver.org/); the current version is in [`VERSION`](VERSION).
 
+## [Unreleased]
+
+- Docs: only decisions are revocation-aware; a verified token alone serves a disabled user until it expires, so the integrate page, the limitations page and the three SDKs' token-verify docs say to make a decision before serving data
+
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
 fields, registration of a fragment without the company anchor and the grants rule for other apps'

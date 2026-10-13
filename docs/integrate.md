@@ -199,6 +199,12 @@ back is who the user is and nothing more; never read a role from the token.
 You should see the user's `sub` (their Keycloak id) for a valid token and an error for an
 expired one, one for another audience, or one Kiban did not sign.
 
+A verified token says who the user was when it was issued, nothing more. It does not know that
+the user has since been disabled in Keycloak or deactivated in the company. Only a decision
+(step 7) checks that, on every call. So make a decision before serving data, and never treat a
+verified token alone as "still allowed". A disabled user's token verifies until it expires,
+five minutes by default.
+
 ### 7. Ask before every read and write
 
 One call with the user's own bearer: the feature key, your app key, the company, and for an
