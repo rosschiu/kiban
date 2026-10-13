@@ -45,7 +45,9 @@ export interface OrgClient {
   /** POST /api/org/admin/companies/{companyId}/positions {code,title} — companyId comes from the
    * PATH only; org-unit defaults to the company root. */
   adminCreatePosition(companyId: string, input: { code: string; title: string }): Promise<OrgPosition>;
-  /** POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated). */
+  /** POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated).
+   * 409 POSITION_HELD, with the current assignmentId and memberId in details, while someone
+   * holds the position: end that assignment first. */
   adminAssignPosition(positionId: string, memberId: string): Promise<OrgAssignment>;
   /** POST /api/org/admin/assignments/{id}/end — end-NOW, no body (server-dated). */
   adminEndAssignment(assignmentId: string): Promise<OrgAssignment>;

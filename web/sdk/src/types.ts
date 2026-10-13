@@ -56,7 +56,8 @@ export const ApiErrorCode = {
   // Kept in sync with internal/errenv by the contracts/wire-enums.json cross-language drift check.
   ValidationFailed: "VALIDATION_FAILED",
   IdempotencyConflict: "IDEMPOTENCY_CONFLICT",
-  GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED"
+  GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED",
+  PositionHeld: "POSITION_HELD"
 } as const;
 
 /** One of {@link ApiErrorCode}'s canonical string values. */
