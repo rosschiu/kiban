@@ -163,6 +163,21 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 		t.Fatalf("Carol assigns: %d %v", st, env)
 	}
 	assignment := id(env)
+	// A second member cannot take a held position: 409 POSITION_HELD names the tenure to end.
+	st, env = call(t, http.MethodPost, "/api/org/admin/members", carolBearer, map[string]any{"companyId": mine, "code": "ERIN", "displayName": "Erin"})
+	if st != http.StatusCreated {
+		t.Fatalf("Carol creates a second member: %d %v", st, env)
+	}
+	erin := id(env)
+	st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/assignments", carolBearer, map[string]any{"memberId": erin})
+	if st != http.StatusConflict {
+		t.Fatalf("assign to a held position = %d %v, want 409", st, env)
+	}
+	if errObj, _ := env["error"].(map[string]any); errObj["code"] != "POSITION_HELD" {
+		t.Fatalf("assign to a held position: %v, want POSITION_HELD", env)
+	} else if details, _ := errObj["details"].(map[string]any); details["assignmentId"] != assignment || details["memberId"] != dave {
+		t.Fatalf("POSITION_HELD details = %v, want assignment %s member %s", details, assignment, dave)
+	}
 	if st, _ = call(t, http.MethodGet, "/api/org/admin/companies/"+mine+"/positions", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol lists positions: %d", st)
 	}

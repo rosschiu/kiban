@@ -57,14 +57,16 @@ GROUP_EXTERNALLY_MANAGED if the group's source isn't &quot;kiban&quot; (the sing
 <li><span><span class="tsd-kind-parameter">memberId</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgGroupMember.html" class="tsd-signature-type tsd-kind-interface">OrgGroupMember</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L73">org.ts:73</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L75">org.ts:75</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="adminassignposition"><span>admin<wbr/>Assign<wbr/>Position</span><a href="#adminassignposition" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
 <li class="">
 <div class="tsd-signature tsd-anchor-link" id="adminassignposition-1"><span class="tsd-kind-call-signature">adminAssignPosition</span><span class="tsd-signature-symbol">(</span><br/>    <span class="tsd-kind-parameter">positionId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/>    <span class="tsd-kind-parameter">memberId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">,</span><br/><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgAssignment.html" class="tsd-signature-type tsd-kind-interface">OrgAssignment</a><span class="tsd-signature-symbol">&gt;</span><a href="#adminassignposition-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></div>
 <div class="tsd-description">
-<div class="tsd-comment tsd-typography"><p>POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated).</p>
+<div class="tsd-comment tsd-typography"><p>POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated).
+409 POSITION_HELD, with the current assignmentId and memberId in details, while someone
+holds the position: end that assignment first.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -73,7 +75,7 @@ GROUP_EXTERNALLY_MANAGED if the group's source isn't &quot;kiban&quot; (the sing
 <li><span><span class="tsd-kind-parameter">memberId</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgAssignment.html" class="tsd-signature-type tsd-kind-interface">OrgAssignment</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L52">org.ts:52</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L54">org.ts:54</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="admincreategroup"><span>admin<wbr/>Create<wbr/>Group</span><a href="#admincreategroup" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -91,7 +93,7 @@ create).</p>
 <li><span><span class="tsd-kind-parameter">input</span>: <span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">code</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">name</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">}</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgGroup.html" class="tsd-signature-type tsd-kind-interface">OrgGroup</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L66">org.ts:66</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L68">org.ts:68</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="admincreateposition"><span>admin<wbr/>Create<wbr/>Position</span><a href="#admincreateposition" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -123,7 +125,7 @@ comes from the PATH only; orgUnitId must sit under the company and defaults to i
 <li><span><span class="tsd-kind-parameter">assignmentId</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgAssignment.html" class="tsd-signature-type tsd-kind-interface">OrgAssignment</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L54">org.ts:54</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L56">org.ts:56</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="adminlistgroupmembers"><span>admin<wbr/>List<wbr/>Group<wbr/>Members</span><a href="#adminlistgroupmembers" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -140,7 +142,7 @@ knowing WHO to remove).</p>
 <li><span><span class="tsd-kind-parameter">groupId</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgGroupMember.html" class="tsd-signature-type tsd-kind-interface">OrgGroupMember</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L70">org.ts:70</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L72">org.ts:72</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="adminlistgroups"><span>admin<wbr/>List<wbr/>Groups</span><a href="#adminlistgroups" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -158,7 +160,7 @@ and source (externally-sourced groups render read-only with a source badge).</p>
 <li><span><code class="tsd-tag">Optional</code><span class="tsd-kind-parameter">pageSize</span>: <span class="tsd-signature-type">number</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="index.Page.html" class="tsd-signature-type tsd-kind-interface">Page</a><span class="tsd-signature-symbol">&lt;</span><a href="index.OrgGroupWithMemberCount.html" class="tsd-signature-type tsd-kind-interface">OrgGroupWithMemberCount</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L62">org.ts:62</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L64">org.ts:64</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="adminlistpositions"><span>admin<wbr/>List<wbr/>Positions</span><a href="#adminlistpositions" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -193,7 +195,7 @@ GROUP_EXTERNALLY_MANAGED refusal as adminAddGroupMember.</p>
 <li><span><span class="tsd-kind-parameter">memberId</span>: <span class="tsd-signature-type">string</span></span></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">{</span> <span class="tsd-kind-property">groupId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span> <span class="tsd-kind-property">memberId</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L76">org.ts:76</a></li></ul></aside></div></li></ul></section>
+<li>Defined in <a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/src/org.ts#L78">org.ts:78</a></li></ul></aside></div></li></ul></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="adminupdateposition"><span>admin<wbr/>Update<wbr/>Position</span><a href="#adminupdateposition" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">

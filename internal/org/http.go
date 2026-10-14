@@ -173,6 +173,7 @@ func parsePathUUID(w http.ResponseWriter, r *http.Request, name string) (uuid.UU
 func writeStoreError(w http.ResponseWriter, err error) {
 	var vErr *ValidationError
 	var refErr *ReferencedError
+	var heldErr *PositionHeldError
 	switch {
 	case errors.As(err, &vErr):
 		errenv.WriteError(w, http.StatusUnprocessableEntity, errenv.APIError{
@@ -199,6 +200,12 @@ func writeStoreError(w http.ResponseWriter, err error) {
 	case errors.Is(err, ErrOrgUnitHasMembers):
 		errenv.WriteError(w, http.StatusUnprocessableEntity, errenv.APIError{
 			Code: errenv.CodeValidationError, Message: "org unit has members", Details: map[string]string{"field": "id"},
+		})
+	case errors.As(err, &heldErr):
+		errenv.WriteError(w, http.StatusConflict, errenv.APIError{
+			Code:    errenv.CodePositionHeld,
+			Message: "position is held; end the current assignment first",
+			Details: map[string]string{"assignmentId": heldErr.AssignmentID.String(), "memberId": heldErr.MemberID.String()},
 		})
 	case isPositionBoundError(err):
 		var boundErr *PositionBoundError

@@ -221,3 +221,31 @@ func TestHTTP_AdminListPositions_InvalidCompanyId_400(t *testing.T) {
 		t.Fatalf("status = %d, want 400, body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+// TestHTTP_AssignNow_HeldAnswers409PositionHeld: the route answers 409 POSITION_HELD with the
+// current assignmentId and memberId in details, never a bare CONFLICT.
+func TestHTTP_AssignNow_HeldAnswers409PositionHeld(t *testing.T) {
+	f := newAllowAllFixture(t, nil)
+	store := f.svc.store
+	company := mustCreateCompany(t, store, "HLD2")
+	first := mustCreateMember(t, store, company.ID, "M811")
+	second := mustCreateMember(t, store, company.ID, "M812")
+	position := mustCreatePosition(t, store, company.ID, company.ID, "COO")
+	current, err := store.AssignNow(context.Background(), "actor", position.ID, first.ID)
+	if err != nil {
+		t.Fatalf("first assign: %v", err)
+	}
+
+	rec := doJSON(t, f, "POST", "/internal/org/positions/"+position.ID.String()+"/assignments", `{"memberId":"`+second.ID.String()+`"}`)
+	if rec.Code != 409 {
+		t.Fatalf("status = %d, want 409, body=%s", rec.Code, rec.Body.String())
+	}
+	errObj := decodeEnvelope(t, rec)["error"].(map[string]any)
+	if errObj["code"] != "POSITION_HELD" {
+		t.Fatalf("code = %v, want POSITION_HELD", errObj["code"])
+	}
+	details := errObj["details"].(map[string]any)
+	if details["assignmentId"] != current.ID.String() || details["memberId"] != first.ID.String() {
+		t.Fatalf("details = %v, want assignment %s member %s", details, current.ID, first.ID)
+	}
+}

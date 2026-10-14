@@ -48,7 +48,9 @@ export interface OrgClient {
   /** PUT /api/org/admin/positions/{id} {title?,orgUnitId?} — retitle, or move the position to
    * another org unit of its company; an absent field keeps its value. */
   adminUpdatePosition(positionId: string, input: { title?: string; orgUnitId?: string }): Promise<OrgPosition>;
-  /** POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated). */
+  /** POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated).
+   * 409 POSITION_HELD, with the current assignmentId and memberId in details, while someone
+   * holds the position: end that assignment first. */
   adminAssignPosition(positionId: string, memberId: string): Promise<OrgAssignment>;
   /** POST /api/org/admin/assignments/{id}/end — end-NOW, no body (server-dated). */
   adminEndAssignment(assignmentId: string): Promise<OrgAssignment>;

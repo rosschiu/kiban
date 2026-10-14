@@ -1035,6 +1035,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/PositionHeld" }
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
 
   /api/org/admin/assignments/{id}/end:
@@ -1585,6 +1586,11 @@ components:
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     Conflict:
       description: CONFLICT (e.g. disabling a mandatory module, revoking the last superadmin)
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    PositionHeld:
+      description: >
+        POSITION_HELD, the position has a holder today; `details.assignmentId` and
+        `details.memberId` name the current assignment to end first.
       content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
     ModuleNotInstalled:
       description: >
