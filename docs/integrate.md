@@ -205,6 +205,72 @@ the user has since been disabled in Keycloak or deactivated in the company. Only
 verified token alone as "still allowed". A disabled user's token verifies until it expires,
 five minutes by default.
 
+This is how Kiban thinks about it, and what we ask of every app beside it:
+
+- The token proves identity, locally and for free. The SDK checks the signature against the
+  realm's keys and never calls Kiban for that.
+- Permission is a decision, never a claim. A decision asks identity and org for the user's
+  current state on every call, so a disabled user is refused on their next request, not when
+  their token expires. Kiban's own routes decide the same way, except the few listed in
+  [limitations](limitations.md).
+- A route with nothing to protect still decides. "My profile" or "my tickets" has no object,
+  but it has a feature key, and a decision on the feature key alone is what refuses a disabled
+  user there.
+- Put both halves in one helper, so a route cannot do the first and forget the second:
+
+=== "Node"
+
+    ```ts
+    export async function requireAccess(req: Request, featureKey: string, companyId: string,
+                                        object?: { type: string; id: string }, relation?: string) {
+      const bearer = req.headers.authorization?.replace(/^Bearer /, "");
+      if (!bearer) throw new Error("login required");
+      await verifier.verify(bearer);                       // who: local, free
+      const decision = await kiban.can(bearer, {           // whether: Kiban, every call
+        featureKey, moduleKey: "tokidesk", scope: "company", companyId, object, relation
+      });
+      if (!decision.allowed) throw new Error("forbidden: " + decision.reason);
+      return bearer;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def require_access(authorization, feature_key, company_id, object=None, relation=None):
+        bearer = (authorization or "").removeprefix("Bearer ")
+        if not bearer:
+            abort(401)
+        kiban.verify_user_token(bearer)                          # who: local, free
+        decision = kiban.can(bearer, feature_key, module_key="tokidesk", company_id=company_id,
+                             object=object, relation=relation)  # whether: Kiban, every call
+        if not decision.allowed:
+            abort(403)
+        return bearer
+    ```
+
+=== "Go"
+
+    ```go
+    func requireAccess(ctx context.Context, kiban *sdk.Client, r *http.Request, req sdk.CanRequest) (string, error) {
+        bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+        if bearer == "" {
+            return "", errUnauthenticated
+        }
+        if _, err := kiban.VerifyUserToken(ctx, bearer); err != nil { // who: local, free
+            return "", errUnauthenticated
+        }
+        d, err := kiban.Can(ctx, bearer, req) // whether: Kiban, every call
+        if err != nil || !d.Allowed {
+            return "", errForbidden
+        }
+        return bearer, nil
+    }
+    ```
+
+Every handler then starts with that one call, and the window for a disabled user is the time
+between two of their requests, not the token's lifetime.
+
 ### 7. Ask before every read and write
 
 One call with the user's own bearer: the feature key, your app key, the company, and for an
