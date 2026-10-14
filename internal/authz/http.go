@@ -624,6 +624,20 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !anchored {
+			// The owning app may still clean up an object whose anchor is already gone (an
+			// anchor revoked before its relations): otherwise those tuples could never be
+			// removed and would come back if the id were anchored again. An object anchored
+			// elsewhere stays refused.
+			if req.Op == "revoke" && ownerCall {
+				existing, err := store.AnchorOf(r.Context(), svc.Pool, t.ObjectType, t.ObjectID)
+				if err != nil {
+					writeDecision(w, decision.Decision{Reason: decision.ReasonDependencyUnavailable, Dependency: "engine", Step: "grants_anchor"})
+					return
+				}
+				if existing == "" {
+					continue
+				}
+			}
 			writeValidationFailed(w, "object "+t.ObjectType+":"+t.ObjectID+" is not anchored to company_module:"+anchorID)
 			return
 		}

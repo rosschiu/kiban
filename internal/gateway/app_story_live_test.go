@@ -277,6 +277,28 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if err := app.Revoke(ctx, companyID, viaPos(posA)); err != nil {
 		t.Fatalf("revoke position viewer: %v", err)
 	}
+	// Revoking the anchor deletes the object: every other tuple on it goes too, the user is
+	// denied at once, and anchoring the same id again revives nothing.
+	obj2 := &struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	}{Type: "livestory_ticket", ID: "t-2"}
+	viewer2 := sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-2", Relation: "viewer", SubjectType: "user", SubjectID: userSub}
+	if err := app.Grant(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID), viewer2); err != nil {
+		t.Fatalf("grant t-2: %v", err)
+	}
+	if err := app.Revoke(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
+		t.Fatalf("revoke anchor of t-2: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj2, Relation: "viewer"}); d.Allowed {
+		t.Fatal("revoking the anchor of t-2 must take the viewer with it")
+	}
+	if err := app.Grant(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
+		t.Fatalf("re-anchor t-2: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj2, Relation: "viewer"}); d.Allowed {
+		t.Fatal("re-anchoring t-2 must not revive the revoked viewer")
+	}
 
 	// --- 5. the service account is a user: a background job's own check is refused until an
 	// administrator makes the service account a member of the company, and the directory then

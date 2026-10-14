@@ -9,6 +9,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
   required by policy, but the browser login flow accepts a password alone. Authenticator-app
   (TOTP) enforcement works, and a per-user override can only raise the requirement above the
   global policy.
+- **Only decisions are revocation-aware.** A route that verifies the bearer without asking for
+  a decision, such as `GET /api/org/me/companies`, serves a disabled user until the token expires
+  (five minutes by default). Decisions deny on the next check.
 - **No field-level or row-level policy on member data.** Every active member of a company can
   read the directory, including email addresses.
 - **Keycloak's own container holds two secrets as environment variables**: its database
