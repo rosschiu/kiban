@@ -18,6 +18,12 @@ import (
 // redirect every package's tests at the isolated stack; TargetsLiveStack is the interlock that
 // refuses when nothing redirected them away from a PUBLIC live stack.
 
+// TestStackAccessTokenLifespan is the KIBAN_ACCESS_TOKEN_LIFESPAN infra/compose.test.yaml pins
+// for the test stack's bootstrap, deliberately not the 300-second default: the gateway's live
+// token test proves the value reaches the realm, and the bootstrap package's live RealmStep
+// runs must reconcile to the same value or they would reset it underneath that test.
+const TestStackAccessTokenLifespan = 120
+
 // Env returns name from the process environment, falling back to .env. It refuses (t.Fatal)
 // when the resulting target would be the live stack in PUBLIC mode.
 func Env(t testing.TB, name string) string {

@@ -24,6 +24,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/rosschiu/kiban/internal/livestack"
 )
 
 func fetchServiceAccountToken(t *testing.T, baseURL, realm, clientSecret string) string {
@@ -107,10 +109,6 @@ func TestLive_TokenVerifier_WrongAudienceRejected(t *testing.T) {
 	}
 }
 
-// testStackAccessTokenLifespan is what infra/compose.test.yaml sets for the test stack's
-// bootstrap, deliberately not the 300-second default.
-const testStackAccessTokenLifespan = 120
-
 // TestLive_AccessTokenLifespan_FromEnv proves KIBAN_ACCESS_TOKEN_LIFESPAN reaches the realm:
 // a token Keycloak mints for the test stack expires exactly that many seconds after issue.
 func TestLive_AccessTokenLifespan_FromEnv(t *testing.T) {
@@ -133,7 +131,7 @@ func TestLive_AccessTokenLifespan_FromEnv(t *testing.T) {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		t.Fatalf("unmarshal claims: %v", err)
 	}
-	if got := claims.Exp - claims.Iat; got != testStackAccessTokenLifespan {
-		t.Fatalf("exp-iat = %d, want %d (KIBAN_ACCESS_TOKEN_LIFESPAN from infra/compose.test.yaml)", got, testStackAccessTokenLifespan)
+	if got := claims.Exp - claims.Iat; got != livestack.TestStackAccessTokenLifespan {
+		t.Fatalf("exp-iat = %d, want %d (KIBAN_ACCESS_TOKEN_LIFESPAN from infra/compose.test.yaml)", got, livestack.TestStackAccessTokenLifespan)
 	}
 }
