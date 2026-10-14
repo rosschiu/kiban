@@ -10,9 +10,9 @@ Self-hostable identity, organization and authorization for business applications
 This project is an extract of past enterprise projects with features revamp and enhancements.
 
 **Documentation: <https://rosschiu.github.io/kiban/>**
-[Quickstart](https://rosschiu.github.io/kiban/quickstart/)
-[Integrate your app](https://rosschiu.github.io/kiban/integrate/) for the backend and frontend steps
-[Known limitations](https://rosschiu.github.io/kiban/limitations/)
+[Quickstart](https://rosschiu.github.io/kiban/latest/quickstart/)
+[Integrate your app](https://rosschiu.github.io/kiban/latest/integrate/) for the backend and frontend steps
+[Known limitations](https://rosschiu.github.io/kiban/latest/limitations/)
 
 ## Features
 

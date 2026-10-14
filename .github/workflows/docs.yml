@@ -1,7 +1,8 @@
-# Builds the public documentation site (docs/, MkDocs Material) on every push to main and on
-# every pull request, and deploys it to GitHub Pages on every push to main, on a `v*` tag push
-# and on a manual dispatch. The `build` job runs `make docs-site` (strict mode); the `deploy`
-# job publishes the artifact it uploaded.
+# Builds the public documentation site (docs/, MkDocs Material) strictly on every push to main
+# and every pull request, and publishes it versioned with mike: a push to main deploys `dev`,
+# a `v<major>.<minor>.<patch>` tag deploys `<major>.<minor>` and moves `latest` to it. mike
+# commits the built site to the `gh-pages` branch, which GitHub Pages serves; the site root
+# redirects to `latest`.
 name: docs
 
 on:
@@ -12,34 +13,35 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: docs-pages-${{ github.ref }}
-  cancel-in-progress: true
+  group: docs-pages
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: make docs-site
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs-site-build
-
-  deploy:
-    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: deploy dev (push to main)
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          PATH="$PWD/.venv-docs/bin:$PATH" mike deploy --push dev
+      - name: deploy the tag's minor as latest
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          minor="$(echo "${GITHUB_REF_NAME#v}" | cut -d. -f1,2)"
+          export PATH="$PWD/.venv-docs/bin:$PATH"
+          mike deploy --push --update-aliases "$minor" latest
+          mike set-default --push latest
