@@ -17,6 +17,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -103,5 +104,36 @@ func TestLive_TokenVerifier_WrongAudienceRejected(t *testing.T) {
 
 	if _, err := v.Verify(context.Background(), tok); err == nil {
 		t.Fatal("expected the real token to be rejected for an audience it does not carry")
+	}
+}
+
+// testStackAccessTokenLifespan is what infra/compose.test.yaml sets for the test stack's
+// bootstrap, deliberately not the 300-second default.
+const testStackAccessTokenLifespan = 120
+
+// TestLive_AccessTokenLifespan_FromEnv proves KIBAN_ACCESS_TOKEN_LIFESPAN reaches the realm:
+// a token Keycloak mints for the test stack expires exactly that many seconds after issue.
+func TestLive_AccessTokenLifespan_FromEnv(t *testing.T) {
+	baseURL := "http://127.0.0.1:" + gatewayTestEnv(t, "KEYCLOAK_HOST_PORT")
+	realm := gatewayTestEnv(t, "KEYCLOAK_REALM")
+	tok := fetchServiceAccountToken(t, baseURL, realm, gatewayTestEnv(t, "KEYCLOAK_IDENTITY_CLIENT_SECRET"))
+
+	parts := strings.Split(tok, ".")
+	if len(parts) != 3 {
+		t.Fatalf("token is not a JWT: %d parts", len(parts))
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	var claims struct {
+		Exp int64 `json:"exp"`
+		Iat int64 `json:"iat"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		t.Fatalf("unmarshal claims: %v", err)
+	}
+	if got := claims.Exp - claims.Iat; got != testStackAccessTokenLifespan {
+		t.Fatalf("exp-iat = %d, want %d (KIBAN_ACCESS_TOKEN_LIFESPAN from infra/compose.test.yaml)", got, testStackAccessTokenLifespan)
 	}
 }

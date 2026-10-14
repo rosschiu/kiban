@@ -24,3 +24,11 @@ volumes:
     name: kiban-test-gateway-tls
   kiban-bootstrap-secrets:
     name: kiban-test-bootstrap-secrets
+
+# The test stack pins a non-default access-token lifetime so the live test
+# (internal/gateway/token_live_test.go, TestLive_AccessTokenLifespan_FromEnv) proves
+# KIBAN_ACCESS_TOKEN_LIFESPAN reaches the realm through bootstrap, not just the default.
+services:
+  bootstrap:
+    environment:
+      KIBAN_ACCESS_TOKEN_LIFESPAN: "120"

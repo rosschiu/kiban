@@ -104,6 +104,8 @@ spec:
               valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_SERVICE_CLIENTS } }
             - name: KIBAN_EXTRA_ORIGINS
               valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_EXTRA_ORIGINS } }
+            - name: KIBAN_ACCESS_TOKEN_LIFESPAN
+              valueFrom: { configMapKeyRef: { name: kiban-config, key: KIBAN_ACCESS_TOKEN_LIFESPAN } }
             - name: KIBAN_DB_HOST
               value: "postgres"
             - name: KIBAN_DB_PORT

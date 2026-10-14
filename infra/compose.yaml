@@ -135,6 +135,9 @@ services:
       # Extra redirect URIs / web origins for kiban-frontend beyond KIBAN_DOMAIN's (a second web
       # app's origin, a native app's custom-scheme redirect). The gateway reads the same list.
       KIBAN_EXTRA_ORIGINS: ${KIBAN_EXTRA_ORIGINS:-}
+      # The realm's access-token lifetime in seconds. A disabled user's token verifies this
+      # long on routes that do not ask for a decision (docs/limitations.md).
+      KIBAN_ACCESS_TOKEN_LIFESPAN: ${KIBAN_ACCESS_TOKEN_LIFESPAN:-300}
 
       KIBAN_SUPERADMIN_USERNAME: ${KIBAN_SUPERADMIN_USERNAME}
       KIBAN_SUPERADMIN_EMAIL: ${KIBAN_SUPERADMIN_EMAIL}

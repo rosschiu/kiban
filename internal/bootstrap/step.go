@@ -112,6 +112,10 @@ type Deps struct {
 	// kiban-frontend beyond KIBAN_DOMAIN's: web origins ("https://app.example.com") and native
 	// redirect URIs ("com.example.app:/callback").
 	ExtraOrigins []string
+	// AccessTokenLifespan (KIBAN_ACCESS_TOKEN_LIFESPAN, seconds) is the realm's access-token
+	// lifetime; a disabled user's token verifies this long (docs/limitations.md). 0 keeps the
+	// 300-second default.
+	AccessTokenLifespan int
 	// IdentityClientSecret is the kiban-identity-service client's current secret
 	// (KEYCLOAK_IDENTITY_CLIENT_SECRET) — RealmStep writes it to SecretsDir as a 0600 file;
 	// with RotateSecrets it instead rotates the secret via the admin API first and writes the
