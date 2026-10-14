@@ -205,18 +205,23 @@ the user has since been disabled in Keycloak or deactivated in the company. Only
 verified token alone as "still allowed". A disabled user's token verifies until it expires,
 five minutes by default.
 
-This is how Kiban thinks about it, and what we ask of every app beside it:
+**Recommendation: verify the token locally, then ask for a decision, on every request, in one
+helper.**
 
-- The token proves identity, locally and for free. The SDK checks the signature against the
-  realm's keys and never calls Kiban for that.
-- Permission is a decision, never a claim. A decision asks identity and org for the user's
-  current state on every call, so a disabled user is refused on their next request, not when
-  their token expires. Kiban's own routes decide the same way, except the few listed in
-  [limitations](limitations.md).
-- A route with nothing to protect still decides. "My profile" or "my tickets" has no object,
-  but it has a feature key, and a decision on the feature key alone is what refuses a disabled
-  user there.
-- Put both halves in one helper, so a route cannot do the first and forget the second:
+Why. The token proves identity and nothing else. Verifying it is a signature check against
+the realm's keys, local and free, and that is all it can ever tell you: who this was when the
+token was issued. Whether the user may do something now is a different question with a
+different answer over time. A user is disabled, leaves a company, loses a position, has a
+share revoked. None of that changes the token. Only a decision asks identity and org for the
+user's current state, so only a decision refuses a disabled user on their next request rather
+than when the token expires. Kiban's own routes work the same way, except the few listed in
+[limitations](limitations.md). Verifying first still matters: it rejects forged, expired and
+foreign tokens before anything touches Kiban, and gives you the subject for logging.
+
+How. Decide on every request, including routes with nothing to protect. "My profile" or "my
+tickets" has no object, but it has a feature key, and a decision on the feature key alone is
+what refuses a disabled user there. Put the two halves in one helper and start every handler
+with it, so a route cannot verify and forget to decide:
 
 === "Node"
 
