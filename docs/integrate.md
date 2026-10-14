@@ -199,6 +199,83 @@ back is who the user is and nothing more; never read a role from the token.
 You should see the user's `sub` (their Keycloak id) for a valid token and an error for an
 expired one, one for another audience, or one Kiban did not sign.
 
+A verified token says who the user was when it was issued, nothing more. It does not know that
+the user has since been disabled in Keycloak or deactivated in the company. Only a decision
+(step 7) checks that, on every call. So make a decision before serving data, and never treat a
+verified token alone as "still allowed". A disabled user's token verifies until it expires,
+five minutes by default.
+
+**Recommendation: verify the token locally, then ask for a decision, on every request, in one
+helper.**
+
+Why. The token proves identity and nothing else. Verifying it is a signature check against
+the realm's keys, local and free, and that is all it can ever tell you: who this was when the
+token was issued. Whether the user may do something now is a different question with a
+different answer over time. A user is disabled, leaves a company, loses a position, has a
+share revoked. None of that changes the token. Only a decision asks identity and org for the
+user's current state, so only a decision refuses a disabled user on their next request rather
+than when the token expires. Kiban's own routes work the same way, except the few listed in
+[limitations](limitations.md). Verifying first still matters: it rejects forged, expired and
+foreign tokens before anything touches Kiban, and gives you the subject for logging.
+
+How. Decide on every request, including routes with nothing to protect. "My profile" or "my
+tickets" has no object, but it has a feature key, and a decision on the feature key alone is
+what refuses a disabled user there. Put the two halves in one helper and start every handler
+with it, so a route cannot verify and forget to decide:
+
+=== "Node"
+
+    ```ts
+    export async function requireAccess(req: Request, featureKey: string, companyId: string,
+                                        object?: { type: string; id: string }, relation?: string) {
+      const bearer = req.headers.authorization?.replace(/^Bearer /, "");
+      if (!bearer) throw new Error("login required");
+      await verifier.verify(bearer);                       // who: local, free
+      const decision = await kiban.can(bearer, {           // whether: Kiban, every call
+        featureKey, moduleKey: "tokidesk", scope: "company", companyId, object, relation
+      });
+      if (!decision.allowed) throw new Error("forbidden: " + decision.reason);
+      return bearer;
+    }
+    ```
+
+=== "Python"
+
+    ```python
+    def require_access(authorization, feature_key, company_id, object=None, relation=None):
+        bearer = (authorization or "").removeprefix("Bearer ")
+        if not bearer:
+            abort(401)
+        kiban.verify_user_token(bearer)                          # who: local, free
+        decision = kiban.can(bearer, feature_key, module_key="tokidesk", company_id=company_id,
+                             object=object, relation=relation)  # whether: Kiban, every call
+        if not decision.allowed:
+            abort(403)
+        return bearer
+    ```
+
+=== "Go"
+
+    ```go
+    func requireAccess(ctx context.Context, kiban *sdk.Client, r *http.Request, req sdk.CanRequest) (string, error) {
+        bearer := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+        if bearer == "" {
+            return "", errUnauthenticated
+        }
+        if _, err := kiban.VerifyUserToken(ctx, bearer); err != nil { // who: local, free
+            return "", errUnauthenticated
+        }
+        d, err := kiban.Can(ctx, bearer, req) // whether: Kiban, every call
+        if err != nil || !d.Allowed {
+            return "", errForbidden
+        }
+        return bearer, nil
+    }
+    ```
+
+Every handler then starts with that one call, and the window for a disabled user is the time
+between two of their requests, not the token's lifetime.
+
 ### 7. Ask before every read and write
 
 One call with the user's own bearer: the feature key, your app key, the company, and for an
