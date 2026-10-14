@@ -149,6 +149,21 @@ func (e *PositionBoundError) Error() string {
 	return fmt.Sprintf("org: position is bound to %d module grant(s), delete refused", e.Count)
 }
 
+// PositionHeldError is the 409 POSITION_HELD for assigning a member to a position that has a
+// holder today. It names the current assignment so the caller can end it first; the exclusion
+// constraint on position_assignment stays as the second layer for a concurrent write.
+type PositionHeldError struct {
+	AssignmentID uuid.UUID
+	MemberID     uuid.UUID
+}
+
+func (e *PositionHeldError) Error() string {
+	return "org: position is held by member " + e.MemberID.String() + " (assignment " + e.AssignmentID.String() + ")"
+}
+
+// Unwrap keeps errors.Is(err, ErrConflict) true: a held position is still a conflict.
+func (e *PositionHeldError) Unwrap() error { return ErrConflict }
+
 // ReferencedError is the 409 CONFLICT for a DELETE refused by a foreign key: the row is still
 // referenced from Table (the referencing table's name, e.g. "position_assignment") — the
 // opposite of the INSERT/UPDATE-side "referenced row does not exist" 422.
@@ -1505,6 +1520,13 @@ func (s *Store) AssignNow(ctx context.Context, actor string, positionID, memberI
 	validFrom, err := s.today(ctx, tx)
 	if err != nil {
 		return Assignment{}, err
+	}
+	held, err := q.GetAssignmentOnDate(ctx, GetAssignmentOnDateParams{PositionID: pgFromUUID(positionID), ValidFrom: pgDate(validFrom)})
+	switch {
+	case err == nil:
+		return Assignment{}, &PositionHeldError{AssignmentID: uuidFromPg(held.ID), MemberID: uuidFromPg(held.MemberID)}
+	case !errors.Is(err, pgx.ErrNoRows):
+		return Assignment{}, fmt.Errorf("org: current holder: %w", err)
 	}
 	asgRow, err := q.CreateAssignment(ctx, CreateAssignmentParams{
 		PositionID: pgFromUUID(positionID), MemberID: pgFromUUID(memberID), ValidFrom: pgDate(validFrom), ValidTo: pgtype.Date{},

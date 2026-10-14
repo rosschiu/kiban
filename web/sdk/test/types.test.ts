@@ -29,7 +29,8 @@ describe("ApiErrorCode — internal/errenv canonical error codes", () => {
       AuthorizationUnavailable: "AUTHORIZATION_UNAVAILABLE",
       ValidationFailed: "VALIDATION_FAILED",
       IdempotencyConflict: "IDEMPOTENCY_CONFLICT",
-      GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED"
+      GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED",
+      PositionHeld: "POSITION_HELD"
     });
   });
 

@@ -54,6 +54,13 @@ func TestConstraints_OverlappingAssignmentRejected(t *testing.T) {
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict for an overlapping open-ended assignment, got %v", err)
 	}
+	// AssignNow refuses before the insert (PositionHeldError); the exclusion constraint is the
+	// layer beneath it, so prove it directly with an overlapping row.
+	_, err = store.pool.Exec(ctx, `INSERT INTO org.position_assignment (position_id, member_id, valid_from) VALUES ($1, $2, $3)`,
+		pgFromUUID(position.ID), pgFromUUID(memberB.ID), pgDate(date("2026-02-01")))
+	if !errors.Is(classifyPgError(err), ErrConflict) {
+		t.Fatalf("expected the exclusion constraint to reject an overlapping row, got %v", err)
+	}
 
 	// A non-overlapping window (ends before the first assignment... impossible since the first
 	// is open-ended, so instead prove a window that starts after an explicit end succeeds).

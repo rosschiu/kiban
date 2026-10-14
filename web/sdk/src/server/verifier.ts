@@ -31,7 +31,8 @@ export interface VerifiedToken {
 /** Verifies bearer tokens Kiban's login issued, against the realm's signing keys. */
 export interface TokenVerifier {
   /** Verifies signature, issuer, audience and time claims; rejects with an `Error` whose
-   * message starts with `kiban: invalid token` otherwise. */
+   * message starts with `kiban: invalid token` otherwise. A user disabled after the token was
+   * issued still verifies until it expires: make a decision (`can`) before serving data. */
   verify(token: string): Promise<VerifiedToken>;
 }
 
