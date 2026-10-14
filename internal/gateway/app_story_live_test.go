@@ -241,8 +241,8 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); d.Allowed {
 		t.Fatal("after revoke the user's object check must be denied")
 	}
-	// Deleting in the wrong order, anchor first, must not strand the rest: the owning app can
-	// still revoke the viewer, and anchoring the same id again revives nothing.
+	// Revoking the anchor deletes the object: every other tuple on it goes too, the user is
+	// denied at once, and anchoring the same id again revives nothing.
 	obj2 := &struct {
 		Type string `json:"type"`
 		ID   string `json:"id"`
@@ -254,8 +254,8 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if err := app.Revoke(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
 		t.Fatalf("revoke anchor of t-2: %v", err)
 	}
-	if err := app.Revoke(ctx, companyID, viewer2); err != nil {
-		t.Fatalf("revoke viewer on the unanchored t-2: %v (0.1.2 answered 422)", err)
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj2, Relation: "viewer"}); d.Allowed {
+		t.Fatal("revoking the anchor of t-2 must take the viewer with it")
 	}
 	if err := app.Grant(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
 		t.Fatalf("re-anchor t-2: %v", err)

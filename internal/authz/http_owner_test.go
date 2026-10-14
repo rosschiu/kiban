@@ -88,9 +88,21 @@ func TestHandleGrants_OwnerApp(t *testing.T) {
 		}
 	})
 
+	t.Run("revoking the anchor removes every tuple on the object, each in the ledger", func(t *testing.T) {
+		expect(t, post(appClient, []map[string]string{anchor("ho_doc", "ho-d5", mod), viewer("ho_doc", "ho-d5")}), http.StatusOK, "")
+		expect(t, postOp("revoke", appClient, []map[string]string{anchor("ho_doc", "ho-d5", mod)}), http.StatusOK, "")
+		var n int
+		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.tuple WHERE object_type = 'ho_doc' AND object_id = 'ho-d5'`).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("tuples left on ho-d5 after revoking its anchor = %d, err=%v; want none", n, err)
+		}
+		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.grant_ledger WHERE object_type = 'ho_doc' AND object_id = 'ho-d5' AND op = 'revoke'`).Scan(&n); err != nil || n != 2 {
+			t.Fatalf("revoke ledger rows for ho-d5 = %d, err=%v; want 2 (anchor and viewer)", n, err)
+		}
+	})
+
 	t.Run("owning app revokes the rest after the anchor is gone, so nothing is stranded", func(t *testing.T) {
-		expect(t, post(appClient, []map[string]string{anchor("ho_doc", "ho-d3", mod), viewer("ho_doc", "ho-d3")}), http.StatusOK, "")
-		expect(t, postOp("revoke", appClient, []map[string]string{anchor("ho_doc", "ho-d3", mod)}), http.StatusOK, "")
+		// A tuple stranded by 0.1.2 (anchor revoked, relation left behind), seeded directly.
+		mustExecAuthz(t, pool, `INSERT INTO authz.tuple (object_type, object_id, relation, subject_type, subject_id, subject_relation) VALUES ('ho_doc', 'ho-d3', 'viewer', 'user', 'ho-reader', '')`)
 		expect(t, postOp("revoke", appClient, []map[string]string{viewer("ho_doc", "ho-d3")}), http.StatusOK, "")
 		var n int
 		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.tuple WHERE object_type = 'ho_doc' AND object_id = 'ho-d3'`).Scan(&n); err != nil || n != 0 {
