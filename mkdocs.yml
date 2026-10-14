@@ -16,6 +16,11 @@ theme:
       toggle: { icon: material/brightness-7, name: Dark mode }
     - scheme: slate
       toggle: { icon: material/brightness-4, name: Light mode }
+extra:
+  version:
+    provider: mike
+    default: latest
+
 markdown_extensions:
   - admonition
   - tables

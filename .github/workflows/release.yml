@@ -366,7 +366,7 @@ jobs:
             echo
             REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
             echo "- Full changelog: ${REPO_URL}/blob/${TAG}/CHANGELOG.md"
-            echo "- Known limitations: https://rosschiu.github.io/kiban/limitations/"
+            echo "- Known limitations: https://rosschiu.github.io/kiban/latest/limitations/"
           } > /tmp/release-notes.md
 
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
