@@ -58,6 +58,7 @@ func (svc *Service) Routes() http.Handler {
 	// every other org mutation).
 	mux.HandleFunc("GET /internal/org/companies/{id}/positions", svc.handleAdminPositionList)
 	mux.HandleFunc("POST /internal/org/companies/{id}/positions", svc.handleAdminCreatePosition)
+	mux.HandleFunc("PUT /internal/org/admin/positions/{id}", svc.handleAdminUpdatePosition)
 
 	// The group admin surface — same "internal read, gateway is the trust boundary"
 	// posture as the position admin surface above; add/remove-member both call authorize() (the
@@ -865,11 +866,10 @@ func positionWithHolderView(p PositionWithHolder) map[string]any {
 	return v
 }
 
-// adminCreatePositionRequest is handleAdminCreatePosition's body shape — deliberately narrower
-// than positionRequest: companyId comes from the PATH only, and orgUnitId isn't accepted at all
-// (defaults to the company root). Both are still DECODED (as optional pointers) purely so a
-// caller that supplies either gets an explicit 422 naming the field, never a silent ignore — a
-// body companyId/orgUnitId is rejected, not trusted.
+// adminCreatePositionRequest is handleAdminCreatePosition's body shape — narrower than
+// positionRequest: companyId comes from the PATH only (a body companyId is rejected with 422,
+// never trusted). orgUnitId is optional: absent, the position sits on the company root; given,
+// the store checks the unit sits under the company (422 otherwise).
 type adminCreatePositionRequest struct {
 	Code      string  `json:"code"`
 	Title     string  `json:"title"`
@@ -877,11 +877,11 @@ type adminCreatePositionRequest struct {
 	OrgUnitID *string `json:"orgUnitId"`
 }
 
-// handleAdminCreatePosition answers `POST /internal/org/companies/{id}/positions` {code,title} —
-// the admin create: companyId is taken from the path only (a body companyId/orgUnitId
-// is rejected with 422, never trusted — the legacy handleCreatePosition's trust gap this surface
-// deliberately does NOT inherit), org-unit defaults to the company's own root org_unit (id ==
-// companyID; orgUnitUnderCompany treats a unit as under itself).
+// handleAdminCreatePosition answers `POST /internal/org/companies/{id}/positions`
+// {code,title,orgUnitId?} — the admin create: companyId is taken from the path only (a body
+// companyId is rejected with 422, never trusted — the legacy handleCreatePosition's trust gap this
+// surface deliberately does NOT inherit); orgUnitId defaults to the company's own root org_unit
+// (id == companyID; orgUnitUnderCompany treats a unit as under itself).
 func (svc *Service) handleAdminCreatePosition(w http.ResponseWriter, r *http.Request) {
 	companyID, ok := parsePathUUID(w, r, "id")
 	if !ok {
@@ -902,19 +902,70 @@ func (svc *Service) handleAdminCreatePosition(w http.ResponseWriter, r *http.Req
 		})
 		return
 	}
+	orgUnitID := companyID
 	if req.OrgUnitID != nil && *req.OrgUnitID != "" {
-		errenv.WriteError(w, http.StatusUnprocessableEntity, errenv.APIError{
-			Code: errenv.CodeValidationError, Message: "orgUnitId is not accepted on this route (defaults to the company root)",
-			Details: map[string]string{"field": "orgUnitId"},
-		})
-		return
+		parsed, err := uuid.Parse(*req.OrgUnitID)
+		if err != nil {
+			errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid orgUnitId", Details: map[string]string{"field": "orgUnitId"}})
+			return
+		}
+		orgUnitID = parsed
 	}
-	position, err := svc.store.CreatePosition(r.Context(), actorFor(authCtx), companyID, req.Code, req.Title, companyID)
+	position, err := svc.store.CreatePosition(r.Context(), actorFor(authCtx), companyID, req.Code, req.Title, orgUnitID)
 	if err != nil {
 		writeStoreError(w, err)
 		return
 	}
 	errenv.WriteData(w, http.StatusCreated, positionView(position))
+}
+
+// adminUpdatePositionRequest is handleAdminUpdatePosition's body: both fields optional, an absent
+// one keeps the current value. companyId and code are immutable after creation.
+type adminUpdatePositionRequest struct {
+	Title     *string `json:"title"`
+	OrgUnitID *string `json:"orgUnitId"`
+}
+
+// handleAdminUpdatePosition answers `PUT /internal/org/admin/positions/{id}` {title?,orgUnitId?}
+// for the superadmin or an administrator of the position's company: retitle, or move the
+// position to another org unit under the same company (the store refuses any other unit with
+// 422). The company is read from the position, never from the caller.
+func (svc *Service) handleAdminUpdatePosition(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	position, err := svc.store.GetPosition(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
+	if !svc.authorizeInCompany(w, r, authCtx, "org.position.update", "position:"+id.String(), position.CompanyID) {
+		return
+	}
+	var req adminUpdatePositionRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	title, orgUnitID := position.Title, position.OrgUnitID
+	if req.Title != nil {
+		title = *req.Title
+	}
+	if req.OrgUnitID != nil && *req.OrgUnitID != "" {
+		parsed, err := uuid.Parse(*req.OrgUnitID)
+		if err != nil {
+			errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid orgUnitId", Details: map[string]string{"field": "orgUnitId"}})
+			return
+		}
+		orgUnitID = parsed
+	}
+	updated, err := svc.store.UpdatePosition(r.Context(), actorFor(authCtx), id, title, orgUnitID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	errenv.WriteData(w, http.StatusOK, positionView(updated))
 }
 
 func (svc *Service) handleUpdatePosition(w http.ResponseWriter, r *http.Request) {

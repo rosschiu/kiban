@@ -207,7 +207,9 @@ func New(ctx context.Context, cfg Config) (*Client, error) {
 	return &Client{cfg: cfg, http: cfg.HTTPClient, verifier: v}, nil
 }
 
-// VerifyUserToken checks a bearer a user presented to the app and returns its subject.
+// VerifyUserToken checks a bearer a user presented to the app and returns its subject. It
+// proves signature, issuer, audience and expiry only: a user disabled after the token was issued
+// still verifies until it expires. Make a decision (Can) before serving data.
 func (c *Client) VerifyUserToken(ctx context.Context, bearer string) (string, error) {
 	return c.verifier.Verify(ctx, bearer)
 }

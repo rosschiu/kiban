@@ -17,7 +17,9 @@ reproduction, and the impact you believe it has.
 Authorization fails closed: any error while evaluating a decision is a refusal. Every object
 check is bound to the request's company: companies and company modules by id, positions and
 groups through their company, module objects through the anchor tuple their module writes at
-creation. An object from another company is denied. An object carries exactly one anchor: a
+creation. An object from another company is denied, and so is a subject: a position, group or
+member named in a tuple resolves only inside its own company, and a grant that names another
+company's position, group or member is refused (`422`). An object carries exactly one anchor: a
 grant that would anchor an already-anchored object to another company is refused (`422`), and
 a unique index on the tuple table holds that rule for every write path; re-anchoring is a
 revoke followed by a grant.

@@ -39,11 +39,14 @@ func TestLive_PositionBoundToRequestCompany(t *testing.T) {
 		},
 		false,
 	)
-	mustExecAuthz(t, pool, `DELETE FROM authz.tuple WHERE object_id IN ($1, $2)`, positionA, memberID)
+	mustExecAuthz(t, pool, `DELETE FROM authz.tuple WHERE object_id IN ($1, $2, $3)`, positionA, memberID, companyA)
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id IN ($1, $2)`, positionA, memberID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id IN ($1, $2, $3)`, positionA, memberID, companyA)
 	})
-	// The org-written shape: position anchored to A, holder via member#mapped_user -> user.
+	// The org-written shape: position anchored to A, the member in A, holder via
+	// member#mapped_user -> user. The membership tuple is what lets the member userset resolve
+	// inside A (a member of another company is skipped).
+	grantTestTuple(t, pool, store.Tuple{ObjectType: "company", ObjectID: companyA, Relation: "member", SubjectType: "member", SubjectID: memberID, SubjectRelation: "mapped_user"})
 	grantTestTuple(t, pool, store.Tuple{ObjectType: "position", ObjectID: positionA, Relation: "company", SubjectType: "company", SubjectID: companyA})
 	grantTestTuple(t, pool, store.Tuple{ObjectType: "position", ObjectID: positionA, Relation: "holder", SubjectType: "member", SubjectID: memberID, SubjectRelation: "mapped_user"})
 	grantTestTuple(t, pool, store.Tuple{ObjectType: "member", ObjectID: memberID, Relation: "mapped_user", SubjectType: "user", SubjectID: holderSub})

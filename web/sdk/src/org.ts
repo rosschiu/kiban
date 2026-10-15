@@ -42,9 +42,12 @@ export interface OrgClient {
   /** GET /api/org/admin/companies/{companyId}/positions — list, each row carrying its CURRENT
    * assignment (assignmentId/memberId/holderDisplayName — null when unassigned). */
   adminListPositions(companyId: string, page?: number, pageSize?: number): Promise<Page<OrgPositionWithHolder>>;
-  /** POST /api/org/admin/companies/{companyId}/positions {code,title} — companyId comes from the
-   * PATH only; org-unit defaults to the company root. */
-  adminCreatePosition(companyId: string, input: { code: string; title: string }): Promise<OrgPosition>;
+  /** POST /api/org/admin/companies/{companyId}/positions {code,title,orgUnitId?} — companyId
+   * comes from the PATH only; orgUnitId must sit under the company and defaults to its root. */
+  adminCreatePosition(companyId: string, input: { code: string; title: string; orgUnitId?: string }): Promise<OrgPosition>;
+  /** PUT /api/org/admin/positions/{id} {title?,orgUnitId?} — retitle, or move the position to
+   * another org unit of its company; an absent field keeps its value. */
+  adminUpdatePosition(positionId: string, input: { title?: string; orgUnitId?: string }): Promise<OrgPosition>;
   /** POST /api/org/admin/positions/{id}/assignments {memberId} — assign-NOW (server-dated).
    * 409 POSITION_HELD, with the current assignmentId and memberId in details, while someone
    * holds the position: end that assignment first. */
@@ -90,6 +93,11 @@ export function createOrgClient(client: ApiClient): OrgClient {
     adminCreatePosition: (companyId, input) =>
       client.request(`/api/org/admin/companies/${encodeURIComponent(companyId)}/positions`, {
         method: "POST",
+        body: input
+      }),
+    adminUpdatePosition: (positionId, input) =>
+      client.request(`/api/org/admin/positions/${encodeURIComponent(positionId)}`, {
+        method: "PUT",
         body: input
       }),
     adminAssignPosition: (positionId, memberId) =>
