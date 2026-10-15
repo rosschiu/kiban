@@ -52,7 +52,7 @@ func TestReconcileRealmSettings(t *testing.T) {
 				t.Fatal("updateRealm should not be called when nothing differs")
 			}
 		})
-		changed, err := reconcileRealmSettings(context.Background(), kc)
+		changed, err := reconcileRealmSettings(context.Background(), kc, realmSettings(0))
 		if err != nil {
 			t.Fatalf("reconcileRealmSettings: %v", err)
 		}
@@ -77,7 +77,7 @@ func TestReconcileRealmSettings(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			}
 		})
-		changed, err := reconcileRealmSettings(context.Background(), kc)
+		changed, err := reconcileRealmSettings(context.Background(), kc, realmSettings(0))
 		if err != nil {
 			t.Fatalf("reconcileRealmSettings: %v", err)
 		}
@@ -111,7 +111,7 @@ func TestReconcileRealmSettings(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			}
 		})
-		changed, err := reconcileRealmSettings(context.Background(), kc)
+		changed, err := reconcileRealmSettings(context.Background(), kc, realmSettings(0))
 		if err != nil {
 			t.Fatalf("reconcileRealmSettings: %v", err)
 		}
@@ -135,7 +135,7 @@ func TestReconcileRealmSettings(t *testing.T) {
 		kc := fakeKCFor(t, "kiban", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		})
-		if _, err := reconcileRealmSettings(context.Background(), kc); err == nil {
+		if _, err := reconcileRealmSettings(context.Background(), kc, realmSettings(0)); err == nil {
 			t.Fatal("expected an error")
 		}
 	})
@@ -149,7 +149,7 @@ func TestReconcileRealmSettings(t *testing.T) {
 				w.WriteHeader(http.StatusForbidden)
 			}
 		})
-		if _, err := reconcileRealmSettings(context.Background(), kc); err == nil {
+		if _, err := reconcileRealmSettings(context.Background(), kc, realmSettings(0)); err == nil {
 			t.Fatal("expected an error")
 		}
 	})
@@ -1582,5 +1582,38 @@ func TestRealmStep_Run_SkippedWhenNoKeycloakAdminBaseURL(t *testing.T) {
 	}
 	if detail == "" {
 		t.Error("expected a non-empty skip detail")
+	}
+}
+
+// --- realmSettings (KIBAN_ACCESS_TOKEN_LIFESPAN) ---
+
+func TestRealmSettings_AccessTokenLifespan(t *testing.T) {
+	if got := realmSettings(0)["accessTokenLifespan"]; got != float64(300) {
+		t.Fatalf("default accessTokenLifespan = %v, want 300", got)
+	}
+	if got := realmSettings(60)["accessTokenLifespan"]; got != float64(60) {
+		t.Fatalf("accessTokenLifespan(60) = %v, want 60", got)
+	}
+	if _, shared := realmTargetSettings["accessTokenLifespan"].(float64); !shared || realmTargetSettings["accessTokenLifespan"] != float64(300) {
+		t.Fatal("realmSettings must copy, never mutate, realmTargetSettings")
+	}
+
+	// A realm still on the default is patched to exactly the configured value, nothing else.
+	var gotPatch map[string]any
+	kc := fakeKCFor(t, "kiban", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			writeJSON(w, realmTargetSettings)
+		case http.MethodPut:
+			_ = json.NewDecoder(r.Body).Decode(&gotPatch)
+			w.WriteHeader(http.StatusNoContent)
+		}
+	})
+	changed, err := reconcileRealmSettings(context.Background(), kc, realmSettings(60))
+	if err != nil || !changed {
+		t.Fatalf("reconcile with lifespan 60: changed=%v err=%v", changed, err)
+	}
+	if len(gotPatch) != 1 || gotPatch["accessTokenLifespan"] != float64(60) {
+		t.Fatalf("patch = %v, want exactly {accessTokenLifespan: 60}", gotPatch)
 	}
 }
