@@ -8,6 +8,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Docs: only decisions are revocation-aware; a verified token alone serves a disabled user until it expires, so the integrate page, the limitations page and the three SDKs' token-verify docs say to make a decision before serving data
 - Positions can be placed on an org unit: `POST /api/org/admin/companies/{id}/positions` accepts the `orgUnitId` the contract already required (under the company, root when absent), and `PUT /api/org/admin/positions/{id}` retitles or moves a position; 0.1.2 refused `orgUnitId` with `422` and had no update route, so every position sat on the company root
 - Grants: revoking an object's anchor removes every other tuple on the object in the same transaction, and the owning app can still revoke tuples 0.1.2 left stranded on an unanchored object; 0.1.2 kept those tuples, refused to revoke them, and revived them when the same id was anchored again
+- Security: a grant naming another company's position, group or member as subject is refused with `422`, and a check bound to a company ignores such a subject while expanding; in 0.1.2 a tuple `viewer @ position:<B position>#holder` on company A's object let a user who is a member of both companies reach A's object
 
 ## [0.1.2] — 2026-10-12
 Fixes from the first two teams on 0.1.1: the Kubernetes Secret namespace, `batch-can` object
