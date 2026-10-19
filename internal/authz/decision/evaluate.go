@@ -190,7 +190,14 @@ func (d *Decider) relationCheck(ctx context.Context, req Request, obj ObjectRef,
 		*ev = append(*ev, Evidence{Key: "objectCompany", Value: "true"})
 	}
 
-	allowed, err := d.deps.Engine.Check(ctx, obj.Type, obj.ID, relation, "user", req.SubjectID)
+	var allowed bool
+	var err error
+	if scoped, ok := d.deps.Engine.(CompanyScopedChecker); ok && req.Scope == ScopeCompany {
+		// Bound to the company: a userset subject from another company grants nothing here.
+		allowed, err = scoped.CheckInCompany(ctx, obj.Type, obj.ID, relation, "user", req.SubjectID, req.CompanyID)
+	} else {
+		allowed, err = d.deps.Engine.Check(ctx, obj.Type, obj.ID, relation, "user", req.SubjectID)
+	}
 	if err != nil {
 		return unavailable("engine", "relation_check", ev), true
 	}

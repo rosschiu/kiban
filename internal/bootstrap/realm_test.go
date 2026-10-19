@@ -28,6 +28,7 @@ func realmTestDeps(t *testing.T) *Deps {
 		KCBootstrapAdminUsername: bootstrapTestEnv(t, "KC_BOOTSTRAP_ADMIN_USERNAME"),
 		KCBootstrapAdminPassword: bootstrapTestEnv(t, "KC_BOOTSTRAP_ADMIN_PASSWORD"),
 		KibanDomain:              "", // dev: fall back to the loopback origins already imported
+		AccessTokenLifespan:      livestack.TestStackAccessTokenLifespan,
 		IdentityClientSecret:     bootstrapTestEnv(t, "KEYCLOAK_IDENTITY_CLIENT_SECRET"),
 		SecretsDir:               t.TempDir(),
 	}

@@ -23,6 +23,8 @@ data:
   # URIs for kiban-frontend (infra/compose.yaml's comments apply unchanged).
   KIBAN_SERVICE_CLIENTS: ""
   KIBAN_EXTRA_ORIGINS: ""
+  # Access-token lifetime in seconds (infra/compose.yaml's comment applies unchanged).
+  KIBAN_ACCESS_TOKEN_LIFESPAN: "300"
   # infra/compose.yaml's KIBAN_DOMAIN comment (`bootstrap` service) applies unchanged
   # here: leave unset for a kind proof (RealmStep falls back to its dev-loopback redirect
   # allowlist) and set to the real hostname in overlays/production once one exists.

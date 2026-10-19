@@ -179,6 +179,11 @@ func (c fragmentEngineChecker) Check(ctx context.Context, objType, objID, rel, s
 	return fragment.Check(ctx, c.en, c.loaded, objType, objID, rel, subjType, subjID)
 }
 
+// CheckInCompany satisfies decision.CompanyScopedChecker: the check is bound to companyID.
+func (c fragmentEngineChecker) CheckInCompany(ctx context.Context, objType, objID, rel, subjType, subjID, companyID string) (bool, error) {
+	return fragment.CheckInCompany(ctx, c.en, c.loaded, objType, objID, rel, subjType, subjID, companyID)
+}
+
 // Defines reports whether the EFFECTIVE model (base + enabled fragments) defines rel on objType.
 // A disabled module's type is absent from the effective model and therefore unbindable — a
 // clean deny, consistent with fragment.Check's own inert-false posture.
@@ -475,6 +480,31 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		// A position, group or member subject must belong to the request's company: a tuple
+		// naming another company's position as viewer would otherwise let a user who is a
+		// member of both companies reach this company's object through that position. The
+		// engine ignores such a subject at check time too (CheckInCompany); refusing it here
+		// keeps the tuple table honest.
+		for _, t := range tuples {
+			var in bool
+			var err error
+			switch t.SubjectType {
+			case "position", "group":
+				in, err = checker.Check(r.Context(), t.SubjectType, t.SubjectID, "company", "company", req.CompanyID)
+			case "member":
+				in, err = store.MemberOfCompany(r.Context(), svc.Pool, req.CompanyID, t.SubjectID)
+			default:
+				continue
+			}
+			if err != nil {
+				writeDecision(w, decision.Decision{Reason: decision.ReasonDependencyUnavailable, Dependency: "engine", Step: "grants_subject"})
+				return
+			}
+			if !in {
+				writeValidationFailed(w, "subject "+t.SubjectType+":"+t.SubjectID+" does not belong to company "+req.CompanyID)
+				return
+			}
+		}
 	}
 
 	// Owner rule (DEC, 2026-09-26) — the app that registered module M, identified by its
@@ -594,6 +624,20 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !anchored {
+			// The owning app may still clean up an object whose anchor is already gone (an
+			// anchor revoked before its relations): otherwise those tuples could never be
+			// removed and would come back if the id were anchored again. An object anchored
+			// elsewhere stays refused.
+			if req.Op == "revoke" && ownerCall {
+				existing, err := store.AnchorOf(r.Context(), svc.Pool, t.ObjectType, t.ObjectID)
+				if err != nil {
+					writeDecision(w, decision.Decision{Reason: decision.ReasonDependencyUnavailable, Dependency: "engine", Step: "grants_anchor"})
+					return
+				}
+				if existing == "" {
+					continue
+				}
+			}
 			writeValidationFailed(w, "object "+t.ObjectType+":"+t.ObjectID+" is not anchored to company_module:"+anchorID)
 			return
 		}

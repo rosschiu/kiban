@@ -57,6 +57,31 @@ describe("createOrgClient", () => {
     expect(JSON.parse(init.body as string)).toEqual({ code: "cfo", title: "CFO" });
   });
 
+  it("adminCreatePosition() passes orgUnitId through when given", async () => {
+    const position = { id: "p1", companyId: "c1", code: "CFO", title: "CFO", orgUnitId: "bu1" };
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(201, { data: position }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    await client.adminCreatePosition("c1", { code: "cfo", title: "CFO", orgUnitId: "bu1" });
+
+    const [, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ code: "cfo", title: "CFO", orgUnitId: "bu1" });
+  });
+
+  it("adminUpdatePosition() puts {title?,orgUnitId?} to /api/org/admin/positions/{id}", async () => {
+    const position = { id: "p1", companyId: "c1", code: "CFO", title: "CFO (interim)", orgUnitId: "bu1" };
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(200, { data: position }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    const result = await client.adminUpdatePosition("p1", { title: "CFO (interim)", orgUnitId: "bu1" });
+
+    expect(result).toEqual(position);
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://gateway.test/api/org/admin/positions/p1");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ title: "CFO (interim)", orgUnitId: "bu1" });
+  });
+
   it("adminAssignPosition() posts {memberId} to /api/org/admin/positions/{id}/assignments", async () => {
     const assignment = { id: "a1", positionId: "p1", memberId: "m1", validFrom: "2026-08-17", validTo: null };
     const fetchFn = vi.fn().mockResolvedValue(jsonResponse(201, { data: assignment }));

@@ -25,3 +25,13 @@ func Check(ctx context.Context, en *engine.Engine, l Loaded, objType, objID, rel
 	engineWithModel := &engine.Engine{Pool: en.Pool, Model: l.Model}
 	return engineWithModel.Check(ctx, objType, objID, rel, subjType, subjID)
 }
+
+// CheckInCompany is Check bound to companyID (engine.CheckInCompany): a position, group or
+// member userset from another company grants nothing. Same inert-false posture as Check.
+func CheckInCompany(ctx context.Context, en *engine.Engine, l Loaded, objType, objID, rel, subjType, subjID, companyID string) (bool, error) {
+	if _, ok := l.Model[objType]; !ok && l.AllowedTypes[objType] {
+		return false, nil
+	}
+	engineWithModel := &engine.Engine{Pool: en.Pool, Model: l.Model}
+	return engineWithModel.CheckInCompany(ctx, objType, objID, rel, subjType, subjID, companyID)
+}

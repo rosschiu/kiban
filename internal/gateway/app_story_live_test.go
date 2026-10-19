@@ -106,6 +106,7 @@ func TestLive_AppBesideKiban(t *testing.T) {
 		}
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id = $1`, "story-ch-"+appKey)
+		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.tuple WHERE object_id LIKE 'story-pos-%' OR subject_id LIKE 'story-pos-%'`)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.grant_ledger WHERE object_type = 'livestory_ticket' OR object_id LIKE $1`, "%/"+appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.default_grant WHERE module_key = $1`, appKey)
 		_, _ = adminPool.Exec(ctx, `DELETE FROM authz.model_fragment WHERE module_key = $1`, appKey)
@@ -240,6 +241,63 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}
 	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); d.Allowed {
 		t.Fatal("after revoke the user's object check must be denied")
+	}
+	// Company isolation: a position of company B cannot be named as viewer of A's object, and a
+	// tuple that says so anyway grants nothing in A; A's own position does.
+	posA, posB := "story-pos-a-"+appKey, "story-pos-b-"+appKey
+	for _, row := range [][]string{
+		{"position", posA, "company", "company", companyID, ""},
+		{"position", posB, "company", "company", companyBID, ""},
+		{"position", posA, "holder", "user", userSub, ""},
+		{"position", posB, "holder", "user", userSub, ""},
+	} {
+		if _, err := adminPool.Exec(ctx, `INSERT INTO authz.tuple (object_type, object_id, relation, subject_type, subject_id, subject_relation) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`, row[0], row[1], row[2], row[3], row[4], row[5]); err != nil {
+			t.Fatalf("seed position tuples: %v", err)
+		}
+	}
+	viaPos := func(pos string) sdk.Tuple {
+		return sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: "viewer", SubjectType: "position", SubjectID: pos, SubjectRelation: "holder"}
+	}
+	err = app.Grant(ctx, companyID, viaPos(posB))
+	if !asAPIError(err, &apiErr) || apiErr.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("grant to another company's position: err = %v, want 422", err)
+	}
+	if _, err := adminPool.Exec(ctx, `INSERT INTO authz.tuple (object_type, object_id, relation, subject_type, subject_id, subject_relation) VALUES ('livestory_ticket','t-1','viewer','position',$1,'holder')`, posB); err != nil {
+		t.Fatalf("seed cross-company tuple: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); d.Allowed {
+		t.Fatal("a tuple naming another company's position must grant nothing in this company")
+	}
+	if err := app.Grant(ctx, companyID, viaPos(posA)); err != nil {
+		t.Fatalf("grant to this company's position: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); !d.Allowed {
+		t.Fatalf("this company's position must grant: %+v", d)
+	}
+	if err := app.Revoke(ctx, companyID, viaPos(posA)); err != nil {
+		t.Fatalf("revoke position viewer: %v", err)
+	}
+	// Revoking the anchor deletes the object: every other tuple on it goes too, the user is
+	// denied at once, and anchoring the same id again revives nothing.
+	obj2 := &struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	}{Type: "livestory_ticket", ID: "t-2"}
+	viewer2 := sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-2", Relation: "viewer", SubjectType: "user", SubjectID: userSub}
+	if err := app.Grant(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID), viewer2); err != nil {
+		t.Fatalf("grant t-2: %v", err)
+	}
+	if err := app.Revoke(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
+		t.Fatalf("revoke anchor of t-2: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj2, Relation: "viewer"}); d.Allowed {
+		t.Fatal("revoking the anchor of t-2 must take the viewer with it")
+	}
+	if err := app.Grant(ctx, companyID, sdk.AnchorTuple(appKey, "livestory_ticket", "t-2", companyID)); err != nil {
+		t.Fatalf("re-anchor t-2: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj2, Relation: "viewer"}); d.Allowed {
+		t.Fatal("re-anchoring t-2 must not revive the revoked viewer")
 	}
 
 	// --- 5. the service account is a user: a background job's own check is refused until an

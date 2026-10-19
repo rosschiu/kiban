@@ -82,6 +82,7 @@ func goErrorCodes() map[string]string {
 		"ValidationFailed":         errenv.CodeValidationFailed,
 		"IdempotencyConflict":      errenv.CodeIdempotencyConflict,
 		"GroupExternallyManaged":   errenv.CodeGroupExternallyManaged,
+		"PositionHeld":             errenv.CodePositionHeld,
 	}
 }
 
@@ -113,7 +114,7 @@ func TestAPIErrorCodes_MatchGolden(t *testing.T) {
 // count check so a NEW Code* constant added to errenv.go without being
 // added to this file's goErrorCodes map fails loudly here rather than passing by omission.
 func TestAPIErrorCodes_EveryGoConstantIsGolden(t *testing.T) {
-	const wantCount = 18
+	const wantCount = 19
 	if got := len(goErrorCodes()); got != wantCount {
 		t.Fatalf("goErrorCodes() has %d entries, want %d — a Code* constant was added to or "+
 			"removed from internal/errenv without updating this file's goErrorCodes map "+

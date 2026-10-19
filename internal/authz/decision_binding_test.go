@@ -35,6 +35,39 @@ func (e *recordingEngine) Check(ctx context.Context, objType, objID, relation, s
 	return e.answers[k], nil
 }
 
+// scopedRecordingEngine also offers CheckInCompany; it records the company each check was
+// bound to.
+type scopedRecordingEngine struct {
+	recordingEngine
+	companies []string
+}
+
+func (e *scopedRecordingEngine) CheckInCompany(ctx context.Context, objType, objID, relation, subjType, subjID, companyID string) (bool, error) {
+	e.companies = append(e.companies, companyID)
+	return e.recordingEngine.Check(ctx, objType, objID, relation, subjType, subjID)
+}
+
+// TestDecisionBinding_RelationCheckBoundToCompany: a company-scope relation check runs through
+// CheckInCompany with the request's company, so a position, group or member userset from
+// another company is ignored by the engine; the anchor check stays a plain Check.
+func TestDecisionBinding_RelationCheckBoundToCompany(t *testing.T) {
+	const (
+		anchorKey   = "doc:d1#company_module@company_module:company-1/test-module"
+		relationKey = "doc:d1#viewer@user:user-1"
+	)
+	eng := &scopedRecordingEngine{recordingEngine: recordingEngine{answers: map[string]bool{anchorKey: true, relationKey: true}}}
+	deps := happyDeps()
+	deps.Engine = eng
+	deps.Model = bindingModel
+	dec := decision.NewDecider(deps).Evaluate(context.Background(), bindingRequest("doc", "d1"))
+	if !dec.Allowed {
+		t.Fatalf("%+v, want allowed", dec)
+	}
+	if len(eng.companies) != 1 || eng.companies[0] != "company-1" {
+		t.Fatalf("relation check bound to %v, want exactly [company-1]", eng.companies)
+	}
+}
+
 // fakeModel is a decision.RelationDefiner over a "type#relation" set — the effective model the
 // binding rule consults to pick the anchor relation for a type.
 type fakeModel map[string]bool
