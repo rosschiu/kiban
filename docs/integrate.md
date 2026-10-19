@@ -203,7 +203,7 @@ A verified token says who the user was when it was issued, nothing more. It does
 the user has since been disabled in Keycloak or deactivated in the company. Only a decision
 (step 7) checks that, on every call. So make a decision before serving data, and never treat a
 verified token alone as "still allowed". A disabled user's token verifies until it expires,
-five minutes by default.
+`KIBAN_ACCESS_TOKEN_LIFESPAN` seconds, 300 by default.
 
 **Recommendation: verify the token locally, then ask for a decision, on every request, in one
 helper.**

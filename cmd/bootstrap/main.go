@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -78,8 +79,9 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		{Name: "KC_BOOTSTRAP_ADMIN_USERNAME", Default: ""},
 		{Name: "KC_BOOTSTRAP_ADMIN_PASSWORD", Default: ""},
 		{Name: "KIBAN_DOMAIN", Default: ""},
-		{Name: "KIBAN_SERVICE_CLIENTS", Default: ""}, // comma-separated confidential client ids
-		{Name: "KIBAN_EXTRA_ORIGINS", Default: ""},   // comma-separated extra web origins / native redirect URIs
+		{Name: "KIBAN_SERVICE_CLIENTS", Default: ""},          // comma-separated confidential client ids
+		{Name: "KIBAN_EXTRA_ORIGINS", Default: ""},            // comma-separated extra web origins / native redirect URIs
+		{Name: "KIBAN_ACCESS_TOKEN_LIFESPAN", Default: "300"}, // seconds; the realm's access-token lifetime
 		{Name: "KEYCLOAK_IDENTITY_CLIENT_SECRET", Default: ""},
 		{Name: "KIBAN_SECRETS_DIR", Default: ""}, // e.g. /run/kiban-secrets
 
@@ -109,6 +111,11 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 	values["KIBAN_SUPERADMIN_PASSWORD"] = superadminPassword["KIBAN_SUPERADMIN_PASSWORD"]
+
+	accessTokenLifespan, err := strconv.Atoi(values["KIBAN_ACCESS_TOKEN_LIFESPAN"])
+	if err != nil || accessTokenLifespan <= 0 {
+		return fmt.Errorf("KIBAN_ACCESS_TOKEN_LIFESPAN must be a positive number of seconds, got %q", values["KIBAN_ACCESS_TOKEN_LIFESPAN"])
+	}
 
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -182,6 +189,7 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 		KibanDomain:              values["KIBAN_DOMAIN"],
 		ServiceClients:           splitCSV(values["KIBAN_SERVICE_CLIENTS"]),
 		ExtraOrigins:             splitCSV(values["KIBAN_EXTRA_ORIGINS"]),
+		AccessTokenLifespan:      accessTokenLifespan,
 		IdentityClientSecret:     values["KEYCLOAK_IDENTITY_CLIENT_SECRET"],
 		SecretsDir:               values["KIBAN_SECRETS_DIR"],
 		RotateSecrets:            rotateSecrets,

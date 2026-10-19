@@ -52,6 +52,10 @@ Key settings:
 - `KIBAN_SERVICE_CLIENTS`: read by `bootstrap`; comma-separated ids of confidential Keycloak
   clients with a service account and the `kiban-api` audience, for backends that need their own
   token. See [Getting a token for a service](integrate.md#getting-a-token-for-a-service).
+- `KIBAN_ACCESS_TOKEN_LIFESPAN`: read by `bootstrap`; the realm's access-token lifetime in
+  seconds, default `300`, written to Keycloak on every run. A disabled user's token verifies
+  this long on routes that do not ask for a decision ([limitations](limitations.md)); shorten
+  it to narrow that window, at the cost of one refresh per user per lifetime.
 - `KIBAN_DOMAIN`: read by `bootstrap` and by the gateway from their own environment, not from
   `.env`. A host name with an optional `:port`, no scheme and no path; the value is not
   validated, and a scheme or path yields redirect URIs and a CORS origin that never match. When set, bootstrap reconciles the `kiban-frontend` client's redirect URIs and web
