@@ -4,6 +4,12 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-10-19
+Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
+anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the
+docs saying plainly that only decisions are revocation-aware; plus the access-token lifetime
+from an env var and the documentation site versioned per minor.
+
 - Assigning a member to a position that already has a holder answers `409 POSITION_HELD` with the current `assignmentId` and `memberId` in the details; 0.1.2 answered a bare `409 CONFLICT` from the database constraint, so the caller could not tell which tenure to end first
 - Docs: only decisions are revocation-aware; a verified token alone serves a disabled user until it expires, so the integrate page, the limitations page and the three SDKs' token-verify docs say to make a decision before serving data
 - Positions can be placed on an org unit: `POST /api/org/admin/companies/{id}/positions` accepts the `orgUnitId` the contract already required (under the company, root when absent), and `PUT /api/org/admin/positions/{id}` retitles or moves a position; 0.1.2 refused `orgUnitId` with `422` and had no update route, so every position sat on the company root
@@ -84,7 +90,8 @@ serves its own API; the sample modules are examples, off by default.
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`
 - Documentation site: quickstart, integrate, concepts, building, SDK guide, operating, security, limitations
 
-[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/rosschiu/kiban/releases/tag/v0.1.3
 [0.1.2]: https://github.com/rosschiu/kiban/releases/tag/v0.1.2
 [0.1.1]: https://github.com/rosschiu/kiban/releases/tag/v0.1.1
 [0.1.0]: https://github.com/rosschiu/kiban/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "name": "@rossbsol/kiban-sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Kiban platform SDK: OIDC/PKCE session, envelope-aware API client, typed clients, use-case recipes.",
   "type": "module",
   "private": false,
