@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- A module manifest's `dependencies[]` are written to the registry at every boot, so a missing one answers `MODULE_DEPENDENCY_MISSING`; 0.1.3 validated them at build time and then dropped them, so the check never fired
+
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the

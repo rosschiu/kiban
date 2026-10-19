@@ -193,7 +193,7 @@ author comments) and the values the table refuses; it does not check that `displ
 | `service.port` | 1..65535, unique across the catalog | The port the gateway dials. Shipped: 8150, 8160, 8170, 8180 |
 | `service.healthPath` | an absolute path | Stored in the catalog |
 | `service.image` | `null` in every shipped module; not validated | Not read by anything in 0.1; the image comes from the Dockerfile stage named after the key |
-| `dependencies[]` | `{ "moduleKey", "versionRange", "required": true }` | Each names a module in the same validate batch (or the `-catalog` snapshot); `versionRange` is a semver range the target's `version` must satisfy; `required` must be `true`; no cycles. Validated only in 0.1: the registry does not load a manifest's dependencies, so the gateway's `MODULE_DEPENDENCY_MISSING` check has nothing to act on |
+| `dependencies[]` | `{ "moduleKey", "versionRange", "required": true }` | Each names a module in the same validate batch (or the `-catalog` snapshot); `versionRange` is a semver range the target's `version` must satisfy; `required` must be `true`; no cycles. The registry writes them to its catalog at every boot; a dependency that is not installed and enabled makes the gateway answer `MODULE_DEPENDENCY_MISSING` for the module |
 | `org.requiredOrgUnitTypes` | list of type keys | `["company"]` for every shipped module. The registry refuses to start when the deployment's org-unit taxonomy lacks a listed type |
 | `org.usesMembers`, `org.usesPositions` | bool | Declarative; not enforced |
 | `data.postgresSchema` | exactly `<moduleKey>` | The schema your migrations create |
