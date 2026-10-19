@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- `ASSIGNMENT_ALREADY_ENDED` is in `contracts/wire-enums.json` and the TypeScript SDK's `ApiErrorCode`; 0.1.3 answered it from the org service without the contract knowing it
+
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the
