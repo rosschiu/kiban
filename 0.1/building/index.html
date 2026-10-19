@@ -1,0 +1,1883 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Self-hostable organizational identity and access foundation for business applications.">
+      
+      
+      
+        <link rel="canonical" href="https://rosschiu.github.io/kiban/0.1/building/">
+      
+      
+        <link rel="prev" href="../operating/">
+      
+      
+        <link rel="next" href="../sdk-guide/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Building on Kiban - Kiban</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#building-on-kiban" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kiban" class="md-header__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kiban
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Building on Kiban
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kiban" class="md-nav__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kiban
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Why Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Integrate your app
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operating/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operating Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Building on Kiban
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Building on Kiban
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#using-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the SDK
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      Writing a module
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing a module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#module-runtime-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module runtime contract
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manifest-modulemanifestjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manifest: module.manifest.json
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authorization-fragment-authzfragmentjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authorization fragment: authz.fragment.json
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi-openapiyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAPI: openapi.yaml
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migrations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-grants" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default grants
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal endpoints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-module-to-the-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a module to the platform
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contributing
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SDK guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Known limitations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#using-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using the SDK
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writing-a-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      Writing a module
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Writing a module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#module-runtime-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      Module runtime contract
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manifest-modulemanifestjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manifest: module.manifest.json
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authorization-fragment-authzfragmentjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authorization fragment: authz.fragment.json
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openapi-openapiyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      OpenAPI: openapi.yaml
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migrations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-grants" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default grants
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal endpoints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-module-to-the-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding a module to the platform
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contributing
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="building-on-kiban">Building on Kiban<a class="headerlink" href="#building-on-kiban" title="Permanent link">&para;</a></h1>
+<p>Two audiences: application developers using the SDK, and module developers extending the
+platform.</p>
+<div class="admonition note">
+<p class="admonition-title">Apps and modules</p>
+<p>Most applications should not be modules. An app runs beside Kiban, registers one manifest and
+calls the API through an SDK in any language; <a href="../integrate/">Integrate your app</a> is that path.
+This page is the deeper, in-tree contract the four sample modules follow: Go, built by the
+platform, routed by the gateway. Read it to contribute a sample or to understand how the
+samples work.</p>
+</div>
+<h2 id="using-the-sdk">Using the SDK<a class="headerlink" href="#using-the-sdk" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createSession</span><span class="p">,</span><span class="w"> </span><span class="nx">createApiClient</span><span class="p">,</span><span class="w"> </span><span class="nx">createCapabilitiesClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">origin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createSession</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">authOrigin</span><span class="o">:</span><span class="w"> </span><span class="kt">origin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">realm</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-frontend"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">redirectUri</span><span class="o">:</span><span class="w"> </span><span class="s2">"http://localhost:5173/callback.html"</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="c1">// a "Log in" button: await session.login()</span>
+<span class="c1">// the callback route, once: await session.handleCallback(window.location.href)</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">api</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createApiClient</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">baseUrl</span><span class="o">:</span><span class="w"> </span><span class="kt">origin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">getAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getAccessToken</span><span class="p">(),</span>
+<span class="w">  </span><span class="nx">getAccessTokenExpiresAt</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getTokens</span><span class="p">()</span><span class="o">?</span><span class="p">.</span><span class="nx">expiresAt</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">refreshAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">refresh</span><span class="p">(),</span>
+<span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">capabilities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">createCapabilitiesClient</span><span class="p">(</span><span class="nx">api</span><span class="p">).</span><span class="nx">list</span><span class="p">();</span>
+</code></pre></div>
+<p>The session runs the OpenID Connect authorization-code flow with PKCE, validates state and nonce,
+refreshes tokens once at a time, survives a reload when created with <code>persistTokens: true</code>
+(off by default: tokens are memory-only) while a refresh token is still valid, and
+logs out at the identity provider. The API client speaks the platform envelope: every success is
+<code>{ data }</code>, every failure <code>{ error: { code, message } }</code>, surfaced as a <code>KibanApiError</code> with the
+HTTP status and code.</p>
+<p>Typed clients cover the platform surface: capabilities, effective access, organization reads,
+and superadmin operations (module enable/disable, platform-role grant and revoke). Two recipes
+answer common questions in one call:</p>
+<ul>
+<li><code>canI({ featureKey, companyId })</code> returns <code>{ allowed, reason }</code> and never throws for a denial.</li>
+<li><code>grantObjectAccess</code> / <code>revokeObjectAccess</code> write one tuple, for a user or for a position or
+  group userset. From a browser login, superadmin only.</li>
+</ul>
+<p>The SDK has no runtime dependencies and no dependency on the sample shell. Everything talks to
+the gateway origin; never call Keycloak or a module directly.</p>
+<p>Step by step, with what you should see: the frontend track of <a href="../integrate/">Integrate your app</a>.
+Every client and recipe: the <a href="../sdk-guide/">SDK guide</a>.</p>
+<h2 id="writing-a-module">Writing a module<a class="headerlink" href="#writing-a-module" title="Permanent link">&para;</a></h2>
+<p>A module is a directory under <code>modules/&lt;key&gt;/</code> in this repository, with five artifacts, a Go
+service and a small embed file:</p>
+<div class="highlight"><pre><span></span><code>modules/&lt;key&gt;/
+  module.manifest.json      key, version, scopeType, service basePath/port/healthPath, schema
+  authz.fragment.json       roles, object types, relations, feature keys
+  openapi.yaml              the module's HTTP API under /api/&lt;key&gt;/v1/...
+  migrations/               tern migrations for schema &lt;key&gt; only, plus tern.conf and checksums.json
+  frontend/                 optional routes a shell can mount (may be absent)
+  service/                  the Go service; service/cmd/main.go is the binary
+  artifacts.go              go:embed of the manifest and the fragment
+  LICENSE                   the licence text the manifest declares
+</code></pre></div>
+<p>In 0.1 a module is compiled into the platform: it is Go, it lives in this repository, its
+binary is built by the same Dockerfile as the foundation services, and the registry's list of
+known modules is a Go literal. A module in another language, or one built outside this
+repository, cannot be installed. The list of edits that turns a directory into a running module
+is at the end of this section.</p>
+<p>This section is the reference; the sample modules under <code>modules/</code> are the worked examples.</p>
+<p>The contract in plain terms:</p>
+<ul>
+<li><strong>Authorize every route.</strong> Ask the effective-access API before every read and write. Company
+  scope comes from the URL; the decision confirms membership and module enablement, then the
+  relation. A denial is a normal outcome; a dependency failure is a refusal.</li>
+<li><strong>Anchor every object.</strong> Each object type your fragment declares carries a <code>company_module</code>
+  relation, and you write that tuple when you create the object. Every object check is bound to
+  the company in the URL.</li>
+<li><strong>Grants name the company.</strong> A grants request carries <code>companyId</code> and the tuples; only your
+  module's own object types (or its <code>company_module</code>) are accepted, the caller must pass your
+  module's company-scope decision, and module-tier tuples need the company-module administrator.</li>
+<li><strong>Audit every mutation</strong> in the same transaction as the write, with the actor taken from the
+  verified token.</li>
+<li><strong>Stay in your schema.</strong> Migrations may only touch the module's own schema and its own audit
+  table. They are checksummed once shipped.</li>
+<li><strong>Describe what you serve.</strong> The OpenAPI file must match the running code; the test suite
+  validates responses against it.</li>
+<li><strong>Be honest on <code>/ready</code>.</strong> Check your database connection.</li>
+</ul>
+<p>For a Go service, import <code>github.com/rosschiu/kiban/modulekit</code> (Apache-2.0). It provides a
+JWKS-backed bearer token verifier; JSON decoding, UUID path parameters, paging and unique-violation
+helpers; an authorization client (<code>Can</code>, grant and revoke, the anchor tuple for a new object);
+an organization client (member lookup by <code>kcSub</code> or member id); and a notification client (post a module
+custom event). A module is then its handlers, its store and its wrappers. The sample modules
+under <code>modules/</code> show the shape.</p>
+<h3 id="module-runtime-contract">Module runtime contract<a class="headerlink" href="#module-runtime-contract" title="Permanent link">&para;</a></h3>
+<p><strong>What the gateway sends.</strong> For <code>/api/&lt;key&gt;/...</code> the gateway validates the bearer, provisions
+the identity record on a subject's first request, checks the catalog (installed, enabled,
+dependencies present; otherwise <code>403</code> with <code>MODULE_NOT_INSTALLED</code>, <code>MODULE_DISABLED</code> or
+<code>MODULE_DEPENDENCY_MISSING</code> and your service is never called; an unknown key is
+<code>404 NOT_FOUND</code>, an unreachable catalog <code>503 MODULE_UNAVAILABLE</code>) and then reverse-proxies the
+request to <code>http://&lt;host&gt;:&lt;service.port&gt;</code>, where <code>&lt;host&gt;</code> is <code>KIBAN_MODULE_HOST_&lt;KEY&gt;</code> on the
+gateway or <code>127.0.0.1</code> when unset.</p>
+<table>
+<thead>
+<tr>
+<th>On the forwarded request</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Path and query</td>
+<td>Byte for byte the client's, so your service sees the full <code>/api/&lt;key&gt;/v1/...</code>, never a stripped path</td>
+</tr>
+<tr>
+<td><code>Authorization</code></td>
+<td>The client's bearer, verbatim. The gateway has already checked issuer, audience <code>kiban-api</code> and signature, but your service verifies it again</td>
+</tr>
+<tr>
+<td><code>x-correlation-id</code></td>
+<td>Set by the gateway: the client's value if it sent one of at most 128 characters, otherwise a generated id. Put it on your audit rows and your grants requests</td>
+</tr>
+<tr>
+<td><code>X-Forwarded-For</code></td>
+<td>The client address, appended to an upstream proxy's list when the gateway is configured to trust one</td>
+</tr>
+<tr>
+<td><code>Host</code></td>
+<td>The client's <code>Host</code> header, preserved</td>
+</tr>
+<tr>
+<td><code>x-user-*</code></td>
+<td>Never present. A client sending one gets <code>400</code> from the gateway. Your service must not read any identity header; the bearer is the only identity source</td>
+</tr>
+</tbody>
+</table>
+<p>Upstream timeouts are the gateway's: 2 seconds to dial, 5 seconds to the first response byte
+(<code>KIBAN_MODULE_DIAL_TIMEOUT</code>, <code>KIBAN_MODULE_RESPONSE_HEADER_TIMEOUT</code> on the gateway); past
+them the client gets <code>503 MODULE_UNAVAILABLE</code>.</p>
+<p><strong>Environment.</strong> Compose sets these on every module service. Defaults are what the sample
+<code>main.go</code> files use when a variable is absent (a host-run process).</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Compose value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>KIBAN_LISTEN_ADDR</code></td>
+<td><code>0.0.0.0</code></td>
+<td>The host part of the listener only; the port is a constant in your <code>main.go</code> that must equal the manifest's <code>service.port</code>. Default <code>127.0.0.1</code></td>
+</tr>
+<tr>
+<td><code>KIBAN_&lt;KEY&gt;_DB_HOST</code></td>
+<td><code>postgres</code></td>
+<td>Default <code>127.0.0.1</code></td>
+</tr>
+<tr>
+<td><code>KIBAN_&lt;KEY&gt;_DB_PORT</code></td>
+<td><code>5432</code></td>
+<td>Required</td>
+</tr>
+<tr>
+<td><code>KIBAN_&lt;KEY&gt;_DB_NAME</code></td>
+<td><code>${POSTGRES_DB}</code></td>
+<td>Required. One database for the whole platform; your module owns one schema in it</td>
+</tr>
+<tr>
+<td><code>KIBAN_&lt;KEY&gt;_DB_PASSWORD</code></td>
+<td><code>${KIBAN_&lt;KEY&gt;_DB_PASSWORD}</code> from <code>.env</code></td>
+<td>Required. The role name is not configurable: <code>kiban_&lt;key&gt;</code></td>
+</tr>
+<tr>
+<td><code>KEYCLOAK_JWKS_URL</code></td>
+<td><code>http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs</code></td>
+<td>Required</td>
+</tr>
+<tr>
+<td><code>KEYCLOAK_ISSUER_URL</code></td>
+<td><code>https://127.0.0.1:${KIBAN_GATEWAY_TLS_HOST_PORT:-8443}/realms/${KEYCLOAK_REALM}</code></td>
+<td>Required. Compared as a string with the token's <code>iss</code>, which is the public origin, not the container hostname</td>
+</tr>
+<tr>
+<td><code>KEYCLOAK_AUDIENCE</code></td>
+<td>not set</td>
+<td>Default <code>kiban-api</code></td>
+</tr>
+<tr>
+<td><code>KIBAN_AUTHZ_BASE_URL</code></td>
+<td><code>http://authz:8140</code></td>
+<td>Default <code>http://127.0.0.1:8140</code></td>
+</tr>
+<tr>
+<td><code>KIBAN_ORG_BASE_URL</code></td>
+<td><code>http://org:8130</code></td>
+<td>Default <code>http://127.0.0.1:8130</code></td>
+</tr>
+</tbody>
+</table>
+<p>Anything else is module-specific (the notification module also reads its SMTP host and port, a
+webhook HMAC secret and a delivery claim group; <code>docs</code> and <code>helpdesk</code> read
+<code>KIBAN_NOTIFICATION_BASE_URL</code>, default <code>http://127.0.0.1:8150</code>, Compose
+<code>http://notification:8150</code>) and is yours to add to the Compose block.</p>
+<p><strong>Listeners and probes.</strong> One process, one port, <code>service.port</code> from the manifest. Serve on it:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Who calls it</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /health</code></td>
+<td>Operators (liveness; the Compose healthcheck uses <code>/ready</code>)</td>
+<td><code>200</code>. This is <code>service.healthPath</code> in the manifest; the registry stores it, the gateway does not probe it</td>
+</tr>
+<tr>
+<td><code>GET /ready</code></td>
+<td>The Compose healthcheck (<code>curl -sf http://127.0.0.1:&lt;port&gt;/ready</code>)</td>
+<td><code>{ "data": { "status": "ok" } }</code> after a database ping; <code>503</code> with <code>INTERNAL_ERROR</code> when the ping fails (<code>internal/httpx</code>'s <code>Ready</code> does exactly this)</td>
+</tr>
+<tr>
+<td><code>GET /metrics</code></td>
+<td>The gateway's <code>GET /api/platform/metrics</code>, which scrapes every enabled module at <code>http://&lt;host&gt;:&lt;port&gt;/metrics</code> with a 2 second budget</td>
+<td>Prometheus text format</td>
+</tr>
+<tr>
+<td><code>/api/&lt;key&gt;/v1/...</code></td>
+<td>The gateway</td>
+<td>Your API, every route behind your own bearer check and an authorization decision</td>
+</tr>
+</tbody>
+</table>
+<p><code>/health</code>, <code>/ready</code> and <code>/metrics</code> are served at the root of your listener, not under
+<code>/api/&lt;key&gt;</code>, and they are the only unauthenticated routes.</p>
+<p><strong>Token claims.</strong> <code>modulekit.NewTokenVerifier(ctx, jwksURL, issuer, audience, "&lt;key&gt;")</code> fetches
+the JWKS once; <code>Verify(ctx, token)</code> parses the JWT against it, requires <code>iss</code> to equal
+<code>KEYCLOAK_ISSUER_URL</code> and <code>aud</code> to contain <code>KEYCLOAK_AUDIENCE</code>, checks expiry and signature, and
+returns the <code>sub</code> claim. <code>azp</code> is never accepted in place of <code>aud</code>. An unknown <code>kid</code> triggers one
+JWKS refetch and one retry; every other failure is <code>modulekit.ErrTokenInvalid</code>. Run
+<code>RefreshPeriodically(ctx, logger, modulekit.DefaultJWKSRefreshInterval)</code> (10 minutes) so a
+rotated key is picked up. <code>sub</code> is the only
+claim a module may use: it is the <code>kcSub</code> every internal endpoint takes. Roles or groups in the
+token are never authority; authorization is always the decision below.</p>
+<h3 id="manifest-modulemanifestjson">Manifest: <code>module.manifest.json</code><a class="headerlink" href="#manifest-modulemanifestjson" title="Permanent link">&para;</a></h3>
+<p>Write every key. The validator rejects unknown keys (except keys starting with <code>_</code>, which are
+author comments) and the values the table refuses; it does not check that <code>displayName</code>,
+<code>mandatory</code>, <code>service.image</code>, <code>dependencies</code>, <code>org</code>, <code>data.migrationsPath</code>,
+<code>license.entitlementRequired</code> or <code>events</code> are present. <code>notification</code>'s file is the template.</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Allowed values</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contractVersion</code></td>
+<td><code>"1"</code></td>
+<td>Any other value is refused</td>
+</tr>
+<tr>
+<td><code>moduleKey</code></td>
+<td><code>^[a-z][a-z0-9_]{1,31}$</code></td>
+<td>Unique across the catalog. Names the directory, the schema, the role <code>kiban_&lt;key&gt;</code>, the feature-key prefix, the base path</td>
+</tr>
+<tr>
+<td><code>displayName</code></td>
+<td>string</td>
+<td>Shown in the catalog</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>semver</td>
+<td>What <code>dependencies[].versionRange</code> of other modules is checked against</td>
+</tr>
+<tr>
+<td><code>scopeType</code></td>
+<td><code>global</code>, <code>company</code></td>
+<td>Every shipped module is <code>company</code></td>
+</tr>
+<tr>
+<td><code>mandatory</code></td>
+<td>bool</td>
+<td>Copied into the catalog</td>
+</tr>
+<tr>
+<td><code>service.basePath</code></td>
+<td>exactly <code>/api/&lt;moduleKey&gt;</code></td>
+<td>Also <code>servers[0].url</code> of the OpenAPI file</td>
+</tr>
+<tr>
+<td><code>service.port</code></td>
+<td>1..65535, unique across the catalog</td>
+<td>The port the gateway dials. Shipped: 8150, 8160, 8170, 8180</td>
+</tr>
+<tr>
+<td><code>service.healthPath</code></td>
+<td>an absolute path</td>
+<td>Stored in the catalog</td>
+</tr>
+<tr>
+<td><code>service.image</code></td>
+<td><code>null</code> in every shipped module; not validated</td>
+<td>Not read by anything in 0.1; the image comes from the Dockerfile stage named after the key</td>
+</tr>
+<tr>
+<td><code>dependencies[]</code></td>
+<td><code>{ "moduleKey", "versionRange", "required": true }</code></td>
+<td>Each names a module in the same validate batch (or the <code>-catalog</code> snapshot); <code>versionRange</code> is a semver range the target's <code>version</code> must satisfy; <code>required</code> must be <code>true</code>; no cycles. Validated only in 0.1: the registry does not load a manifest's dependencies, so the gateway's <code>MODULE_DEPENDENCY_MISSING</code> check has nothing to act on</td>
+</tr>
+<tr>
+<td><code>org.requiredOrgUnitTypes</code></td>
+<td>list of type keys</td>
+<td><code>["company"]</code> for every shipped module. The registry refuses to start when the deployment's org-unit taxonomy lacks a listed type</td>
+</tr>
+<tr>
+<td><code>org.usesMembers</code>, <code>org.usesPositions</code></td>
+<td>bool</td>
+<td>Declarative; not enforced</td>
+</tr>
+<tr>
+<td><code>data.postgresSchema</code></td>
+<td>exactly <code>&lt;moduleKey&gt;</code></td>
+<td>The schema your migrations create</td>
+</tr>
+<tr>
+<td><code>data.migrationsPath</code></td>
+<td><code>"migrations"</code></td>
+<td>Declarative; not read. The validator and tern use <code>modules/&lt;key&gt;/migrations</code> regardless</td>
+</tr>
+<tr>
+<td><code>license.class</code></td>
+<td><code>foundation</code>, <code>open</code></td>
+<td><code>foundation</code> requires <code>license.spdx</code> <code>Apache-2.0</code>; <code>open</code> requires <code>Apache-2.0</code> or <code>MIT</code></td>
+</tr>
+<tr>
+<td><code>license.spdx</code></td>
+<td>see above</td>
+<td>The module's <code>LICENSE</code> file must match the canonical text for that id, line endings and leading or trailing whitespace aside</td>
+</tr>
+<tr>
+<td><code>license.entitlementRequired</code></td>
+<td>bool</td>
+<td>Declarative; nothing checks entitlements in 0.1</td>
+</tr>
+<tr>
+<td><code>events</code></td>
+<td><code>null</code> in every shipped module; not validated</td>
+<td>Reserved</td>
+</tr>
+</tbody>
+</table>
+<h3 id="authorization-fragment-authzfragmentjson">Authorization fragment: <code>authz.fragment.json</code><a class="headerlink" href="#authorization-fragment-authzfragmentjson" title="Permanent link">&para;</a></h3>
+<p>The top-level keys are <code>moduleKey</code>, <code>roles</code>, <code>objects</code>, <code>relations</code>, <code>features</code>, <code>fieldCatalog</code>,
+<code>fieldSets</code>, <code>rowScopes</code> and <code>bootstrapPolicy</code>. <code>moduleKey</code> must equal the manifest's.
+Unknown keys are refused; <code>_</code>-prefixed keys are comments.</p>
+<p>What runs at runtime: the registry embeds the file, installs its <code>relations</code> section into the
+authorization engine, where it is merged with the base model, and stores each
+<code>features[].featureKey</code> in the catalog. The decision endpoint answers <code>422 VALIDATION_FAILED</code>
+for a feature key your module does not declare (<code>&lt;moduleKey&gt;.access</code> is always accepted).
+Everything else in the file is validated for consistency with that model but is not loaded by
+any service in 0.1; the flags on <code>roles[]</code> drive no grant.</p>
+<p><strong><code>relations</code></strong> (optional; omit the key when every tier you need already exists on the base
+model, as <code>timesheet</code> and <code>helpdesk</code> do). Object type, then relation name, then one expression:</p>
+<table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{ "this": true }</code></td>
+<td>Direct tuples on this relation. <code>false</code> is refused</td>
+</tr>
+<tr>
+<td><code>{ "computedUserset": "&lt;relation&gt;" }</code></td>
+<td>Whoever holds <code>&lt;relation&gt;</code> on the same object. Must name a relation of the same type</td>
+</tr>
+<tr>
+<td><code>{ "tupleToUserset": { "tupleset": "&lt;relation&gt;", "computedUserset": "&lt;relation&gt;" } }</code></td>
+<td>Follow the tuples on <code>tupleset</code> (a relation of this type) to their subject objects and check <code>computedUserset</code> there. <code>computedUserset</code> must be defined on at least one type of the effective model (base plus your fragment)</td>
+</tr>
+<tr>
+<td><code>{ "union": [ ...expressions ] }</code></td>
+<td>Any of the children; at least one</td>
+</tr>
+</tbody>
+</table>
+<p>Any other construct (<code>intersection</code>, <code>exclusion</code>, wildcards, conditions) is outside the subset
+and refused. Every type you declare must define <code>"company_module": { "this": true }</code>, the anchor
+every object check binds through. A type may not redeclare a base type (<code>user</code>, <code>system</code>,
+<code>module</code>, <code>company</code>, <code>company_module</code>, <code>module_role_binding</code>, <code>access_bundle</code>,
+<code>access_segment</code>, <code>member_directory</code>, <code>member</code>, <code>project_directory</code>, <code>project</code>,
+<code>timesheet_entry</code>, <code>submission</code>, <code>position</code>, <code>group</code>, <code>document</code>); it may reference their
+relations, typically <code>company_module</code>'s <code>member</code>, <code>admin</code>, <code>editor</code>, <code>viewer</code>, <code>submitter</code> and
+<code>approver</code>, through a <code>tupleToUserset</code> over the anchor. A type name must be unique across the
+catalog.</p>
+<p><strong><code>roles[]</code></strong>, one entry per key:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>roleKey</code></td>
+<td>string</td>
+<td>Shipped modules use <code>&lt;key&gt;_admin</code></td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>scopeType</code></td>
+<td><code>global</code>, <code>company</code></td>
+<td>Validated</td>
+</tr>
+<tr>
+<td><code>grantsShellAccess</code></td>
+<td>bool</td>
+<td>Declarative in 0.1</td>
+</tr>
+<tr>
+<td><code>seedCompanyCreatorRole</code></td>
+<td>bool</td>
+<td>Declarative in 0.1; see "Default grants" for what is actually written</td>
+</tr>
+<tr>
+<td><code>sortOrder</code></td>
+<td>int</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>objects[]</code></strong>, one entry per object type you want listed in a permission UI:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>objectType</code></td>
+<td>a type declared in this fragment's <code>relations</code></td>
+<td>A base type or an undeclared type is refused</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>scopeKind</code></td>
+<td><code>module</code>, <code>directory</code>, <code>object</code>, <code>document</code></td>
+<td>Validated</td>
+</tr>
+<tr>
+<td><code>parentKind</code></td>
+<td>an object type of the effective model</td>
+<td><code>company_module</code> for every shipped object</td>
+</tr>
+<tr>
+<td><code>managerRelation</code></td>
+<td>a relation of <code>objectType</code></td>
+<td>The relation that may manage grants, by convention <code>owner</code></td>
+</tr>
+<tr>
+<td><code>grantableRelations</code></td>
+<td>relations of <code>objectType</code></td>
+<td>What a UI may offer to grant, e.g. <code>["owner", "editor", "viewer"]</code></td>
+</tr>
+<tr>
+<td><code>showInPermissionUi</code></td>
+<td>bool</td>
+<td></td>
+</tr>
+<tr>
+<td><code>sortOrder</code></td>
+<td>int</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>features[]</code></strong>, one entry per feature key your handlers check:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Values</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>featureKey</code></td>
+<td><code>&lt;moduleKey&gt;.&lt;name&gt;</code>, e.g. <code>docs.create</code>, <code>helpdesk.tickets.work</code></td>
+<td>Must start with <code>&lt;moduleKey&gt;.</code>; unique across the catalog. <code>&lt;moduleKey&gt;.access</code> is reserved: the platform synthesizes it for every enabled module</td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td><code>scopeType</code></td>
+<td><code>global</code>, <code>company</code></td>
+<td>Validated</td>
+</tr>
+<tr>
+<td><code>requiresCompany</code></td>
+<td>bool</td>
+<td>Declarative</td>
+</tr>
+<tr>
+<td><code>accessRuleKind</code></td>
+<td><code>relation</code>, <code>platform_role</code>, <code>module_eligibility</code></td>
+<td>Validated; every shipped feature is <code>relation</code></td>
+</tr>
+<tr>
+<td><code>accessRulePayload</code></td>
+<td><code>{ "objectType", "relation" }</code> or <code>{}</code></td>
+<td>Both or neither: when either is set, <code>relation</code> must be defined on <code>objectType</code> in the effective model. <code>{}</code> means membership only, no relation leg</td>
+</tr>
+<tr>
+<td><code>sortOrder</code></td>
+<td>int</td>
+<td></td>
+</tr>
+<tr>
+<td><code>isSidebarEntry</code></td>
+<td>bool</td>
+<td>Declarative; a shell may use it for navigation</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>rowScopes[]</code></strong>: <code>{ "entityType": &lt;a type this fragment declares&gt;, "rules": [ ... ] }</code>;
+<code>entityType</code> is validated, <code>rules</code> is not interpreted. <strong><code>fieldCatalog</code></strong> and <strong><code>fieldSets</code></strong>
+are lists of objects, uninterpreted; ship <code>[]</code>. <strong><code>bootstrapPolicy</code></strong> is
+<code>{ "seedCompanyCreatorObjectRelations": [] }</code>, uninterpreted.</p>
+<h3 id="openapi-openapiyaml">OpenAPI: <code>openapi.yaml</code><a class="headerlink" href="#openapi-openapiyaml" title="Permanent link">&para;</a></h3>
+<p>A standard OpenAPI 3 document. The validator requires:</p>
+<ul>
+<li><code>servers[0].url</code> equal to <code>service.basePath</code>; the only other server allowed is <code>/</code>, for the
+  probes. Path keys are relative to the base path: they start with <code>/</code> and never with <code>/api/</code>.</li>
+<li>Every operation has a unique <code>operationId</code>.</li>
+<li>Every operation except <code>GET /health</code> and <code>GET /ready</code> carries <strong><code>x-required-modules</code></strong>, a
+  non-empty list of module keys, normally <code>[&lt;key&gt;]</code>. Each key named must be a module in the
+  validate batch or the <code>-catalog</code> snapshot. Nothing reads the annotation at runtime; it is the
+  contract's statement of which modules a route needs, and the test suite validates your
+  responses against the document.</li>
+</ul>
+<h3 id="migrations">Migrations<a class="headerlink" href="#migrations" title="Permanent link">&para;</a></h3>
+<p><code>modules/&lt;key&gt;/migrations/</code> is a tern tree run as the database owner <code>kiban</code>; your service
+connects as <code>kiban_&lt;key&gt;</code>, which has no DDL rights. <code>tern.conf</code> is the same for every module
+except the schema name:</p>
+<div class="highlight"><pre><span></span><code>[database]
+host = {{env "KIBAN_DB_HOST"}}
+port = {{env "KIBAN_DB_PORT"}}
+database = {{env "POSTGRES_DB"}}
+user = kiban
+password = {{env "KIBAN_DB_PASSWORD"}}
+version_table = public.schema_version_&lt;key&gt;
+sslmode = disable
+</code></pre></div>
+<p>Files are named <code>NNNN_description.sql</code> (four digits, lowercase, <code>[a-z0-9_]</code>), numbered without
+gaps or duplicates (the validator refuses a duplicate, tern refuses a gap when it runs), and each holds the up statements, the line
+<code>---- create above / drop below ----</code>, and the down statements. <code>0001</code> creates the schema and
+grants the runtime role its way in:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">AUTHORIZATION</span><span class="w"> </span><span class="n">kiban</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">USAGE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">schema_version_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">---- create above / drop below ----</span>
+
+<span class="k">REVOKE</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">schema_version_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">REVOKE</span><span class="w"> </span><span class="k">USAGE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="k">CASCADE</span><span class="p">;</span>
+</code></pre></div>
+<p>The <code>SELECT</code> on the version table is what lets the service check at startup that its
+migrations have been applied. Later files create tables under <code>&lt;key&gt;.</code> and grant <code>kiban_&lt;key&gt;</code>
+table by table. Your audit table is <code>audit.&lt;key&gt;__events</code> with an append-only trigger calling
+the shared <code>audit.reject_mutation()</code> and <code>GRANT SELECT, INSERT</code> to your role; do not redefine
+that function (the four shipped modules did so before the rule existed and are grandfathered
+by checksum).</p>
+<p><strong>The role file in the registry tree.</strong> <code>kiban_&lt;key&gt;</code> is created by the platform, not by you,
+because role creation and the shared <code>audit</code> schema's grant list are outside a module's fence.
+Add <code>migrations/registry/00NN_&lt;key&gt;_role.sql</code> (next free number) with, as <code>0005</code> and <code>0006</code> do
+for notification:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">ROLE</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="w"> </span><span class="n">LOGIN</span><span class="w"> </span><span class="n">NOSUPERUSER</span><span class="w"> </span><span class="k">NOCREATEDB</span><span class="w"> </span><span class="n">NOCREATEROLE</span><span class="w"> </span><span class="n">NOINHERIT</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">CONNECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">kiban</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">USAGE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="n">audit</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+
+<span class="c1">---- create above / drop below ----</span>
+
+<span class="k">REVOKE</span><span class="w"> </span><span class="k">USAGE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="n">audit</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">REVOKE</span><span class="w"> </span><span class="k">CONNECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">kiban</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">ROLE</span><span class="w"> </span><span class="n">kiban_</span><span class="o">&lt;</span><span class="k">key</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+<p>The role's password is set after the tree runs, from <code>KIBAN_&lt;KEY&gt;_DB_PASSWORD</code>, by
+the role-password step (<code>go run ./tools/dev migrate</code>), both in the Compose <code>migrate</code> job and in the
+<code>Makefile</code>'s <code>migrate-&lt;key&gt;</code> target (host run).</p>
+<p><strong>The ledger.</strong> Every migrations directory carries <code>checksums.json</code>, file name to SHA-256. The
+validator fails when a file is missing from it, a listed file is missing on disk, or a hash has
+changed: a shipped migration is never edited, a new one is added. Record a new file with</p>
+<div class="highlight"><pre><span></span><code>go run ./tools/dev modvalidate -write-checksums modules/&lt;key&gt;/
+go run ./tools/dev modvalidate -write-checksums migrations/registry
+</code></pre></div>
+<p><strong>What a module migration may not do.</strong> The validator tokenizes each statement (strings,
+comments, dollar quotes and quoted identifiers are real tokens, so nothing hides in them) and
+applies a positive rule table. Allowed: <code>CREATE</code> of a schema, extension, table, index, function,
+procedure, trigger, type, sequence, view, policy or domain; <code>ALTER</code> of the same except schema
+and extension; <code>DROP</code> of the same except extension; <code>COMMENT ON</code> a table, column, constraint,
+index, function, procedure, trigger, type, sequence, view, policy or domain;
+<code>GRANT</code> and <code>REVOKE</code> with an <code>ON</code> clause; <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>TRUNCATE</code>; a <code>WITH</code>
+query. Within those, the following are refused by name:</p>
+<ul>
+<li>A reference outside the fence: anything not in schema <code>&lt;key&gt;</code>, not <code>audit.&lt;key&gt;__*</code>, not
+  <code>public.schema_version_&lt;key&gt;</code>. <code>audit.reject_mutation()</code> may be referenced as a trigger
+  function but not created, replaced, altered or dropped.</li>
+<li>An unqualified object name (<code>CREATE TABLE channel</code> lands on <code>search_path</code>); <code>CREATE SCHEMA</code>
+  of anything but <code>&lt;key&gt;</code> (<code>CREATE SCHEMA IF NOT EXISTS audit</code> is tolerated as a no-op); a
+  schema owned by anyone but <code>kiban</code>.</li>
+<li><code>CREATE EXTENSION</code> other than a bare <code>pgcrypto</code>; <code>SECURITY DEFINER</code>; setting <code>search_path</code>;
+  <code>ALTER ... OWNER TO</code>; <code>ALTER ... SET SCHEMA</code>.</li>
+<li><code>GRANT</code>/<code>REVOKE</code> without <code>ON</code> (role membership); <code>WITH GRANT OPTION</code>; grants on a database,
+  tablespace, language, type, domain, parameter, large object or foreign object; grants on a schema other than
+  <code>&lt;key&gt;</code> or <code>audit</code>; grants to, or revokes from, any role but <code>kiban_&lt;key&gt;</code>.</li>
+<li><code>TRUNCATE</code> outside schema <code>&lt;key&gt;</code> (audit tables are append-only).</li>
+<li>Any other statement: <code>DO</code>, <code>SET</code>, <code>CREATE ROLE</code>, <code>VACUUM</code>, <code>COPY</code> and so on.</li>
+</ul>
+<p>The registry tree is checked for layout and ledger only; its files legitimately create roles
+and grant on shared schemas.</p>
+<h3 id="default-grants">Default grants<a class="headerlink" href="#default-grants" title="Permanent link">&para;</a></h3>
+<p>Nothing in the fragment grants anyone anything. When a module becomes installed and enabled
+(the registry's first start with the key in <code>KIBAN_INSTALLED_MODULES</code>, or re-enabling an
+installed module with <code>POST /api/platform/admin/modules/&lt;key&gt;/enable</code>), the registry writes, for every active company, two
+tuples on the object <code>company_module:&lt;companyId&gt;/&lt;key&gt;</code> through the authorization service's
+audited store: the anchor <code>#company @ company:&lt;companyId&gt;</code>, which is what lets a company's
+members resolve <code>member</code> and its administrators resolve <code>admin</code> on your module, and
+<code>#system @ system:platform</code>, which is what lets a superadmin resolve <code>admin</code>. The org service
+writes the same pair for every enabled module when a company is created, in the company's own
+transaction. The anchor is ensured on every pass; the <code>system</code> tuple is written once per
+(company, module) and never again, so an operator who deletes it to exclude superadmins from a
+module stays in control. Disabling a module removes nothing. <code>roles[].seedCompanyCreatorRole</code>
+and <code>bootstrapPolicy</code> are not consulted; a creator role for a module is something your module
+grants itself, through the grants endpoint, when it decides to.</p>
+<h3 id="internal-endpoints">Internal endpoints<a class="headerlink" href="#internal-endpoints" title="Permanent link">&para;</a></h3>
+<p>The three calls a module makes, with every field. All three are reachable only inside the Compose
+network, which is one reason a module container must never publish a host port.</p>
+<p><strong><code>POST /internal/authz/effective-access/can</code></strong> on <code>KIBAN_AUTHZ_BASE_URL</code>, with the user's
+bearer. The subject is always the bearer's <code>sub</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Request field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>featureKey</code></td>
+<td>string</td>
+<td>Recorded as evidence and in the denial audit row. Must be a key your fragment declares, or <code>&lt;key&gt;.access</code>; anything else is <code>422</code></td>
+</tr>
+<tr>
+<td><code>moduleKey</code></td>
+<td>string</td>
+<td>Your key. Step 6 requires this module to be installed and enabled</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td><code>"company"</code> or <code>"global"</code></td>
+<td><code>global</code> is decided by <code>requiredPlatformRole</code> alone: no company, module-state or relation step runs</td>
+</tr>
+<tr>
+<td><code>companyId</code></td>
+<td>uuid</td>
+<td>Required for company scope; the company from your URL</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td><code>{ "type", "id" }</code></td>
+<td>Optional. With <code>relation</code>, the object of the relation check. <code>company_module</code> ids are <code>&lt;companyId&gt;/&lt;moduleKey&gt;</code></td>
+</tr>
+<tr>
+<td><code>relation</code></td>
+<td>string</td>
+<td>Optional. Empty means no relation check: the decision stops after membership and module state</td>
+</tr>
+<tr>
+<td><code>requiredPlatformRole</code></td>
+<td>string</td>
+<td>Optional. The platform role for a global check, or the operator exception below</td>
+</tr>
+<tr>
+<td><code>allowPlatformOperatorCompanyScope</code></td>
+<td>bool</td>
+<td>Optional. Lets a holder of <code>requiredPlatformRole</code> pass the membership step without being a member; the company must still be active</td>
+</tr>
+<tr>
+<td><code>requiredCompanyRole</code></td>
+<td>string</td>
+<td>Optional. A company role checked after membership</td>
+</tr>
+<tr>
+<td><code>actorId</code></td>
+<td>string</td>
+<td>Must be absent or equal the bearer's <code>sub</code>; anything else is <code>400</code></td>
+</tr>
+<tr>
+<td><code>requiresEligibility</code></td>
+<td>bool</td>
+<td>Must be absent or <code>false</code>; <code>true</code> is <code>400</code> in this deployment</td>
+</tr>
+<tr>
+<td><code>correlationId</code></td>
+<td>string</td>
+<td>Forward your request's <code>x-correlation-id</code></td>
+</tr>
+</tbody>
+</table>
+<p>The steps, in order: subject exists; Keycloak account enabled; lifecycle active; for global
+scope, platform role held, and the decision ends there; for company scope, company active,
+then membership (or the operator exception, which also skips <code>requiredCompanyRole</code>), then
+<code>requiredCompanyRole</code>, module enabled, and the relation check when <code>relation</code> is set.
+An object check is bound to <code>companyId</code>: a <code>company_module</code> object must be that company's, and a
+module object must be anchored to that company's module or the answer is a denial.</p>
+<table>
+<thead>
+<tr>
+<th>Response</th>
+<th>Shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200</code></td>
+<td><code>{ "data": { "allowed": bool, "reason": "&lt;reason&gt;", "evidence": [ { "key", "value" } ] } }</code></td>
+</tr>
+<tr>
+<td><code>503</code> <code>AUTHORIZATION_UNAVAILABLE</code></td>
+<td>A dependency could not answer; <code>details</code> carries <code>dependency</code>, <code>step</code> and <code>evidence</code>. Refuse the request, never fail open</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>Malformed body, <code>actorId</code> mismatch, <code>requiresEligibility</code>, or global scope without <code>requiredPlatformRole</code></td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>No or invalid bearer</td>
+</tr>
+<tr>
+<td><code>422</code> <code>VALIDATION_FAILED</code></td>
+<td>A <code>featureKey</code> the module does not declare</td>
+</tr>
+</tbody>
+</table>
+<p><code>reason</code> is one of <code>ALLOWED</code>, <code>AUTH_USER_NOT_FOUND</code>, <code>KEYCLOAK_DISABLED</code>,
+<code>USER_LIFECYCLE_DISABLED</code>, <code>COMPANY_INACTIVE</code>, <code>COMPANY_MEMBERSHIP_REQUIRED</code>,
+<code>COMPANY_ACCESS_BLOCKED</code>, <code>MODULE_DISABLED</code> (also when the module is not installed),
+<code>PLATFORM_ROLE_REQUIRED</code>, <code>COMPANY_ROLE_REQUIRED</code>, <code>ENGINE_DENIED</code>,
+<code>BUSINESS_ELIGIBILITY_DENIED</code>, <code>DEPENDENCY_UNAVAILABLE</code>.</p>
+<p><code>modulekit.AuthzClient.Can(ctx, bearer, featureKey, companyID, relation)</code> sends
+<code>scope: "company"</code> with your key and, when <code>relation</code> is not empty, the object
+<code>company_module:&lt;companyId&gt;/&lt;key&gt;</code>; <code>DoCan</code> sends a <code>modulekit.CanRequest</code> you build (<code>featureKey</code>,
+<code>moduleKey</code>, <code>scope</code>, <code>companyId</code>, <code>object</code>, <code>relation</code>; the other request fields, <code>correlationId</code>
+included, are not on that struct).</p>
+<p><strong><code>POST /internal/authz/grants</code></strong> on <code>KIBAN_AUTHZ_BASE_URL</code>, with the user's bearer.</p>
+<table>
+<thead>
+<tr>
+<th>Request field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>op</code></td>
+<td><code>"grant"</code> or <code>"revoke"</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>companyId</code></td>
+<td>uuid</td>
+<td>The company every tuple is bound to</td>
+</tr>
+<tr>
+<td><code>tuples[]</code></td>
+<td>list, non-empty</td>
+<td>One relation tuple each</td>
+</tr>
+<tr>
+<td><code>tuples[].objectType</code>, <code>tuples[].objectId</code></td>
+<td>strings</td>
+<td>A type your fragment declares, or <code>company_module</code> with id <code>&lt;companyId&gt;/&lt;key&gt;</code>. Never a base type</td>
+</tr>
+<tr>
+<td><code>tuples[].relation</code></td>
+<td>string</td>
+<td>A relation of that type</td>
+</tr>
+<tr>
+<td><code>tuples[].subjectType</code>, <code>tuples[].subjectId</code></td>
+<td>strings</td>
+<td><code>user</code> and a <code>kcSub</code>; or <code>position</code>/<code>group</code> and its id with <code>subjectRelation</code></td>
+</tr>
+<tr>
+<td><code>tuples[].subjectRelation</code></td>
+<td>string, optional</td>
+<td>A userset subject: <code>holder</code> for a position, <code>member</code> for a group. Must be a relation of <code>subjectType</code></td>
+</tr>
+<tr>
+<td><code>correlationId</code></td>
+<td>string</td>
+<td>Forward your request's <code>x-correlation-id</code></td>
+</tr>
+</tbody>
+</table>
+<p>Checks, all before any write: every object belongs to one module and that module is enabled;
+the bearer passes the company-scope decision for (module, company) (a superadmin passes without
+membership); each module object is anchored to <code>company_module:&lt;companyId&gt;/&lt;key&gt;</code>, either
+already or by a <code>company_module</code> tuple in the same request (which is how a create writes the
+anchor and the owner together); a tuple on <code>company_module</code> itself requires the bearer to hold
+<code>admin</code> on it. The tuples and an audit row commit in one transaction.</p>
+<table>
+<thead>
+<tr>
+<th>Response</th>
+<th>Shape</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>200</code></td>
+<td><code>{ "data": { "status": "ok", "count": &lt;tuples in the request&gt; } }</code></td>
+</tr>
+<tr>
+<td><code>422</code> <code>VALIDATION_FAILED</code></td>
+<td>An object type, anchor, <code>company_module</code> id or <code>subjectRelation</code> the rules above refuse</td>
+</tr>
+<tr>
+<td><code>403</code> <code>AUTHORIZATION_DENIED</code></td>
+<td>The bearer failed the decision or lacks <code>admin</code>; <code>details.reason</code> says which</td>
+</tr>
+<tr>
+<td><code>503</code> <code>AUTHORIZATION_UNAVAILABLE</code></td>
+<td>The decision or the anchor check could not run</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>Bad JSON, bad <code>op</code>, empty <code>tuples</code>, <code>companyId</code> not a UUID</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>No or invalid bearer</td>
+</tr>
+</tbody>
+</table>
+<p><code>modulekit.AuthzClient.AnchorTuple(objectType, objectID, companyID)</code> builds the anchor and
+<code>GrantOrRevoke(ctx, bearer, companyID, op, tuples, correlationID)</code> sends the request.</p>
+<p><strong><code>GET /internal/org/companies/{companyId}/members/by-kcsub/{kcSub}</code></strong> on
+<code>KIBAN_ORG_BASE_URL</code>. No bearer: org's fact reads are open inside the network.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>companyId</code></td>
+<td>uuid path segment; a non-UUID is <code>400</code></td>
+</tr>
+<tr>
+<td><code>kcSub</code></td>
+<td>the token's <code>sub</code></td>
+</tr>
+<tr>
+<td><code>200</code></td>
+<td><code>{ "data": { "isMember": bool, "isActive": bool, "memberId": "&lt;uuid&gt;" or null } }</code>. <code>memberId</code> is <code>null</code> when <code>isMember</code> is false; <code>isActive</code> is the member row's flag</td>
+</tr>
+</tbody>
+</table>
+<p><code>modulekit.OrgClient.MemberByKcSub(ctx, companyID, kcSub)</code> returns
+<code>(memberID, isMember, isActive, err)</code>; <code>GetMember(ctx, memberID)</code> returns the row with its
+linked user.</p>
+<h3 id="validate">Validate<a class="headerlink" href="#validate" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>make validate-modules            # every modules/*/
+go run ./tools/dev modvalidate modules/&lt;key&gt;/
+make validate-migrations         # the foundation trees, including migrations/registry
+</code></pre></div>
+<p>The validator loads the four required artifacts, <code>LICENSE</code>, and <code>frontend/frontend.manifest.json</code>
+when present,
+applies every rule above, then the cross-module rules: <code>moduleKey</code>, <code>service.basePath</code>,
+<code>service.port</code>, frontend route ids, feature keys and object types are unique across the batch
+(pass <code>-catalog snapshot.json</code> to include modules outside it), dependencies resolve and form no
+cycle. A frontend manifest needs <code>moduleKey</code> equal to the manifest's, <code>routeBase</code> equal to
+<code>/app/&lt;key&gt;</code>, a semver <code>sdkVersionRange</code>, unique route ids and paths (two paths that differ only
+in a parameter's name collide), literal segments of <code>[a-zA-Z0-9_-]</code>, <code>:param</code> segments that are
+identifiers, and each route's
+<code>featureKey</code> declared in the fragment or equal to <code>&lt;key&gt;.access</code>. <code>make check</code> runs all of it.</p>
+<h3 id="adding-a-module-to-the-platform">Adding a module to the platform<a class="headerlink" href="#adding-a-module-to-the-platform" title="Permanent link">&para;</a></h3>
+<p>Every item is needed; the platform has no runtime registration in 0.1.</p>
+<ol>
+<li><code>modules/&lt;key&gt;/</code>: the artifacts above, <code>artifacts.go</code> with <code>//go:embed authz.fragment.json</code>
+   and <code>//go:embed module.manifest.json</code> exporting <code>AuthzFragmentJSON</code> and <code>ManifestJSON</code>, and
+   <code>LICENSE</code>.</li>
+<li><code>internal/registry/builtin.go</code>: an entry in <code>BuiltinModules</code> mirroring the manifest
+   (<code>ModuleKey</code>, <code>DisplayName</code>, <code>ScopeType</code>, <code>Mandatory</code>, <code>BasePath</code>, <code>HealthPath</code>, <code>Port</code>,
+   <code>LicenseClass</code>, <code>ManifestVersion</code> and <code>RequiredOrgUnitTypes</code> from <code>mustManifest</code>,
+   <code>AuthzFragment</code> from <code>mustAuthzRelations</code>, <code>Features</code> from <code>mustFeatureKeys</code>), plus the <code>var &lt;key&gt;AuthzRelations</code> next to the
+   existing four. A key in <code>KIBAN_INSTALLED_MODULES</code> that the list does not know stops the
+   registry at startup.</li>
+<li><code>migrations/registry/00NN_&lt;key&gt;_role.sql</code> as above, then
+   <code>go run ./tools/dev modvalidate -write-checksums migrations/registry</code>.</li>
+<li><code>infra/Dockerfile.service</code>: a <code>go build ... -o /out/&lt;key&gt; ./modules/&lt;key&gt;/service/cmd</code> line
+   in the builder stage and a <code>FROM runtime-base AS &lt;key&gt;</code> stage that copies the binary and sets
+   it as the entrypoint.</li>
+<li><code>tools/dev/migrate.go</code>: a <code>migrationTrees</code> entry after the foundation trees, naming
+   <code>modules/&lt;key&gt;/migrations</code> and the role-to-variable pair <code>kiban_&lt;key&gt;:
+   KIBAN_&lt;KEY&gt;_DB_PASSWORD</code>; <code>Makefile</code>: <code>migrate-&lt;key&gt;</code> in <code>MIGRATE_TARGETS</code>.</li>
+<li><code>.env.example</code> and <code>.env</code>: <code>KIBAN_&lt;KEY&gt;_DB_PASSWORD=</code>; <code>infra/compose.yaml</code>: the same
+   variable on the <code>migrate</code> service's environment.</li>
+<li><code>infra/compose.yaml</code>: a <code>&lt;key&gt;</code> service copied from <code>notification</code>'s block (build target
+   <code>&lt;key&gt;</code>, the environment table above, the <code>/ready</code> healthcheck, <code>depends_on</code> <code>postgres</code>,
+   <code>migrate</code>, <code>bootstrap</code>, <code>org</code> and <code>registry</code>; it carries <code>profiles: ["samples"]</code>, so it starts
+   only with <code>COMPOSE_PROFILES=samples</code>). Add <code>&lt;key&gt;</code> to <code>KIBAN_INSTALLED_MODULES</code> in <code>.env</code>
+   (Compose passes it to the <code>registry</code> service) and to the list <code>make test-stack-up</code> writes
+   into <code>.env.test</code> in the <code>Makefile</code>.</li>
+<li><code>infra/compose.yaml</code>, <code>gateway</code> service: <code>KIBAN_MODULE_HOST_&lt;KEY&gt;: &lt;key&gt;</code>. Without the variable the gateway dials <code>127.0.0.1:&lt;port&gt;</code>, which is not your
+   container.</li>
+<li><code>make validate-modules</code>, <code>make validate-migrations</code>, then <code>make dev</code> to rebuild the images
+    and start the stack. A module listed in <code>KIBAN_INSTALLED_MODULES</code> at the registry's first
+    boot is installed and enabled for the whole deployment;
+    <code>POST /api/platform/admin/modules/&lt;key&gt;/disable</code> and <code>.../enable</code> (or the sample shell)
+    toggle it. There is no per-company switch.</li>
+</ol>
+<p>A module's installation row is written once, the first time a registry that knows the key
+boots. If the key was not in <code>KIBAN_INSTALLED_MODULES</code> at that boot, the module stays not
+installed: a later restart with an updated list does not change the row, and the enable route
+answers <code>409 MODULE_NOT_INSTALLED</code>. Put the key in the list before the first boot, or start from
+a clean database (<code>make dev-clean</code>).</p>
+<p>The four sample modules are the worked examples. <code>notification</code> is the smallest complete one;
+<code>helpdesk</code> shows position- and group-based assignment; <code>docs</code> (DocShare) shows per-object
+sharing as live tuples.</p>
+<h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
+<p>Gates are <code>make check</code> (format, vet, vulnerability check, unit tests, module and migration
+validation, web checks, the Python SDK's tests, coverage ratchet over 40 scopes and its guard,
+licence checks, secret scan, generated-docs freshness) and
+<code>make test</code> (Go tests under the race detector and the OpenFGA differential harness). Both need the isolated test
+stack: <code>make test-stack-up</code> first. Coverage minimums only ever rise. See <code>CONTRIBUTING.md</code> in
+the repository.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>
