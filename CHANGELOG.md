@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- A module added to `KIBAN_INSTALLED_MODULES` after the first boot is installed on the next restart; 0.1.3 wrote the installation row once and never installed it, so enabling it answered `409 MODULE_NOT_INSTALLED` forever
+
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the
