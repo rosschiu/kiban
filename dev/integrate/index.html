@@ -1,0 +1,2033 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Self-hostable organizational identity and access foundation for business applications.">
+      
+      
+      
+        <link rel="canonical" href="https://rosschiu.github.io/kiban/dev/integrate/">
+      
+      
+        <link rel="prev" href="../quickstart/">
+      
+      
+        <link rel="next" href="../concepts/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Integrate your app - Kiban</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#integrate-your-app" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kiban" class="md-header__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kiban
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Integrate your app
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kiban" class="md-nav__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kiban
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Why Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Integrate your app
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Integrate your app
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#which-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Which track
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-this-before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read this before you start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backend track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backend track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-give-your-backend-a-service-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Give your backend a service client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-write-the-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Write the manifest
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-register-and-enable-the-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Register and enable the app
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-install-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Install the SDK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-create-the-client-once-at-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Create the client once at startup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-verify-the-users-token-on-every-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Verify the user's token on every request
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-ask-before-every-read-and-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Ask before every read and write
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-write-tuples-when-things-happen" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Write tuples when things happen
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-look-the-member-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Look the member up
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-background-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Background jobs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-read-the-org" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Read the org
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-users-token-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where the user's token lives
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-register-your-applications-origin" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Register your application's origin
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Install the SDK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-create-the-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Create the session
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-gate-a-route-on-login-and-finish-the-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Gate a route on login and finish the login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-the-api-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Build the API client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-ask-before-showing-a-feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Ask before showing a feature
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-call-a-module-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Call a module endpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-handle-401-and-refresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Handle 401 and refresh
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-log-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Log out
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#administration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Administration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-only-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST-only track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="REST-only track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-you-can-and-cannot-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What you can and cannot do
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route families
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-a-token-for-the-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting a token for the shell
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-a-token-for-a-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting a token for a service
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operating/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operating Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building on Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SDK guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Known limitations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#which-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Which track
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-this-before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read this before you start
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backend track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backend track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-give-your-backend-a-service-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Give your backend a service client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-write-the-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Write the manifest
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-register-and-enable-the-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Register and enable the app
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-install-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Install the SDK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-create-the-client-once-at-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Create the client once at startup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-verify-the-users-token-on-every-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Verify the user's token on every request
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-ask-before-every-read-and-write" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Ask before every read and write
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-write-tuples-when-things-happen" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Write tuples when things happen
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-look-the-member-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Look the member up
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-background-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Background jobs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-read-the-org" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Read the org
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-users-token-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where the user's token lives
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-register-your-applications-origin" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Register your application's origin
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-the-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Install the SDK
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-create-the-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Create the session
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-gate-a-route-on-login-and-finish-the-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Gate a route on login and finish the login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-build-the-api-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Build the API client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-ask-before-showing-a-feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Ask before showing a feature
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-call-a-module-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Call a module endpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-handle-401-and-refresh" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Handle 401 and refresh
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-log-out" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Log out
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#administration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Administration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-only-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST-only track
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="REST-only track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-you-can-and-cannot-do" class="md-nav__link">
+    <span class="md-ellipsis">
+      What you can and cannot do
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route families
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-a-token-for-the-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting a token for the shell
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getting-a-token-for-a-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting a token for a service
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="integrate-your-app">Integrate your app<a class="headerlink" href="#integrate-your-app" title="Permanent link">&para;</a></h1>
+<p>Your application runs beside Kiban and keeps its own code, database and deployment. This page
+connects it: the backend registers the app and talks to Kiban through an SDK, the frontend logs
+users in through Kiban. It is written as numbered steps; each step says what to run and what you
+should see.</p>
+<h2 id="which-track">Which track<a class="headerlink" href="#which-track" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Backend track</strong>: a Node, Python or Go backend (or any language with the REST API) that needs
+  to know who the user is, ask "may they do this here?", and record who may see what.</li>
+<li><strong>Frontend track</strong>: a browser application that needs login and the same question for its UI.</li>
+<li><strong>Administration</strong>: creating the first company and its members, as a superadmin.</li>
+<li><strong>REST-only</strong>: the routes behind the SDKs, for any language.</li>
+</ul>
+<h2 id="read-this-before-you-start">Read this before you start<a class="headerlink" href="#read-this-before-you-start" title="Permanent link">&para;</a></h2>
+<p>Three things 0.1 does not do. They shape the steps below.</p>
+<ol>
+<li><strong>Registering an app, enabling it, and creating companies are superadmin work.</strong> A company's
+   administrator manages that company's members, positions, assignments and groups
+   (<a href="#administration">Administration</a>); there is no self-service registration.</li>
+<li><strong>Checks answer for the bearer only.</strong> Your backend asks with the user's own token ("may
+   this user") or its service token ("may I"). There is no "list every object this user may
+   see" API yet.</li>
+<li><strong>An app is enabled for the whole deployment</strong>, not per company.</li>
+</ol>
+<p>Every track assumes a running Kiban. <code>make dev</code> from a checkout gives you a gateway at
+<code>https://127.0.0.1:8443</code>; the image quickstart gives you <code>http://localhost:3000</code>. See the
+<a href="../quickstart/">Quickstart</a>. The samples use <code>tokidesk</code> as the app key; use your own.</p>
+<h2 id="backend-track">Backend track<a class="headerlink" href="#backend-track" title="Permanent link">&para;</a></h2>
+<p>The Node samples on this page are compiled and run against the SDK by its test suite; the Go
+samples compile with the Go SDK; the same calls run end to end against a real stack in the
+repository's live tests.</p>
+<h3 id="1-give-your-backend-a-service-client">1. Give your backend a service client<a class="headerlink" href="#1-give-your-backend-a-service-client" title="Permanent link">&para;</a></h3>
+<p>Add a client id to <code>KIBAN_SERVICE_CLIENTS</code> in <code>.env</code> (comma-separated) and start the stack;
+bootstrap creates a confidential Keycloak client with a service account and the <code>kiban-api</code>
+audience. Read its secret in the Keycloak admin console: realm <code>kiban</code>, Clients,
+<code>tokidesk-backend</code>, Credentials.</p>
+<div class="highlight"><pre><span></span><code>KIBAN_SERVICE_CLIENTS=tokidesk-backend
+</code></pre></div>
+<p>You should see <code>service client tokidesk-backend: applied</code> in bootstrap's log on the first run and
+<code>converged</code> afterwards.</p>
+<h3 id="2-write-the-manifest">2. Write the manifest<a class="headerlink" href="#2-write-the-manifest" title="Permanent link">&para;</a></h3>
+<p>One JSON document: the app key, the service client, the feature keys your code will ask about,
+and the object types and relations your app owns. Every object type declares <code>company_module</code>
+(the anchor that binds an object to a company) plus its own relations. Registration does not
+check for the anchor; see <a href="../limitations/">limitations</a>.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"displayName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TokiDesk"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"serviceClientId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tokidesk-backend"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"features"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tokidesk.ticket.view"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tokidesk.ticket.edit"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tokidesk.reminders.run"</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"authzFragment"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"ticket"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"company_module"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"viewer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">"editor"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Relations follow the base model's grammar (<code>this</code>, <code>computedUserset</code>, <code>tupleToUserset</code>,
+<code>union</code>); the
+<a href="../building/#authorization-fragment-authzfragmentjson">Building</a> page documents it. A type the
+base model or another app already declares is refused.</p>
+<h3 id="3-register-and-enable-the-app">3. Register and enable the app<a class="headerlink" href="#3-register-and-enable-the-app" title="Permanent link">&para;</a></h3>
+<p>As a superadmin (the token from
+<a href="#getting-a-token-for-the-shell">Getting a token for the shell</a>), once:</p>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/api/platform/admin/apps \
+  -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" -d @manifest.json
+curl -sk -X POST https://127.0.0.1:8443/api/platform/admin/modules/tokidesk/enable \
+  -H "Authorization: Bearer $TOKEN"
+</code></pre></div>
+<p>You should see <code>{"data":{"module":"tokidesk","installed":true,"enabled":false,...}}</code> from the
+first call and <code>"enabled":true</code> from the second. Registering again updates the app in place
+(the <code>version</code> is stored, not compared); a bad manifest is a <code>422</code> naming the field. No restart
+happens; the gateway recognises the app's service client within about five seconds. Each
+backend SDK also has the registration call (<code>registerApp</code>, <code>register_app</code>, <code>RegisterApp</code>),
+which takes a superadmin's bearer and the manifest.</p>
+<h3 id="4-install-the-sdk">4. Install the SDK<a class="headerlink" href="#4-install-the-sdk" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Node</label><label for="__tabbed_1_2">Python</label><label for="__tabbed_1_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>npm i @rossbsol/kiban-sdk
+</code></pre></div>
+<p>The backend entry is <code>@rossbsol/kiban-sdk/server</code> (ESM, Node 20 or later, no runtime
+dependencies). Published to the public npm registry; see the <a href="../sdk-guide/#install">SDK guide</a>.</p>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>pip install kiban-sdk           # or, from a checkout: pip install ./sdk/python
+</code></pre></div>
+<p>Python 3.10 or later; depends on PyJWT with its cryptography extra.</p>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>go get github.com/rosschiu/kiban/sdk
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="5-create-the-client-once-at-startup">5. Create the client once at startup<a class="headerlink" href="#5-create-the-client-once-at-startup" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Node</label><label for="__tabbed_2_2">Python</label><label for="__tabbed_2_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createAppClient</span><span class="p">,</span><span class="w"> </span><span class="nx">createServiceCredentials</span><span class="p">,</span><span class="w"> </span><span class="nx">createTokenVerifier</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk/server"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createServiceCredentials</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="p">,</span><span class="w"> </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk-backend"</span><span class="p">,</span><span class="w"> </span><span class="nx">clientSecret</span><span class="w"> </span><span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">kiban</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createAppClient</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="p">,</span><span class="w"> </span><span class="nx">appKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">credentials</span><span class="w"> </span><span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">verifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createTokenVerifier</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">kiban</span><span class="w"> </span><span class="kn">import</span> <span class="n">KibanClient</span>
+
+<span class="n">kiban</span> <span class="o">=</span> <span class="n">KibanClient</span><span class="p">(</span><span class="n">gateway_url</span><span class="o">=</span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">,</span> <span class="n">client_id</span><span class="o">=</span><span class="s2">"tokidesk-backend"</span><span class="p">,</span> <span class="n">client_secret</span><span class="o">=</span><span class="n">SECRET</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">kiban</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span><span class="nx">GatewayURL</span><span class="p">:</span><span class="w"> </span><span class="s">"https://127.0.0.1:8443"</span><span class="p">,</span><span class="w"> </span><span class="nx">ClientID</span><span class="p">:</span><span class="w"> </span><span class="s">"tokidesk-backend"</span><span class="p">,</span><span class="w"> </span><span class="nx">ClientSecret</span><span class="p">:</span><span class="w"> </span><span class="nx">secret</span><span class="p">})</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>You should see no network call yet in Node and Python; the Go client fetches the realm's
+signing keys at construction and fails loudly if the gateway is unreachable.</p>
+<p>The <code>make dev</code> gateway serves a self-signed certificate, which Node, Python and Go reject until
+your backend trusts it (<code>NODE_EXTRA_CA_CERTS</code> for Node, <code>SSL_CERT_FILE</code> for Python and Go, or
+your own <code>sdk.Config.HTTPClient</code> in Go). The image quickstart's <code>http://localhost:3000</code> has no
+certificate to trust.</p>
+<h3 id="6-verify-the-users-token-on-every-request">6. Verify the user's token on every request<a class="headerlink" href="#6-verify-the-users-token-on-every-request" title="Permanent link">&para;</a></h3>
+<p>Your frontend sends the user's Kiban access token as <code>Authorization: Bearer</code>. Verify it before
+anything else: signature against the realm's keys, issuer, audience, expiry. The subject you get
+back is who the user is and nothing more; never read a role from the token.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Node</label><label for="__tabbed_3_2">Python</label><label for="__tabbed_3_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">requireUser</span><span class="p">(</span><span class="nx">authorization</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">undefined</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">bearer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">authorization</span><span class="o">?</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/^Bearer /</span><span class="p">,</span><span class="w"> </span><span class="s2">""</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">bearer</span><span class="p">)</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s2">"login required"</span><span class="p">);</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">verifier</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span><span class="nx">bearer</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">user</span><span class="p">.</span><span class="nx">subject</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">require_user</span><span class="p">(</span><span class="n">authorization</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">bearer</span> <span class="o">=</span> <span class="p">(</span><span class="n">authorization</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"Bearer "</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bearer</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">PermissionError</span><span class="p">(</span><span class="s2">"login required"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">kiban</span><span class="o">.</span><span class="n">verify_user_token</span><span class="p">(</span><span class="n">bearer</span><span class="p">)</span><span class="o">.</span><span class="n">subject</span>   <span class="c1"># raises jwt.PyJWTError otherwise</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">requireUser</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">kiban</span><span class="w"> </span><span class="o">*</span><span class="nx">sdk</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">bearer</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">TrimPrefix</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="s">"Authorization"</span><span class="p">),</span><span class="w"> </span><span class="s">"Bearer "</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">bearer</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">""</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">""</span><span class="p">,</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="s">"login required"</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">VerifyUserToken</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">bearer</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>You should see the user's <code>sub</code> (their Keycloak id) for a valid token and an error for an
+expired one, one for another audience, or one Kiban did not sign.</p>
+<p>A verified token says who the user was when it was issued, nothing more. It does not know that
+the user has since been disabled in Keycloak or deactivated in the company. Only a decision
+(step 7) checks that, on every call. So make a decision before serving data, and never treat a
+verified token alone as "still allowed". A disabled user's token verifies until it expires,
+<code>KIBAN_ACCESS_TOKEN_LIFESPAN</code> seconds, 300 by default.</p>
+<p><strong>Recommendation: verify the token locally, then ask for a decision, on every request, in one
+helper.</strong></p>
+<p>Why. The token proves identity and nothing else. Verifying it is a signature check against
+the realm's keys, local and free, and that is all it can ever tell you: who this was when the
+token was issued. Whether the user may do something now is a different question with a
+different answer over time. A user is disabled, leaves a company, loses a position, has a
+share revoked. None of that changes the token. Only a decision asks identity and org for the
+user's current state, so only a decision refuses a disabled user on their next request rather
+than when the token expires. Kiban's own routes work the same way, except the few listed in
+<a href="../limitations/">limitations</a>. Verifying first still matters: it rejects forged, expired and
+foreign tokens before anything touches Kiban, and gives you the subject for logging.</p>
+<p>How. Decide on every request, including routes with nothing to protect. "My profile" or "my
+tickets" has no object, but it has a feature key, and a decision on the feature key alone is
+what refuses a disabled user there. Put the two halves in one helper and start every handler
+with it, so a route cannot verify and forget to decide:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Node</label><label for="__tabbed_4_2">Python</label><label for="__tabbed_4_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">requireAccess</span><span class="p">(</span><span class="nx">req</span><span class="o">:</span><span class="w"> </span><span class="kt">Request</span><span class="p">,</span><span class="w"> </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span>
+<span class="w">                                    </span><span class="nx">object</span><span class="o">?:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">relation?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">bearer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">req</span><span class="p">.</span><span class="nx">headers</span><span class="p">.</span><span class="nx">authorization</span><span class="o">?</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/^Bearer /</span><span class="p">,</span><span class="w"> </span><span class="s2">""</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">bearer</span><span class="p">)</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s2">"login required"</span><span class="p">);</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">verifier</span><span class="p">.</span><span class="nx">verify</span><span class="p">(</span><span class="nx">bearer</span><span class="p">);</span><span class="w">                       </span><span class="c1">// who: local, free</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">decision</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">can</span><span class="p">(</span><span class="nx">bearer</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w">           </span><span class="c1">// whether: Kiban, every call</span>
+<span class="w">    </span><span class="nx">featureKey</span><span class="p">,</span><span class="w"> </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">scope</span><span class="o">:</span><span class="w"> </span><span class="s2">"company"</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">object</span><span class="p">,</span><span class="w"> </span><span class="nx">relation</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">decision</span><span class="p">.</span><span class="nx">allowed</span><span class="p">)</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s2">"forbidden: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">decision</span><span class="p">.</span><span class="nx">reason</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">bearer</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">require_access</span><span class="p">(</span><span class="n">authorization</span><span class="p">,</span> <span class="n">feature_key</span><span class="p">,</span> <span class="n">company_id</span><span class="p">,</span> <span class="nb">object</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">relation</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">bearer</span> <span class="o">=</span> <span class="p">(</span><span class="n">authorization</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"Bearer "</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">bearer</span><span class="p">:</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span>
+    <span class="n">kiban</span><span class="o">.</span><span class="n">verify_user_token</span><span class="p">(</span><span class="n">bearer</span><span class="p">)</span>                          <span class="c1"># who: local, free</span>
+    <span class="n">decision</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">can</span><span class="p">(</span><span class="n">bearer</span><span class="p">,</span> <span class="n">feature_key</span><span class="p">,</span> <span class="n">module_key</span><span class="o">=</span><span class="s2">"tokidesk"</span><span class="p">,</span> <span class="n">company_id</span><span class="o">=</span><span class="n">company_id</span><span class="p">,</span>
+                         <span class="nb">object</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span> <span class="n">relation</span><span class="o">=</span><span class="n">relation</span><span class="p">)</span>  <span class="c1"># whether: Kiban, every call</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">decision</span><span class="o">.</span><span class="n">allowed</span><span class="p">:</span>
+        <span class="n">abort</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">bearer</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">requireAccess</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">kiban</span><span class="w"> </span><span class="o">*</span><span class="nx">sdk</span><span class="p">.</span><span class="nx">Client</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">http</span><span class="p">.</span><span class="nx">Request</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="w"> </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">CanRequest</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">bearer</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">strings</span><span class="p">.</span><span class="nx">TrimPrefix</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">Header</span><span class="p">.</span><span class="nx">Get</span><span class="p">(</span><span class="s">"Authorization"</span><span class="p">),</span><span class="w"> </span><span class="s">"Bearer "</span><span class="p">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">bearer</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">""</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">""</span><span class="p">,</span><span class="w"> </span><span class="nx">errUnauthenticated</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">VerifyUserToken</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">bearer</span><span class="p">);</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="c1">// who: local, free</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">""</span><span class="p">,</span><span class="w"> </span><span class="nx">errUnauthenticated</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nx">d</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">Can</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">bearer</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span><span class="w"> </span><span class="c1">// whether: Kiban, every call</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">!</span><span class="nx">d</span><span class="p">.</span><span class="nx">Allowed</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="s">""</span><span class="p">,</span><span class="w"> </span><span class="nx">errForbidden</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">bearer</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Every handler then starts with that one call, and the window for a disabled user is the time
+between two of their requests, not the token's lifetime.</p>
+<h3 id="7-ask-before-every-read-and-write">7. Ask before every read and write<a class="headerlink" href="#7-ask-before-every-read-and-write" title="Permanent link">&para;</a></h3>
+<p>One call with the user's own bearer: the feature key, your app key, the company, and for an
+object read or write, the object and the relation. A denial is a normal answer with a reason,
+never an exception.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:3"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><input id="__tabbed_5_3" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Node</label><label for="__tabbed_5_2">Python</label><label for="__tabbed_5_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">decision</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">can</span><span class="p">(</span><span class="nx">bearer</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk.ticket.view"</span><span class="p">,</span><span class="w"> </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">scope</span><span class="o">:</span><span class="w"> </span><span class="s2">"company"</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">object</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">ticketId</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span>
+<span class="p">});</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">decision</span><span class="p">.</span><span class="nx">allowed</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span><span class="p">(</span><span class="mf">403</span><span class="p">).</span><span class="nx">end</span><span class="p">();</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">decision</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">can</span><span class="p">(</span><span class="n">bearer</span><span class="p">,</span> <span class="s2">"tokidesk.ticket.view"</span><span class="p">,</span> <span class="n">module_key</span><span class="o">=</span><span class="s2">"tokidesk"</span><span class="p">,</span> <span class="n">company_id</span><span class="o">=</span><span class="n">company_id</span><span class="p">,</span>
+                     <span class="nb">object</span><span class="o">=</span><span class="p">{</span><span class="s2">"type"</span><span class="p">:</span> <span class="s2">"ticket"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">:</span> <span class="n">ticket_id</span><span class="p">},</span> <span class="n">relation</span><span class="o">=</span><span class="s2">"viewer"</span><span class="p">)</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">decision</span><span class="o">.</span><span class="n">allowed</span><span class="p">:</span>
+    <span class="n">abort</span><span class="p">(</span><span class="mi">403</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">d</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">Can</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">bearer</span><span class="p">,</span><span class="w"> </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">CanRequest</span><span class="p">{</span>
+<span class="w">    </span><span class="nx">FeatureKey</span><span class="p">:</span><span class="w"> </span><span class="s">"tokidesk.ticket.view"</span><span class="p">,</span><span class="w"> </span><span class="nx">ModuleKey</span><span class="p">:</span><span class="w"> </span><span class="s">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">CompanyID</span><span class="p">:</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">Object</span><span class="p">:</span><span class="w"> </span><span class="o">&amp;</span><span class="kd">struct</span><span class="p">{</span><span class="w"> </span><span class="nx">Type</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:"type"`</span><span class="p">;</span><span class="w"> </span><span class="nx">ID</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="s">`json:"id"`</span><span class="w"> </span><span class="p">}{</span><span class="s">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">ticketID</span><span class="p">},</span><span class="w"> </span><span class="nx">Relation</span><span class="p">:</span><span class="w"> </span><span class="s">"viewer"</span><span class="p">,</span>
+<span class="p">})</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>You should see <code>allowed: true</code> for a member of the company who holds <code>viewer</code> on the ticket,
+<code>COMPANY_MEMBERSHIP_REQUIRED</code> for someone who is not a member of the company, <code>ENGINE_DENIED</code>
+for a member who does not hold <code>viewer</code> (or when the ticket has no anchor), <code>MODULE_DISABLED</code>
+while the app is not enabled,
+and a <code>422</code> for a feature key your manifest does not declare.</p>
+<h3 id="8-write-tuples-when-things-happen">8. Write tuples when things happen<a class="headerlink" href="#8-write-tuples-when-things-happen" title="Permanent link">&para;</a></h3>
+<p>When your app creates an object, write its anchor and its first relation in one call, with the
+app's service token (the SDK obtains and refreshes it). The anchor binds the object to the
+company; without it every check on the object is denied.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:3"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><input id="__tabbed_6_3" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Node</label><label for="__tabbed_6_2">Python</label><label for="__tabbed_6_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">grant</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">anchorTuple</span><span class="p">(</span><span class="s2">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">ticketId</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="p">),</span>
+<span class="w">  </span><span class="p">{</span><span class="w"> </span><span class="nx">objectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">objectId</span><span class="o">:</span><span class="w"> </span><span class="kt">ticketId</span><span class="p">,</span><span class="w"> </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span><span class="p">,</span><span class="w"> </span><span class="nx">subjectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"user"</span><span class="p">,</span><span class="w"> </span><span class="nx">subjectId</span><span class="o">:</span><span class="w"> </span><span class="kt">creatorSubject</span><span class="w"> </span><span class="p">}</span>
+<span class="p">]);</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">kiban</span><span class="o">.</span><span class="n">grant</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="p">[</span>
+    <span class="n">kiban</span><span class="o">.</span><span class="n">anchor_tuple</span><span class="p">(</span><span class="s2">"tokidesk"</span><span class="p">,</span> <span class="s2">"ticket"</span><span class="p">,</span> <span class="n">ticket_id</span><span class="p">,</span> <span class="n">company_id</span><span class="p">),</span>
+    <span class="p">{</span><span class="s2">"objectType"</span><span class="p">:</span> <span class="s2">"ticket"</span><span class="p">,</span> <span class="s2">"objectId"</span><span class="p">:</span> <span class="n">ticket_id</span><span class="p">,</span> <span class="s2">"relation"</span><span class="p">:</span> <span class="s2">"viewer"</span><span class="p">,</span> <span class="s2">"subjectType"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"subjectId"</span><span class="p">:</span> <span class="n">creator</span><span class="p">},</span>
+<span class="p">])</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">Grant</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span>
+<span class="w">    </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">AnchorTuple</span><span class="p">(</span><span class="s">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="s">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">ticketID</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">),</span>
+<span class="w">    </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">Tuple</span><span class="p">{</span><span class="nx">ObjectType</span><span class="p">:</span><span class="w"> </span><span class="s">"ticket"</span><span class="p">,</span><span class="w"> </span><span class="nx">ObjectID</span><span class="p">:</span><span class="w"> </span><span class="nx">ticketID</span><span class="p">,</span><span class="w"> </span><span class="nx">Relation</span><span class="p">:</span><span class="w"> </span><span class="s">"viewer"</span><span class="p">,</span><span class="w"> </span><span class="nx">SubjectType</span><span class="p">:</span><span class="w"> </span><span class="s">"user"</span><span class="p">,</span><span class="w"> </span><span class="nx">SubjectID</span><span class="p">:</span><span class="w"> </span><span class="nx">creatorSubject</span><span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p><code>revoke</code> removes what <code>grant</code> wrote. When your app deletes an object, revoke its anchor:
+every other tuple on the object goes with it, in the same transaction, each recorded in the
+ledger. Anchoring the same id again starts from nothing. You should see <code>403 AUTHORIZATION_DENIED</code> if you name
+another enabled app's or module's object type: outside its own types an app's backend needs
+the company's <code>admin</code> relation (<code>company:&lt;id&gt;#admin</code>), and a service account that is only a
+member of the company (step 10) is refused with reason <code>COMPANY_ROLE_REQUIRED</code>. A base type
+such as <code>company</code>, or a type no enabled app declares, is <code>422 VALIDATION_FAILED</code>. A subject can also be a position (<code>subjectType:
+"position"</code>, <code>subjectRelation: "holder"</code>) or a group (<code>subjectType: "group"</code>, <code>subjectRelation:
+"member"</code>), so access follows the chair or the membership. The position, group or member
+must belong to the same company; another company's is <code>422 VALIDATION_FAILED</code>, and a check
+in this company never resolves through it. Without the <code>subjectRelation</code> the tuple is stored
+and never matches.</p>
+<h3 id="9-look-the-member-up">9. Look the member up<a class="headerlink" href="#9-look-the-member-up" title="Permanent link">&para;</a></h3>
+<p>The subject is enough for tuples. When your app needs the member id (to store beside its own
+rows), ask org whether the subject is an active member of the company. The answer carries the
+id only; names come from the member directory (step 11).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="7:3"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><input id="__tabbed_7_3" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Node</label><label for="__tabbed_7_2">Python</label><label for="__tabbed_7_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">fact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">memberBySubject</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">subject</span><span class="p">);</span><span class="w">   </span><span class="c1">// { isMember, isActive, memberId }</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">fact</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">member_by_subject</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">subject</span><span class="p">)</span>              <span class="c1"># MemberFact(is_member, is_active, member_id)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">fact</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MemberBySubject</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="nx">subject</span><span class="p">)</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="10-background-jobs">10. Background jobs<a class="headerlink" href="#10-background-jobs" title="Permanent link">&para;</a></h3>
+<p>A worker, a connector or a mailer has no user. It asks for itself, with the service token. The
+service account is a user like any other, only its sign-in differs, so it is authorized the same
+way: it must be a member of the company it acts in, and it gets what was granted to it. Until an
+administrator makes it a member, every check for it in that company answers
+<code>COMPANY_MEMBERSHIP_REQUIRED</code>. Enabling the app means "this app exists in this deployment";
+membership means "this app's service account may act here". Both are deliberate.</p>
+<p>Make the service account a member once per company, with the two admin calls from
+<a href="#administration">Administration</a>: create a member for it, then link the member to the service
+account's subject (the <code>sub</code> of a service token; the account must have made one request
+through the gateway first, which any check does). The directory then lists it with
+<code>kind: "service"</code>, so a staff list can leave it out.</p>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/api/org/admin/members -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"companyId":"&lt;company&gt;","code":"TOKIDESK","displayName":"TokiDesk (reminders)"}'
+curl -sk https://127.0.0.1:8443/api/org/admin/members/&lt;memberId&gt;/link-user -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"kcSub":"&lt;service account sub&gt;"}'
+</code></pre></div>
+<p>Writing tuples on the app's own types needs no membership (the owner rule in step 8): that is
+the app defining its own model, not acting in the company.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="8:3"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><input id="__tabbed_8_2" name="__tabbed_8" type="radio" /><input id="__tabbed_8_3" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">Node</label><label for="__tabbed_8_2">Python</label><label for="__tabbed_8_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">decision</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">canService</span><span class="p">({</span><span class="w"> </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk.reminders.run"</span><span class="p">,</span><span class="w"> </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">scope</span><span class="o">:</span><span class="w"> </span><span class="s2">"company"</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">decision</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">can_service</span><span class="p">(</span><span class="s2">"tokidesk.reminders.run"</span><span class="p">,</span> <span class="n">module_key</span><span class="o">=</span><span class="s2">"tokidesk"</span><span class="p">,</span> <span class="n">company_id</span><span class="o">=</span><span class="n">company_id</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">d</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">CanService</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">sdk</span><span class="p">.</span><span class="nx">CanRequest</span><span class="p">{</span><span class="nx">FeatureKey</span><span class="p">:</span><span class="w"> </span><span class="s">"tokidesk.reminders.run"</span><span class="p">,</span><span class="w"> </span><span class="nx">ModuleKey</span><span class="p">:</span><span class="w"> </span><span class="s">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">CompanyID</span><span class="p">:</span><span class="w"> </span><span class="nx">companyID</span><span class="p">})</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="11-read-the-org">11. Read the org<a class="headerlink" href="#11-read-the-org" title="Permanent link">&para;</a></h3>
+<p>Four reads cover most approval and routing needs. The app's service account must be a member of
+the company for the last three (step 10).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="9:3"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><input id="__tabbed_9_3" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">Node</label><label for="__tabbed_9_2">Python</label><label for="__tabbed_9_3">Go</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">companies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">meCompanies</span><span class="p">(</span><span class="nx">userBearer</span><span class="p">);</span><span class="w">                 </span><span class="c1">// what this user may see</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">page</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">memberDirectory</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="s2">"ali"</span><span class="p">);</span><span class="w">       </span><span class="c1">// active members, kind person|service</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">holder</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">positionHolder</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">positionId</span><span class="p">,</span><span class="w"> </span><span class="s2">"2026-10-01"</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">members</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">groupMembers</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">groupId</span><span class="p">);</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">companies</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">me_companies</span><span class="p">(</span><span class="n">user_bearer</span><span class="p">)</span>
+<span class="n">page</span>      <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">member_directory</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="s2">"ali"</span><span class="p">)</span>
+<span class="n">holder</span>    <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">position_holder</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">position_id</span><span class="p">,</span> <span class="s2">"2026-10-01"</span><span class="p">)</span>   <span class="c1"># KibanApiError 404: nobody that day</span>
+<span class="n">members</span>   <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">group_members</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">group_id</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nx">companies</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MeCompanies</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">userBearer</span><span class="p">)</span>
+<span class="nx">page</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">      </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MemberDirectory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="s">"ali"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">)</span>
+<span class="nx">holder</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">    </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">PositionHolder</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="nx">positionID</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">())</span>
+<span class="nx">members</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">   </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">GroupMembers</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="nx">groupID</span><span class="p">)</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>For a page with many permission-driven controls, ask once: <code>batchCan</code> / <code>batch_can</code> / <code>BatchCan</code>
+take up to 100 object-relation pairs with the user's bearer and answer one decision each.</p>
+<h2 id="where-the-users-token-lives">Where the user's token lives<a class="headerlink" href="#where-the-users-token-lives" title="Permanent link">&para;</a></h2>
+<p>Two shapes work with Kiban as shipped; the choice is the app's, not a Kiban setting.</p>
+<ul>
+<li><strong>The browser holds the token.</strong> The frontend track below: the browser SDK logs the user in,
+  keeps the token in session storage, and the browser calls Kiban and your app with it. Simple,
+  and it fits any static frontend. A script that manages to run in the page could read the
+  token, so a strict content security policy matters.</li>
+<li><strong>Your backend holds the token.</strong> The user logs in, your backend receives the token and keeps
+  it server-side, and gives the browser its own httpOnly cookie for the session, the shape an app
+  with an existing cookie session already has. The browser never sees a Kiban token; your backend
+  calls Kiban with the SDK and the token it holds, and your existing CSRF protection stays as it
+  is. Add your backend's origin (for example <code>https://app.example.com</code>) to <code>KIBAN_EXTRA_ORIGINS</code>;
+  every path under it, your callback included, is then a valid redirect URI. Exchange the code
+  there.</li>
+</ul>
+<h2 id="frontend-track">Frontend track<a class="headerlink" href="#frontend-track" title="Permanent link">&para;</a></h2>
+<p>Every TypeScript snippet on this page is compiled and run against the SDK by its test suite, so
+it works against the package as shipped.</p>
+<h3 id="1-register-your-applications-origin">1. Register your application's origin<a class="headerlink" href="#1-register-your-applications-origin" title="Permanent link">&para;</a></h3>
+<p>Keycloak only completes a login whose <code>redirect_uri</code> is registered on the <code>kiban-frontend</code>
+client. Bootstrap writes that list on every start of the stack:</p>
+<ul>
+<li>With <code>KIBAN_DOMAIN</code> unset (the default for <code>make dev</code> and the image quickstart), the list is
+  fixed: <code>http://localhost:3000/*</code>, <code>http://localhost:5173/*</code>, <code>http://localhost/*</code>,
+  <code>https://127.0.0.1:8443/*</code> and the test stack's <code>https://127.0.0.1:18543/*</code>. A development
+  server on <code>http://localhost:5173</code> or <code>http://localhost:3000</code> works without any change.</li>
+<li>With <code>KIBAN_DOMAIN=app.example.com</code> (the <code>make public-up</code> path sets it from
+  <code>KIBAN_PUBLIC_HOST</code>), the list becomes exactly <code>https://app.example.com/*</code> and nothing else.
+  Your application must be served from that origin, or behind the same reverse proxy as the
+  gateway.</li>
+</ul>
+<p>For any other origin, add it to <code>KIBAN_EXTRA_ORIGINS</code> in <code>.env</code> (comma-separated) and restart
+the stack: a web origin such as <code>https://app.example.com</code> is allowed to complete the login and
+joins the gateway's CORS allow-list; a custom scheme such as <code>com.example.app:/callback</code> is a
+native app's redirect URI. Bootstrap reconciles the client's lists to <code>KIBAN_DOMAIN</code> plus this
+variable on every start, so an edit in the Keycloak admin console lasts only until the next
+start; the variable is the place.</p>
+<p>You should see: after the change, a login started from your origin lands back on your callback
+route instead of Keycloak's "Invalid parameter: redirect_uri" page.</p>
+<h3 id="2-install-the-sdk">2. Install the SDK<a class="headerlink" href="#2-install-the-sdk" title="Permanent link">&para;</a></h3>
+<p>The package is on the public npm registry; no <code>.npmrc</code> and no token.</p>
+<div class="highlight"><pre><span></span><code>npm i @rossbsol/kiban-sdk
+</code></pre></div>
+<p>You should see <code>@rossbsol/kiban-sdk</code> in <code>package.json</code>. The package is ESM only and has no
+runtime dependencies; it needs <code>fetch</code> and <code>crypto.subtle</code>, which every current browser has.</p>
+<h3 id="3-create-the-session">3. Create the session<a class="headerlink" href="#3-create-the-session" title="Permanent link">&para;</a></h3>
+<p>One session object per application, created once at startup. <code>authOrigin</code> is the gateway; the
+SDK never talks to Keycloak directly.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createSession</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createSession</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">authOrigin</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">realm</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-frontend"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">redirectUri</span><span class="o">:</span><span class="w"> </span><span class="s2">"http://localhost:5173/callback.html"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">persistTokens</span><span class="o">:</span><span class="w"> </span><span class="kt">true</span>
+<span class="p">});</span>
+</code></pre></div>
+<p><code>persistTokens: true</code> writes the token set to <code>sessionStorage</code> under <code>kiban.oidc.tokens</code> so a
+reload keeps the session; the entry goes away when the tab closes. Leave it off to keep tokens
+in memory only.</p>
+<p>You should see nothing yet: <code>session.isAuthenticated()</code> is <code>false</code> until step 4 completes.</p>
+<h3 id="4-gate-a-route-on-login-and-finish-the-login">4. Gate a route on login and finish the login<a class="headerlink" href="#4-gate-a-route-on-login-and-finish-the-login" title="Permanent link">&para;</a></h3>
+<p>A protected route asks the session first. When the user is signed out the SDK records a PKCE
+transaction and sends the browser to Keycloak; the function returns <code>false</code> so the route
+renders nothing.</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">requireLogin</span><span class="p">(</span><span class="nx">session</span><span class="o">:</span><span class="w"> </span><span class="kt">Session</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="kt">boolean</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">session</span><span class="p">.</span><span class="nx">isAuthenticated</span><span class="p">())</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">login</span><span class="p">();</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The callback route (<code>redirectUri</code> above) exchanges the code once on load. The call is
+idempotent for the same code, so a React StrictMode double effect does not exchange it twice.</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">finishLogin</span><span class="p">(</span><span class="nx">session</span><span class="o">:</span><span class="w"> </span><span class="kt">Session</span><span class="p">,</span><span class="w"> </span><span class="nx">callbackUrl</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="ow">void</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">handleCallback</span><span class="p">(</span><span class="nx">callbackUrl</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Call it as <code>finishLogin(session, window.location.href)</code>, then navigate to your application's
+home.</p>
+<p>You should see: the browser goes to
+<code>https://127.0.0.1:8443/auth/realms/kiban/protocol/openid-connect/auth?...code_challenge_method=S256</code>,
+shows the Keycloak login page, and returns to your callback route with <code>code</code> and <code>state</code> in
+the query. After <code>finishLogin</code>, <code>session.isAuthenticated()</code> is <code>true</code>. On a <code>make dev</code> stack the
+first login as the superadmin also forces a password change.</p>
+<h3 id="5-build-the-api-client">5. Build the API client<a class="headerlink" href="#5-build-the-api-client" title="Permanent link">&para;</a></h3>
+<p>Every request goes through one client that attaches the bearer and a correlation id, unwraps
+the <code>{ data }</code> envelope and turns <code>{ error }</code> into a <code>KibanApiError</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createApiClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">api</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createApiClient</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">baseUrl</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">getAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getAccessToken</span><span class="p">(),</span>
+<span class="w">  </span><span class="nx">getAccessTokenExpiresAt</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getTokens</span><span class="p">()</span><span class="o">?</span><span class="p">.</span><span class="nx">expiresAt</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">refreshAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">refresh</span><span class="p">()</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>You should see: <code>await createOrgClient(api).meCompanies()</code> returns the companies the user is an
+active member of. For a freshly bootstrapped stack that is <code>[]</code> even for the superadmin: nobody
+is a member of anything until a company and a member exist (see
+<a href="#administration">Administration</a>).</p>
+<h3 id="6-ask-before-showing-a-feature">6. Ask before showing a feature<a class="headerlink" href="#6-ask-before-showing-a-feature" title="Permanent link">&para;</a></h3>
+<p><code>canI</code> answers "may this user use this feature, in this company?". A denial is a normal
+<code>{ allowed: false, reason }</code>, never an exception. <code>moduleKey</code> is optional: when omitted it is taken from the
+feature key's first segment, and the decision always checks that this module is enabled.</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">canSeeInbox</span><span class="p">(</span><span class="nx">api</span><span class="o">:</span><span class="w"> </span><span class="kt">ApiClient</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="kt">boolean</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">canI</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createCanI</span><span class="p">(</span><span class="nx">createEffectiveAccessClient</span><span class="p">(</span><span class="nx">api</span><span class="p">));</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">inbox</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">canI</span><span class="p">({</span><span class="w"> </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"notification.inbox.view"</span><span class="p">,</span><span class="w"> </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"notification"</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="w"> </span><span class="p">});</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">inbox</span><span class="p">.</span><span class="nx">allowed</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>You should see <code>true</code> for an active member of <code>companyId</code> when the notification module is
+enabled, and <code>false</code> with a reason such as <code>COMPANY_MEMBERSHIP_REQUIRED</code> otherwise. The
+request on the wire is <code>POST /api/auth/effective-access/can</code> with
+<code>{ "featureKey": "notification.inbox.view", "moduleKey": "notification", "scope": "company", "companyId": "..." }</code>.
+Kiban answers for the bearer only: a body <code>actorId</code> naming anyone else is a <code>400 BAD_REQUEST</code>,
+and no other subject field exists.</p>
+<h3 id="7-call-a-module-endpoint">7. Call a module endpoint<a class="headerlink" href="#7-call-a-module-endpoint" title="Permanent link">&para;</a></h3>
+<p>The SDK has no typed client for the sample modules. <code>api.request</code> takes the path from the
+module's OpenAPI file, and the gateway forwards it to the module unchanged. Paths follow
+<code>/api/&lt;module&gt;/v1/...</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">interface</span><span class="w"> </span><span class="nx">NotificationChannel</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"in_app"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"email"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="s2">"webhook"</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">createdAt</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">export</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">listChannels</span><span class="p">(</span><span class="nx">api</span><span class="o">:</span><span class="w"> </span><span class="kt">ApiClient</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">NotificationChannel</span><span class="p">[]</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">page</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">api</span><span class="p">.</span><span class="nx">request</span><span class="o">&lt;</span><span class="nx">Page</span><span class="o">&lt;</span><span class="nx">NotificationChannel</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="sb">`/api/notification/v1/companies/</span><span class="si">${</span><span class="nx">companyId</span><span class="si">}</span><span class="sb">/channels`</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">query</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">page</span><span class="o">:</span><span class="w"> </span><span class="kt">1</span><span class="p">,</span><span class="w"> </span><span class="nx">pageSize</span><span class="o">:</span><span class="w"> </span><span class="kt">50</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">});</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">page</span><span class="p">.</span><span class="nx">items</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>You should see an array (empty on a new stack). A <code>403</code> with code <code>MODULE_DISABLED</code> or
+<code>MODULE_NOT_INSTALLED</code> means the module is off for this deployment; <code>AUTHORIZATION_DENIED</code> means
+the module's own check (<code>notification.inbox.view</code> here) refused the bearer. The types come from
+the module's <a href="../api/notification.html">API reference</a>.</p>
+<h3 id="8-handle-401-and-refresh">8. Handle 401 and refresh<a class="headerlink" href="#8-handle-401-and-refresh" title="Permanent link">&para;</a></h3>
+<p>The API client already does the common case: on a <code>401</code> it calls <code>session.refresh()</code> once
+(concurrent callers share one refresh) and retries the request once. A second <code>401</code> is thrown
+as a <code>KibanApiError</code>, so a rejected endpoint never loops. What is left for you is the branch on
+the error code:</p>
+<div class="highlight"><pre><span></span><code><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">createOrgClient</span><span class="p">(</span><span class="nx">api</span><span class="p">).</span><span class="nx">adminCreateGroup</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="s2">"sales"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"Sales"</span><span class="w"> </span><span class="p">});</span>
+<span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="nx">err</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">KibanApiError</span><span class="p">))</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="nx">err</span><span class="p">;</span>
+<span class="w">  </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">code</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.AuthTokenMissing</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode.AuthTokenInvalid</span><span class="o">:</span>
+<span class="w">      </span><span class="kt">void</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">login</span><span class="p">();</span><span class="w"> </span><span class="c1">// refresh already failed; start over</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.Forbidden</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">AuthorizationDenied</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// the caller may not do this; hide the control</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.ModuleDisabled</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ModuleNotInstalled</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// the module is off for this deployment</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">PositionHeld</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// someone holds the position: err.details.assignmentId is the tenure to end first</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ValidationError</span><span class="o">:</span><span class="w"> </span><span class="c1">// org and the platform routes</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ValidationFailed</span><span class="o">:</span><span class="w"> </span><span class="c1">// the authorization service</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">Conflict</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// show err.message and err.details to the user</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">AuthorizationUnavailable</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// authz could not answer (503); retry later, never fail open</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">default</span><span class="o">:</span>
+<span class="w">      </span><span class="kt">throw</span><span class="w"> </span><span class="nx">err</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>You should see: an access token lives 300 seconds and the refresh token 30 minutes idle, 10
+hours in total (the realm's defaults). Within those limits the user never sees a login page again; past them the
+<code>AuthTokenInvalid</code> branch starts a new login.</p>
+<h3 id="9-log-out">9. Log out<a class="headerlink" href="#9-log-out" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">signOut</span><span class="p">(</span><span class="nx">session</span><span class="o">:</span><span class="w"> </span><span class="kt">Session</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="ow">void</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">session</span><span class="p">.</span><span class="nx">logout</span><span class="p">();</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>You should see: the tokens are cleared, the browser goes to Keycloak's logout endpoint with the
+ID token as <code>id_token_hint</code>, and comes back to the origin root of <code>redirectUri</code>
+(<code>http://localhost:5173/</code>), not to the callback route. Pass <code>postLogoutRedirectUri</code> to
+<code>createSession</code> for a different landing page; it must be registered on the client too.</p>
+<p>For the full API and the recipes, see the <a href="../sdk-guide/">SDK guide</a>.</p>
+<h2 id="administration">Administration<a class="headerlink" href="#administration" title="Permanent link">&para;</a></h2>
+<p>A superadmin creates companies and org units through the gateway, with the token from
+<a href="#getting-a-token-for-the-shell">Getting a token for the shell</a>. Members, positions,
+assignments and groups of a company are managed by the superadmin or by an administrator of
+that company: a member who holds the company's <code>admin</code> relation (<code>company:&lt;id&gt;#admin</code>, granted
+with <code>POST /api/auth/grants</code> by a superadmin). The sample shell's administration pages use the
+same routes for positions and groups.</p>
+<p>Create the company. A company has no parent; <code>typeKey</code> is <code>company</code>:</p>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/api/org/admin/units \
+  -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"typeKey":"company","parentId":null,"code":"acme","name":"Acme Ltd"}'
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="p">{</span><span class="w"> </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;companyId&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nt">"typeKey"</span><span class="p">:</span><span class="w"> </span><span class="s2">"company"</span><span class="p">,</span><span class="w"> </span><span class="nt">"parentId"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w"> </span><span class="nt">"code"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ACME"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Acme Ltd"</span><span class="p">,</span><span class="w"> </span><span class="nt">"isActive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Creating an active company also links every enabled app and module to the platform for that
+company in the same transaction (<code>company_module:&lt;companyId&gt;/&lt;key&gt;#system</code>), so superadmins
+administer it from the start. An
+org unit below the company is the same call with <code>"typeKey": "business_unit"</code> or <code>"territory"</code>
+(the shipped taxonomy) and <code>"parentId": "&lt;companyId&gt;"</code>. Codes are normalised to upper case.</p>
+<p>Create a member and link it to a login. <code>kcSub</code> is the <code>sub</code> claim of the user's token; the
+identity record exists as soon as that user has made one request through the gateway (a login
+followed by any API call):</p>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/api/org/admin/members \
+  -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"companyId":"&lt;companyId&gt;","code":"ross","displayName":"Ross Chiu","email":"ross@example.com"}'
+
+curl -sk https://127.0.0.1:8443/api/org/admin/members/&lt;memberId&gt;/link-user \
+  -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"kcSub":"&lt;sub&gt;"}'
+</code></pre></div>
+<p>You should see the member with <code>"userId"</code> set after the link, and <code>GET /api/org/me/companies</code>
+as that user now lists the company. <code>GET /api/org/admin/members?companyId=</code> lists a company's
+members; <code>PUT /api/org/admin/members/{id}</code> updates one; <code>DELETE .../link-user</code> unlinks.</p>
+<h2 id="rest-only-track">REST-only track<a class="headerlink" href="#rest-only-track" title="Permanent link">&para;</a></h2>
+<h3 id="what-you-can-and-cannot-do">What you can and cannot do<a class="headerlink" href="#what-you-can-and-cannot-do" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Every call needs a bearer: a user's access token from a browser login, or a service client's
+  token from the client-credentials grant (below). A backend acts either on behalf of the user
+  whose token it holds or as itself.</li>
+<li>Every response is an envelope: <code>{ "data": ... }</code> on success, <code>{ "error": { "code",
+  "message", "details"? } }</code> on failure. Send <code>x-correlation-id</code> if you want to find the request
+  in the gateway's logs and the audit rows; the gateway generates one otherwise.</li>
+</ul>
+<h3 id="route-families">Route families<a class="headerlink" href="#route-families" title="Permanent link">&para;</a></h3>
+<p>All on the gateway origin. The full contract is the <a href="../api/platform.html">Platform API</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>What it is</th>
+<th>Who may call it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /api/auth/effective-access/can</code>, <code>.../batch-can</code></td>
+<td>The access decision for the bearer, one or many objects (at most 100 per batch)</td>
+<td>Any bearer, for itself only</td>
+</tr>
+<tr>
+<td><code>GET /api/auth/effective-access/summary?companyId=</code></td>
+<td>Feature keys, role bindings and object grants the bearer holds</td>
+<td>Any bearer, for itself only</td>
+</tr>
+<tr>
+<td><code>POST /api/auth/grants</code></td>
+<td>Write or remove relation tuples, bound to one company and one app or module</td>
+<td>A registered app's backend, on its own object types; an app's backend that holds the company's <code>admin</code> relation, on any app's types there; or a superadmin (who also appoints a company administrator with it)</td>
+</tr>
+<tr>
+<td><code>GET /api/org/companies/{id}/members/by-subject/{sub}</code></td>
+<td>Is this subject an active member, and which member</td>
+<td>A registered app's backend, or a superadmin</td>
+</tr>
+<tr>
+<td><code>GET /api/org/me/companies</code></td>
+<td>Companies the bearer is an active member of</td>
+<td>Any bearer</td>
+</tr>
+<tr>
+<td><code>GET /api/org/companies/{id}/members?q=&amp;page=&amp;pageSize=</code></td>
+<td>Member directory of one company</td>
+<td>Active members of that company, or a superadmin</td>
+</tr>
+<tr>
+<td><code>/api/org/admin/units</code>, <code>/api/org/admin/units/{id}</code>, <code>.../subtree</code></td>
+<td>Company and org-unit administration</td>
+<td>Superadmin</td>
+</tr>
+<tr>
+<td><code>/api/org/admin/members</code>, <code>/api/org/admin/members/{id}</code>, <code>.../link-user</code></td>
+<td>Member administration</td>
+<td>Superadmin, or an administrator of that company</td>
+</tr>
+<tr>
+<td><code>/api/org/admin/companies/{id}/positions</code>, <code>.../groups</code>, <code>/api/org/admin/positions/{id}</code>, <code>/api/org/admin/positions/{id}/assignments</code>, <code>/api/org/admin/assignments/{id}/end</code>, <code>/api/org/admin/groups/{id}/members</code></td>
+<td>Position and group administration</td>
+<td>Superadmin, or an administrator of that company</td>
+</tr>
+<tr>
+<td><code>POST /api/platform/admin/apps</code></td>
+<td>Register an app from its manifest</td>
+<td>Superadmin</td>
+</tr>
+<tr>
+<td><code>GET /api/platform/capabilities[/{module}]</code>, <code>GET /api/platform/catalog</code></td>
+<td>What is registered, installed and enabled</td>
+<td>Any bearer</td>
+</tr>
+<tr>
+<td><code>POST /api/platform/admin/modules/{key}/enable</code>, <code>.../disable</code>; <code>POST /api/platform/admin/platform-roles</code>, <code>DELETE .../platform-roles/{role}/{subjectId}</code></td>
+<td>App and module enablement, the superadmin role</td>
+<td>Superadmin</td>
+</tr>
+<tr>
+<td><code>/api/&lt;module&gt;/v1/...</code></td>
+<td>A built-in module's own API, forwarded unchanged</td>
+<td>Whatever the module decides</td>
+</tr>
+</tbody>
+</table>
+<p>A minimal call:</p>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/api/auth/effective-access/can \
+  -H "Authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"featureKey":"tokidesk.ticket.view","moduleKey":"tokidesk","scope":"company","companyId":"'"$COMPANY"'"}'
+</code></pre></div>
+<p>You should see <code>{"data":{"allowed":true,"reason":"ALLOWED","evidence":[...]}}</code> for a member once
+the app is enabled and <code>allowed: false</code> with <code>COMPANY_MEMBERSHIP_REQUIRED</code> for someone who is
+not a member. Kiban answers for the bearer: a body <code>actorId</code> naming anyone else is a
+<code>400 BAD_REQUEST</code>.</p>
+<h3 id="getting-a-token-for-the-shell">Getting a token for the shell<a class="headerlink" href="#getting-a-token-for-the-shell" title="Permanent link">&para;</a></h3>
+<p>Because there is no direct grant for users, take the token from a browser session. Log in to
+the sample shell (<code>https://127.0.0.1:8443</code>), open the browser's developer tools and run:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">sessionStorage</span><span class="p">.</span><span class="nx">getItem</span><span class="p">(</span><span class="s2">"kiban.oidc.tokens"</span><span class="p">)).</span><span class="nx">accessToken</span>
+</code></pre></div>
+<p>The shell persists its tokens under that key. Export the value as <code>TOKEN</code>. It is valid for 300
+seconds; take a fresh one when you get <code>401 AUTH_TOKEN_INVALID</code>. Its <code>sub</code> is your subject.</p>
+<h3 id="getting-a-token-for-a-service">Getting a token for a service<a class="headerlink" href="#getting-a-token-for-a-service" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>curl -sk https://127.0.0.1:8443/realms/kiban/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=tokidesk-backend -d client_secret=$SECRET
+</code></pre></div>
+<p>You should see a JSON body with <code>access_token</code>, valid for 300 seconds. Its <code>sub</code> is the client's
+service-account user and its <code>azp</code> is the client id, which is how the gateway and the
+authorization service recognise the app's backend. The SDKs do this for you.</p>
+<h2 id="next">Next<a class="headerlink" href="#next" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../sdk-guide/">SDK guide</a>: every client, the browser SDK and the backend entry.</li>
+<li><a href="../limitations/">Known limitations</a>: what 0.1 does not do.</li>
+<li><a href="../building/">Building on Kiban</a>: the in-tree module contract the sample modules follow.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

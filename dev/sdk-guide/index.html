@@ -1,0 +1,1269 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Self-hostable organizational identity and access foundation for business applications.">
+      
+      
+      
+        <link rel="canonical" href="https://rosschiu.github.io/kiban/dev/sdk-guide/">
+      
+      
+        <link rel="prev" href="../building/">
+      
+      
+        <link rel="next" href="../reference/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>SDK guide - Kiban</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sdk-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kiban" class="md-header__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kiban
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              SDK guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kiban" class="md-nav__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kiban
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Why Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Integrate your app
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operating/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operating Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building on Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    SDK guide
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    SDK guide
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create-a-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a session
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Create a session">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-tokens-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where tokens live
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-api-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      The API client
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      The clients
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recipes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recipes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cani-can-i-use-this-feature-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      canI: "can I use this feature, here?"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grantobjectaccess-share-this-object-with-that-subject" class="md-nav__link">
+    <span class="md-ellipsis">
+      grantObjectAccess: "share this object with that subject"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error handling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-backend-entry-rossbsolkiban-sdkserver" class="md-nav__link">
+    <span class="md-ellipsis">
+      The backend entry: @rossbsol/kiban-sdk/server
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-and-go" class="md-nav__link">
+    <span class="md-ellipsis">
+      Python and Go
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wire-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wire types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Versioning
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reference
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Known limitations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#install" class="md-nav__link">
+    <span class="md-ellipsis">
+      Install
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create-a-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a session
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Create a session">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-tokens-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where tokens live
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-api-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      The API client
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      The clients
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recipes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recipes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cani-can-i-use-this-feature-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      canI: "can I use this feature, here?"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grantobjectaccess-share-this-object-with-that-subject" class="md-nav__link">
+    <span class="md-ellipsis">
+      grantObjectAccess: "share this object with that subject"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error handling
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-backend-entry-rossbsolkiban-sdkserver" class="md-nav__link">
+    <span class="md-ellipsis">
+      The backend entry: @rossbsol/kiban-sdk/server
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-and-go" class="md-nav__link">
+    <span class="md-ellipsis">
+      Python and Go
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wire-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wire types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#versioning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Versioning
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reference
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="sdk-guide">SDK guide<a class="headerlink" href="#sdk-guide" title="Permanent link">&para;</a></h1>
+<p><code>@rossbsol/kiban-sdk</code> is the TypeScript package a web application or a module frontend uses to
+talk to a Kiban deployment: the login flow, the tokens, typed calls to the platform API and the
+error envelope. It has no runtime dependencies (native <code>fetch</code> and <code>crypto</code> only) and talks to
+the gateway origin alone, never to Keycloak or to a module's service directly. The sample shell
+in <code>web/shell/</code> is one consumer of it; you do not need the shell to use the SDK.</p>
+<p>Every sample on this page compiles against the package as shipped: the same code lives in
+<code>web/sdk/docs-snippets/guide.ts</code> and <code>server.ts</code>, which the SDK's type check and unit tests
+cover.</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>npm i @rossbsol/kiban-sdk
+</code></pre></div>
+<p>Every release is published to the public npm registry, so no <code>.npmrc</code> and no token are needed.</p>
+<p>The package ships ESM only (<code>dist/index.js</code> and <code>dist/server/index.js</code>, each with its <code>.d.ts</code>). Node 20 or a modern browser
+gives you the <code>fetch</code> and <code>crypto.subtle</code> it relies on.</p>
+<h2 id="create-a-session">Create a session<a class="headerlink" href="#create-a-session" title="Permanent link">&para;</a></h2>
+<p>The session runs the OpenID Connect authorization-code flow with PKCE (S256) against the
+gateway's Keycloak proxy, validates <code>state</code> and <code>nonce</code>, and refreshes tokens one flight at a
+time.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createSession</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">;</span><span class="w"> </span><span class="c1">// your gateway; self-signed TLS in `make dev`</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createSession</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">authOrigin</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">realm</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-frontend"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">redirectUri</span><span class="o">:</span><span class="w"> </span><span class="s2">"http://localhost:5173/callback.html"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">persistTokens</span><span class="o">:</span><span class="w"> </span><span class="kt">true</span>
+<span class="p">});</span>
+</code></pre></div>
+<ul>
+<li>A "Log in" button calls <code>await session.login()</code>; the browser goes to Keycloak and comes back to
+  <code>redirectUri</code> with <code>code</code> and <code>state</code>.</li>
+<li>The callback route calls <code>await session.handleCallback(window.location.href)</code> once on load.
+  The call is idempotent for the same <code>code</code>, so a React StrictMode double effect does not
+  exchange the code twice.</li>
+<li><code>session.isAuthenticated()</code> and <code>session.getAccessToken()</code> are synchronous and never trigger a
+  refresh. <code>session.refresh()</code> does; concurrent callers share one network call.</li>
+<li><code>session.logout()</code> clears the tokens and sends the browser to Keycloak's logout endpoint, then
+  back to <code>postLogoutRedirectUri</code> (default: the origin root of <code>redirectUri</code>, not the callback
+  route).</li>
+</ul>
+<p><code>redirectUri</code> must be registered on the <code>kiban-frontend</code> client. Bootstrap writes that list on
+every start: <code>https://&lt;KIBAN_DOMAIN&gt;/*</code> when <code>KIBAN_DOMAIN</code> is set, otherwise the fixed
+localhost set, plus every entry of <code>KIBAN_EXTRA_ORIGINS</code>. An edit in the Keycloak admin console
+lasts until the next start; <code>KIBAN_EXTRA_ORIGINS</code> is the place to add an origin. <a href="../integrate/#1-register-your-applications-origin">Integrate your app</a>
+has the list and the steps.</p>
+<h3 id="where-tokens-live">Where tokens live<a class="headerlink" href="#where-tokens-live" title="Permanent link">&para;</a></h3>
+<p>The token set (access, refresh and ID token plus expiry) is held in memory. With
+<code>persistTokens: true</code> it is also written to <code>sessionStorage</code> under <code>kiban.oidc.tokens</code>, so a page
+reload or a direct link keeps the session; the entry goes away when the tab closes. The SDK never
+writes tokens to <code>localStorage</code>. On reload a persisted set is only trusted if it is still usable:
+not expired, or expired but carrying a refresh token (the next 401 refreshes it). Anything else
+is dropped and the user logs in again.</p>
+<p>To keep tokens out of browser storage entirely, pass a memory adapter:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createMemoryStorage</span><span class="p">,</span><span class="w"> </span><span class="nx">createSession</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createSession</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">authOrigin</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">realm</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-frontend"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">redirectUri</span><span class="o">:</span><span class="w"> </span><span class="s2">"http://localhost:5173/callback.html"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">storage</span><span class="o">:</span><span class="w"> </span><span class="kt">createMemoryStorage</span><span class="p">()</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>A reload then needs a new <code>login()</code>, which Keycloak's SSO cookie usually completes without a
+password prompt. Any script on your origin can read the tokens, so serve your application with a
+Content-Security-Policy as the gateway does for the sample shell.</p>
+<p><code>decodeIdTokenClaims(idToken)</code> reads the ID token's claims for display (name, email) without
+verifying the signature. Use it for the header, never for an authorization decision.</p>
+<h2 id="the-api-client">The API client<a class="headerlink" href="#the-api-client" title="Permanent link">&para;</a></h2>
+<p><code>createApiClient</code> is the one fetch wrapper every typed client is built on. It attaches the bearer
+and an <code>x-correlation-id</code>, JSON-encodes the body, unwraps the <code>{ data }</code> envelope and turns an
+<code>{ error }</code> envelope into a <code>KibanApiError</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createApiClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">api</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createApiClient</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">baseUrl</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">getAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getAccessToken</span><span class="p">(),</span>
+<span class="w">  </span><span class="nx">getAccessTokenExpiresAt</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">getTokens</span><span class="p">()</span><span class="o">?</span><span class="p">.</span><span class="nx">expiresAt</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">refreshAccessToken</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">session</span><span class="p">.</span><span class="nx">refresh</span><span class="p">()</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>A token that expires within the next 30 seconds is refreshed before the request is sent, when
+<code>getAccessTokenExpiresAt</code> is wired. On a 401 the client calls <code>refreshAccessToken</code> once and retries
+the request once if it returned a token. A second 401 is thrown as a <code>KibanApiError</code>, so a persistently rejected endpoint never
+loops. A 204 resolves to <code>undefined</code>. <code>api.request&lt;T&gt;(path, options)</code> is available for a module's
+own endpoints: <code>options</code> takes <code>method</code>, <code>body</code>, <code>headers</code>, <code>query</code> and an <code>AbortSignal</code>.</p>
+<h2 id="the-clients">The clients<a class="headerlink" href="#the-clients" title="Permanent link">&para;</a></h2>
+<p>Each client is a function of the API client and returns an object of typed methods.</p>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Methods</th>
+<th>Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>createCapabilitiesClient(api)</code></td>
+<td><code>list()</code>, <code>get(moduleKey)</code></td>
+<td><code>GET /api/platform/capabilities[/{module}]</code></td>
+</tr>
+<tr>
+<td><code>createEffectiveAccessClient(api)</code></td>
+<td><code>can(request)</code>, <code>batchCan(request)</code>, <code>summary(companyId?)</code></td>
+<td><code>POST /api/auth/effective-access/can</code>, <code>/batch-can</code>, <code>GET .../summary</code></td>
+</tr>
+<tr>
+<td><code>createOrgClient(api)</code></td>
+<td><code>meCompanies()</code>, <code>memberDirectory(companyId, q?, page?, pageSize?)</code>, and the admin methods (a superadmin, or an administrator of that company) <code>adminListPositions</code>, <code>adminCreatePosition</code>, <code>adminAssignPosition</code>, <code>adminEndAssignment</code>, <code>adminListGroups</code>, <code>adminCreateGroup</code>, <code>adminListGroupMembers</code>, <code>adminAddGroupMember</code>, <code>adminRemoveGroupMember</code></td>
+<td><code>/api/org/...</code></td>
+</tr>
+<tr>
+<td><code>createSuperadminClient(api)</code></td>
+<td><code>catalog()</code>, <code>enableModule(key)</code>, <code>disableModule(key)</code>, <code>grantPlatformRole(subjectId, role)</code>, <code>revokePlatformRole(subjectId, role)</code></td>
+<td><code>/api/platform/catalog</code>, <code>/api/platform/admin/...</code></td>
+</tr>
+<tr>
+<td><code>createDemoModeClient(api)</code></td>
+<td><code>get()</code></td>
+<td><code>GET /api/platform/demo-mode</code></td>
+</tr>
+</tbody>
+</table>
+<p>Effective access is self-scoped: the gateway answers for the bearer only, and a request body
+naming another subject is rejected. <code>summary()</code> returns the feature keys, role bindings and
+direct object grants the caller holds, globally or in one company; it is a display composition
+for navigation, while <code>can</code> and <code>batchCan</code> are the gate a component asks before acting.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createEffectiveAccessClient</span><span class="p">,</span><span class="w"> </span><span class="nx">createOrgClient</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">effectiveAccess</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createEffectiveAccessClient</span><span class="p">(</span><span class="nx">api</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">org</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createOrgClient</span><span class="p">(</span><span class="nx">api</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">companies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">meCompanies</span><span class="p">();</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">summary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">effectiveAccess</span><span class="p">.</span><span class="nx">summary</span><span class="p">(</span><span class="nx">companies</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span><span class="o">?</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">decisions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">effectiveAccess</span><span class="p">.</span><span class="nx">batchCan</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs.create"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">scope</span><span class="o">:</span><span class="w"> </span><span class="s2">"company"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">summary.companyId</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">items</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">object</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs_document"</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"doc-1"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">object</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kr">type</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs_document"</span><span class="p">,</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"doc-2"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">visible</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">decisions</span><span class="p">.</span><span class="nx">filter</span><span class="p">((</span><span class="nx">d</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">d</span><span class="p">.</span><span class="nx">decision</span><span class="p">.</span><span class="nx">allowed</span><span class="p">).</span><span class="nx">map</span><span class="p">((</span><span class="nx">d</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">d</span><span class="p">.</span><span class="nx">object</span><span class="p">.</span><span class="nx">id</span><span class="p">);</span>
+</code></pre></div>
+<p>The sample modules (notification, docs, helpdesk, timesheet) have no clients in the SDK; call
+their endpoints with <code>api.request</code> and the types from their OpenAPI files in the
+<a href="../reference/">reference</a>.</p>
+<p><code>queryKeys</code> is a key factory for TanStack Query users, one entry per client above, so cache
+invalidation uses the same keys everywhere. <code>createSessionContext()</code> keeps the active company
+selection and user preferences in <code>localStorage</code>; it is a convenience for the UI, not an
+authorization source.</p>
+<h2 id="recipes">Recipes<a class="headerlink" href="#recipes" title="Permanent link">&para;</a></h2>
+<p>Two use-case functions answer common product questions in one call. Each has a pattern page and
+a live end-to-end test in the repository.</p>
+<h3 id="cani-can-i-use-this-feature-here"><code>canI</code>: "can I use this feature, here?"<a class="headerlink" href="#cani-can-i-use-this-feature-here" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createCanI</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">canI</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createCanI</span><span class="p">(</span><span class="nx">effectiveAccess</span><span class="p">);</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">admin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">canI</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"auth.platform_administration.access"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">requiredPlatformRole</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-superadmin"</span>
+<span class="p">});</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">view</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">canI</span><span class="p">({</span><span class="w"> </span><span class="nx">featureKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"notification.inbox.view"</span><span class="p">,</span><span class="w"> </span><span class="nx">moduleKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"notification"</span><span class="p">,</span><span class="w"> </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">summary.companyId</span><span class="w"> </span><span class="p">});</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">view</span><span class="p">.</span><span class="nx">allowed</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">view</span><span class="p">.</span><span class="nx">reason</span><span class="p">);</span><span class="w"> </span><span class="c1">// e.g. "COMPANY_MEMBERSHIP_REQUIRED"</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Omit <code>companyId</code> for a global check, set it for a company-scoped one. A global check must set
+<code>requiredPlatformRole</code>; without it the server answers <code>400 VALIDATION_ERROR</code>. A denial is a
+normal <code>{ allowed: false, reason }</code> result and does not throw; <code>KibanApiError</code> is thrown for a
+non-2xx answer (a <code>400</code> for an invalid request, a <code>422</code> for a feature key a registered app does
+not declare, <code>401</code>, <code>5xx</code>).</p>
+<h3 id="grantobjectaccess-share-this-object-with-that-subject"><code>grantObjectAccess</code>: "share this object with that subject"<a class="headerlink" href="#grantobjectaccess-share-this-object-with-that-subject" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createGrantObjectAccess</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">grantObjectAccess</span><span class="p">,</span><span class="w"> </span><span class="nx">revokeObjectAccess</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createGrantObjectAccess</span><span class="p">(</span><span class="nx">api</span><span class="p">);</span>
+
+<span class="k">await</span><span class="w"> </span><span class="nx">grantObjectAccess</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">summary.companyId</span><span class="p">,</span><span class="w"> </span><span class="c1">// the company whose docs module owns the document</span>
+<span class="w">  </span><span class="nx">objectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs_document"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">objectId</span><span class="o">:</span><span class="w"> </span><span class="s2">"doc-1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"group"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectId</span><span class="o">:</span><span class="w"> </span><span class="s2">"group-12"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectRelation</span><span class="o">:</span><span class="w"> </span><span class="s2">"member"</span><span class="w"> </span><span class="c1">// every current member of the group; omit for a single user</span>
+<span class="p">});</span>
+
+<span class="k">await</span><span class="w"> </span><span class="nx">revokeObjectAccess</span><span class="p">({</span>
+<span class="w">  </span><span class="nx">companyId</span><span class="o">:</span><span class="w"> </span><span class="kt">summary.companyId</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">objectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"docs_document"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">objectId</span><span class="o">:</span><span class="w"> </span><span class="s2">"doc-1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">relation</span><span class="o">:</span><span class="w"> </span><span class="s2">"viewer"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectType</span><span class="o">:</span><span class="w"> </span><span class="s2">"group"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectId</span><span class="o">:</span><span class="w"> </span><span class="s2">"group-12"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">subjectRelation</span><span class="o">:</span><span class="w"> </span><span class="s2">"member"</span>
+<span class="p">});</span>
+</code></pre></div>
+<p>Both write one tuple through <code>POST /api/auth/grants</code>. The gateway admits a superadmin
+or a registered app's backend (a service token whose client id is the app's service client);
+anyone else, which includes every other browser login, receives <code>403 FORBIDDEN</code>. The authz service then binds the request to the
+company named by <code>companyId</code> and to the one enabled module whose fragment declares the object
+type: <code>docs_document</code> belongs to the docs module, a base type such as <code>company</code> is refused (the one exception: a superadmin may grant or revoke
+<code>company:&lt;companyId&gt;#admin</code> for a user, which appoints a company administrator), and
+the object must already be anchored to that company's module (the module does this when it
+creates the object). A request without a UUID <code>companyId</code> is answered <code>400</code>; an object type no
+enabled module declares, or an unanchored object, <code>422</code>. A position's holder is
+<code>subjectType: "position"</code> with <code>subjectRelation: "holder"</code>.</p>
+<h2 id="error-handling">Error handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<p>Every non-2xx response throws <code>KibanApiError</code> with <code>status</code>, <code>code</code>, <code>message</code>, optional <code>details</code>
+and the <code>correlationId</code> the client sent, which also appears in the gateway's logs and audit
+rows. <code>ApiErrorCode</code> holds the canonical codes as constants; the ones a frontend usually
+branches on:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">,</span><span class="w"> </span><span class="nx">KibanApiError</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
+
+<span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">org</span><span class="p">.</span><span class="nx">adminCreateGroup</span><span class="p">(</span><span class="nx">summary</span><span class="p">.</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="s2">"sales"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"Sales"</span><span class="w"> </span><span class="p">});</span>
+<span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">err</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="nx">err</span><span class="w"> </span><span class="ow">instanceof</span><span class="w"> </span><span class="nx">KibanApiError</span><span class="p">))</span><span class="w"> </span><span class="k">throw</span><span class="w"> </span><span class="nx">err</span><span class="p">;</span>
+<span class="w">  </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">code</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.AuthTokenMissing</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode.AuthTokenInvalid</span><span class="o">:</span>
+<span class="w">      </span><span class="kt">session.login</span><span class="p">();</span><span class="w"> </span><span class="c1">// refresh already failed; start over</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.Forbidden</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">AuthorizationDenied</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// the caller may not do this; hide the control</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.ModuleDisabled</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ModuleNotInstalled</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// the module is off for this deployment</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode.ValidationFailed</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">Conflict</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// show err.message and err.details to the user</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">AuthorizationUnavailable</span><span class="o">:</span>
+<span class="w">      </span><span class="c1">// authz could not answer (503); retry later, never fail open</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">default</span><span class="o">:</span>
+<span class="w">      </span><span class="kt">throw</span><span class="w"> </span><span class="nx">err</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><code>code</code> is <code>"UNKNOWN_ERROR"</code> when a non-2xx response carried no JSON envelope (a proxy error
+page). A request that never got a response (network failure, abort) rejects with the error
+<code>fetch</code> threw, not a <code>KibanApiError</code>. Do not parse <code>message</code>; it is for people.</p>
+<h2 id="the-backend-entry-rossbsolkiban-sdkserver">The backend entry: <code>@rossbsol/kiban-sdk/server</code><a class="headerlink" href="#the-backend-entry-rossbsolkiban-sdkserver" title="Permanent link">&para;</a></h2>
+<p>The same package has a second entry for a Node backend that runs beside Kiban. It needs no
+browser: <code>fetch</code> and <code>crypto.subtle</code> from Node 20 or later.</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createAppClient</span><span class="p">,</span><span class="w"> </span><span class="nx">createServiceCredentials</span><span class="p">,</span><span class="w"> </span><span class="nx">createTokenVerifier</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk/server"</span><span class="p">;</span>
+
+<span class="kd">const</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"https://127.0.0.1:8443"</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">credentials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createServiceCredentials</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="p">,</span><span class="w"> </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk-backend"</span><span class="p">,</span><span class="w"> </span><span class="nx">clientSecret</span><span class="w"> </span><span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">kiban</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createAppClient</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="p">,</span><span class="w"> </span><span class="nx">appKey</span><span class="o">:</span><span class="w"> </span><span class="s2">"tokidesk"</span><span class="p">,</span><span class="w"> </span><span class="nx">credentials</span><span class="w"> </span><span class="p">});</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">verifier</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createTokenVerifier</span><span class="p">({</span><span class="w"> </span><span class="nx">gatewayOrigin</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<ul>
+<li><code>createServiceCredentials</code> obtains the app's own access token by the client-credentials
+  grant and caches it until shortly before expiry (concurrent callers share one request).</li>
+<li><code>createTokenVerifier(...).verify(token)</code> checks a user's token against the realm's signing
+  keys (RS256, WebCrypto), the issuer, the audience and the time claims, and returns the
+  subject, the client id (<code>azp</code>) and every claim. It refetches the keys once for an unknown key
+  id. It rejects with an error whose message starts with <code>kiban: invalid token</code>; when the key
+  set cannot be loaded, with <code>kiban: JWKS fetch failed</code>.</li>
+<li><code>createAppClient</code> gives <code>can(userBearer, request)</code>, <code>canService(request)</code>, <code>batchCan</code> and
+  <code>batchCanService</code>, <code>grant(companyId, tuples)</code>, <code>revoke(companyId, tuples)</code>,
+  <code>anchorTuple(objectType, objectId, companyId)</code>, <code>memberBySubject(companyId, subject)</code>, the org
+  reads <code>meCompanies(userBearer)</code>, <code>memberDirectory</code>, <code>positionHolder</code> and <code>groupMembers</code>, and
+  <code>registerApp(superadminBearer, manifest)</code>, plus
+  <code>api</code>, a plain client on the gateway origin for any other route. It attaches no token: pass
+  <code>headers: { Authorization: "Bearer " + (await credentials.getAccessToken()) }</code> yourself.
+  Errors are <code>KibanApiError</code> like the browser client's.</li>
+</ul>
+<p><a href="../integrate/#backend-track">Integrate your app</a> walks the ten steps with these calls; its Node
+samples are compiled and run by this package's test suite.</p>
+<h2 id="python-and-go">Python and Go<a class="headerlink" href="#python-and-go" title="Permanent link">&para;</a></h2>
+<p><code>kiban-sdk</code> (Python, <code>sdk/python</code>) and <code>github.com/rosschiu/kiban/sdk</code> (Go) are the backend entry
+for those languages, with the same surface as the Node <code>server</code> entry: the service token, user
+token verification, <code>can</code> and <code>batch_can</code> (for the user, or for the service account), tuple
+grant and revoke with the anchor helper, member lookup by subject, the org reads (companies the
+user may see, member directory, position holder on a date, group members) and app registration.
+The <a href="../integrate/">Integrate page</a> shows every call in all three languages.</p>
+<h2 id="wire-types">Wire types<a class="headerlink" href="#wire-types" title="Permanent link">&para;</a></h2>
+<p>The package exports the request and response shapes as TypeScript types, hand-typed from the Go
+handlers and pinned by tests: <code>Capability</code>, <code>CatalogEntry</code>, <code>EffectiveAccessRequest</code>,
+<code>EffectiveAccessDecision</code>, <code>EffectiveAccessSummary</code>, <code>AuthzTuple</code>, <code>OrgMeCompany</code>,
+<code>OrgPositionWithHolder</code>, <code>OrgGroupWithMemberCount</code>, <code>Page&lt;T&gt;</code> (<code>items</code>, <code>total</code>, <code>page</code>,
+<code>pageSize</code>, <code>totalPages</code>) and <code>Cursor&lt;T&gt;</code>. <code>Capability</code> and <code>CatalogEntry</code> do not yet declare
+three fields the server sends: <code>external</code>, <code>serviceClientId</code> and <code>features</code>. <code>ApiErrorCode</code> and <code>EffectiveAccessReason</code> are string
+constants checked against the same golden file as the Go side, so a code you compare against
+exists on the wire.</p>
+<h2 id="versioning">Versioning<a class="headerlink" href="#versioning" title="Permanent link">&para;</a></h2>
+<p>The SDK follows semantic versioning and ships with each platform release; before 1.0 a minor
+version may rename an export, and the rename is listed under "Changed (breaking — pre-1.0)" in
+<a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/CHANGELOG.md"><code>web/sdk/CHANGELOG.md</code></a>. Pin
+the version and read that file when you bump it.</p>
+<h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../sdk/">SDK API reference</a>, generated from the source's doc comments at the same
+  commit.</li>
+<li><a href="https://github.com/rosschiu/kiban/blob/main/web/sdk/RECIPES.md">Recipes catalog</a>, with the
+  pattern page and test for each recipe.</li>
+<li><a href="../api/platform.html">Platform API</a> for the endpoints the clients call.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>

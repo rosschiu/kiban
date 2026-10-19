@@ -1,0 +1,1244 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Self-hostable organizational identity and access foundation for business applications.">
+      
+      
+      
+        <link rel="canonical" href="https://rosschiu.github.io/kiban/dev/metrics/">
+      
+      
+        <link rel="prev" href="../reference/">
+      
+      
+        <link rel="next" href="../security/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
+    
+    
+      
+        <title>Metrics - Kiban</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8c3ca2c6.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#metrics" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Kiban" class="md-header__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kiban
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Metrics
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Kiban" class="md-nav__button md-logo" aria-label="Kiban" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Kiban
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rosschiu/kiban" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Why Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrate/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Integrate your app
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Concepts
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operating/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Operating Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../building/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Building on Kiban
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk-guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SDK guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Metrics
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-aggregated-exposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      The aggregated exposition
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The aggregated exposition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal endpoints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metric-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metric table
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metric table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-set-every-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard set (every service)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authz-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      authz-only
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      notification-only
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gateway-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      gateway-only
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#route-label-cardinality-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route-label cardinality rule
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prometheus-scrape-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prometheus scrape config
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-alert-on-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      What to alert on first
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-this-page-is-kept-true" class="md-nav__link">
+    <span class="md-ellipsis">
+      How this page is kept true
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Security
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../limitations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Known limitations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Roadmap
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-aggregated-exposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      The aggregated exposition
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The aggregated exposition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Access
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Internal endpoints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metric-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metric table
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metric table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-set-every-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard set (every service)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authz-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      authz-only
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      notification-only
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gateway-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      gateway-only
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#route-label-cardinality-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route-label cardinality rule
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prometheus-scrape-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prometheus scrape config
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-alert-on-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      What to alert on first
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-this-page-is-kept-true" class="md-nav__link">
+    <span class="md-ellipsis">
+      How this page is kept true
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      See also
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h1>
+<p>The platform has one scrape target: <code>GET /api/platform/metrics</code> on the gateway. It returns a
+single Prometheus text exposition (<code>text/plain; version=0.0.4</code>) that merges the gateway's own
+registry with the <code>/metrics</code> of registry, identity, org, authz and every installed and enabled
+module, fetched concurrently on the internal network with a 2 s timeout per target. Every
+service also keeps exposing <code>GET /metrics</code> on its own internal listener (the compose-internal
+host:port its <code>/health</code> answers on, never published to the host and never routed through the
+gateway's module proxy) for a Prometheus that lives inside the network.</p>
+<h2 id="the-aggregated-exposition">The aggregated exposition<a class="headerlink" href="#the-aggregated-exposition" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Every series carries a <code>service</code> label naming the service that emitted it (<code>gateway</code>,
+  <code>registry</code>, <code>identity</code>, <code>org</code>, <code>authz</code>, or the module key). The label is set by the gateway
+  when it merges the scrapes; a service's own <code>/metrics</code> carries the same label already.</li>
+<li>Metric families with the same name from several services (the standard set, for instance)
+  are emitted once under one <code># HELP</code>/<code># TYPE</code> header with every service's samples beneath it.</li>
+<li>One extra gauge, <code>kiban_metrics_scrape_up{service}</code>, reports the scrape itself: <code>1</code> when that
+  service's <code>/metrics</code> answered, <code>0</code> when it failed, timed out, or returned something that is
+  not an exposition. A failed target contributes nothing else, and the response is still
+  <code>200</code>: alert on <code>kiban_metrics_scrape_up == 0</code>, not on the scrape failing.</li>
+<li>The gateway scrapes a module only while its catalog entry is installed and enabled; a
+  disabled module simply disappears from the exposition (no <code>kiban_metrics_scrape_up</code> series
+  for it).</li>
+<li>The response body is capped at 8 MiB across all upstreams; a target whose body would exceed
+  what is left of that budget is reported as <code>kiban_metrics_scrape_up 0</code>.</li>
+</ul>
+<h3 id="access">Access<a class="headerlink" href="#access" title="Permanent link">&para;</a></h3>
+<p>The route sits behind the same superadmin guard every <code>/api/platform/admin/*</code> mutation uses
+(<code>internal/gateway.RequireSuperadmin</code>): the scraper needs a superadmin bearer. A scoped
+read-only scrape credential is not offered today, so a Prometheus outside the network scrapes
+with a superadmin's token (short-lived, obtained the way a login obtains one) or runs inside
+the network against the per-service endpoints instead. The gateway itself has no bare
+<code>/metrics</code>: its only listener is the edge (in public mode the shared Traefik forwards the whole
+host to it), so an unauthenticated mount would be reachable from the internet
+(<code>internal/gateway/metrics_public_exposure_test.go</code> pins this).</p>
+<h3 id="internal-endpoints">Internal endpoints<a class="headerlink" href="#internal-endpoints" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>Metrics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gateway</td>
+<td>8443/8090 (edge)</td>
+<td>no bare <code>/metrics</code>; the aggregated operator route only</td>
+</tr>
+<tr>
+<td>registry</td>
+<td>8110</td>
+<td>standard + DB pool</td>
+</tr>
+<tr>
+<td>identity</td>
+<td>8120</td>
+<td>standard + DB pool</td>
+</tr>
+<tr>
+<td>org</td>
+<td>8130</td>
+<td>standard + DB pool</td>
+</tr>
+<tr>
+<td>authz</td>
+<td>8140</td>
+<td>standard + DB pool + authz decisions</td>
+</tr>
+<tr>
+<td>notification</td>
+<td>8150</td>
+<td>standard + DB pool + delivery jobs</td>
+</tr>
+<tr>
+<td>timesheet</td>
+<td>8160</td>
+<td>standard + DB pool</td>
+</tr>
+<tr>
+<td>docs</td>
+<td>8170</td>
+<td>standard + DB pool</td>
+</tr>
+<tr>
+<td>helpdesk</td>
+<td>8180</td>
+<td>standard + DB pool</td>
+</tr>
+</tbody>
+</table>
+<p>A gateway-forwarded <code>/api/&lt;module&gt;/metrics</code> keeps its <code>/api/&lt;module&gt;</code> path prefix all the way to
+the module's mux, which registers its base-path routes, <code>/health</code>, <code>/ready</code>, any
+<code>/internal/&lt;module&gt;/...</code> route and the bare <code>/metrics</code>, so the
+two never collide (<code>internal/gateway/internal_exposure_test.go</code> and
+<code>internal/gateway/metrics_exposure_test.go</code> prove this both ways).</p>
+<h2 id="metric-table">Metric table<a class="headerlink" href="#metric-table" title="Permanent link">&para;</a></h2>
+<p>Every metric carries a <code>service</code> label identifying which of the services above emitted it
+(<code>kiban_build_info</code> additionally carries <code>version</code>/<code>commit</code>; the family-specific tables below
+list only the labels beyond <code>service</code>).</p>
+<h3 id="standard-set-every-service">Standard set (every service)<a class="headerlink" href="#standard-set-every-service" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Labels (beyond <code>service</code>)</th>
+<th>Meaning</th>
+<th>Emitted by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http_requests_total</code></td>
+<td>counter</td>
+<td><code>route</code>, <code>method</code>, <code>status</code></td>
+<td>Total HTTP requests handled, keyed by the mux route pattern, never the raw path (see the cardinality rule).</td>
+<td>all 9 services</td>
+</tr>
+<tr>
+<td><code>http_request_duration_seconds</code></td>
+<td>histogram</td>
+<td><code>route</code>, <code>method</code>, <code>status</code></td>
+<td>Request handling latency.</td>
+<td>all 9 services</td>
+</tr>
+<tr>
+<td><code>http_requests_in_flight</code></td>
+<td>gauge</td>
+<td>(none)</td>
+<td>Requests currently being handled.</td>
+<td>all 9 services</td>
+</tr>
+<tr>
+<td><code>kiban_build_info</code></td>
+<td>gauge (always 1)</td>
+<td><code>version</code>, <code>commit</code></td>
+<td>Identifies the running build. <code>version</code> is the root <code>VERSION</code> file contents, baked in at <code>go build</code> time via <code>-ldflags</code>; <code>commit</code> is the short git SHA, or <code>"unknown"</code> when not supplied at build time; <code>make images</code> stamps the short git SHA.</td>
+<td>all 9 services</td>
+</tr>
+<tr>
+<td><code>kiban_db_pool_acquired_conns</code></td>
+<td>gauge</td>
+<td>(none)</td>
+<td>Currently acquired connections in the service's <code>pgxpool.Pool</code>, read live from <code>pool.Stat()</code> at scrape time.</td>
+<td>registry, identity, org, authz, notification, timesheet, docs, helpdesk (not gateway, which has no DB pool)</td>
+</tr>
+<tr>
+<td><code>kiban_db_pool_idle_conns</code></td>
+<td>gauge</td>
+<td>(none)</td>
+<td>Currently idle pool connections.</td>
+<td>same 8</td>
+</tr>
+<tr>
+<td><code>kiban_db_pool_max_conns</code></td>
+<td>gauge</td>
+<td>(none)</td>
+<td>Configured pool maximum.</td>
+<td>same 8</td>
+</tr>
+</tbody>
+</table>
+<h3 id="authz-only">authz-only<a class="headerlink" href="#authz-only" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Labels (beyond <code>service</code>)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kiban_authz_decisions_total</code></td>
+<td>counter</td>
+<td><code>reason</code></td>
+<td>Effective-access decisions by outcome: one of the 13 frozen reason codes (<code>internal/authz/decision.Reason</code>, <code>ALLOWED</code> included). Recorded for the two enforcement endpoints, <code>POST /internal/authz/effective-access/can</code> and <code>.../batch-can</code> (one increment per batch item), and for the decisions the grants and platform-role routes make to authorize their caller. The <code>/effective-access/summary</code> endpoint's internal decisions are not recorded: they compose a display read across every feature and module rather than answer one enforcement question.</td>
+</tr>
+<tr>
+<td><code>kiban_authz_decision_duration_seconds</code></td>
+<td>histogram</td>
+<td>(none)</td>
+<td>Latency of one <code>decision.Decider.Evaluate</code> call (batch calls record the batch's total latency divided evenly across its items).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notification-only">notification-only<a class="headerlink" href="#notification-only" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Labels (beyond <code>service</code>)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kiban_delivery_jobs</code></td>
+<td>gauge</td>
+<td><code>state</code> (<code>pending</code>|<code>done</code>|<code>dead</code>)</td>
+<td>Count of <code>notification.delivery_job</code> rows in the worker's <code>claim_group</code>, per state. Re-counted periodically (<code>Store.CountJobsByState</code>, every 15 s by default) rather than updated on each transition, so the delivery hot path never waits on a metrics call.</td>
+</tr>
+<tr>
+<td><code>kiban_delivery_attempts_total</code></td>
+<td>counter</td>
+<td><code>kind</code> (<code>email</code>|<code>webhook</code>), <code>outcome</code> (<code>success</code>|<code>retry</code>|<code>dead</code>)</td>
+<td>One increment per delivery attempt, recorded inline when the attempt settles (<code>Worker.deliverLeased</code>/<code>failJob</code>). <code>dead</code> covers both the immediate dead-letter path for a non-retryable delivery and the retry ladder's max-attempts exhaustion.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="gateway-only">gateway-only<a class="headerlink" href="#gateway-only" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Labels (beyond <code>service</code>)</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kiban_gateway_upstream_requests_total</code></td>
+<td>counter</td>
+<td><code>module</code>, <code>status</code></td>
+<td>One increment per module-proxy request the gateway forwarded. A request rejected before reaching the upstream (<code>MODULE_NOT_INSTALLED</code>, <code>MODULE_DISABLED</code>, <code>MODULE_DEPENDENCY_MISSING</code>) is not counted, since no upstream call was made. <code>status</code> is the HTTP status code the gateway wrote back, including 503 on an unreachable upstream.</td>
+</tr>
+<tr>
+<td><code>kiban_gateway_upstream_duration_seconds</code></td>
+<td>histogram</td>
+<td><code>module</code></td>
+<td>Latency of the proxied call itself (from immediately before the outbound request to the response being written), excluding catalog-lookup and capability-check time.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="route-label-cardinality-rule">Route-label cardinality rule<a class="headerlink" href="#route-label-cardinality-rule" title="Permanent link">&para;</a></h2>
+<p><code>route</code> is always the Go 1.22+ mux pattern the request matched (<code>r.Pattern</code>, read after the
+request has been routed; <code>internal/obs/metrics.Registry.Middleware</code>'s doc comment has the
+mechanics), for example <code>GET /api/helpdesk/v1/companies/{companyId}/tickets</code>. It is never the
+raw request path. A request that matches no registered pattern (a raw 404, or anything reaching
+a handler outside <code>ServeMux</code> pattern dispatch) is labeled <code>"unmatched"</code>, not the path that
+produced it, so an attacker-controlled 404 storm cannot create unbounded label cardinality.</p>
+<h2 id="prometheus-scrape-config">Prometheus scrape config<a class="headerlink" href="#prometheus-scrape-config" title="Permanent link">&para;</a></h2>
+<p>One target, the gateway's operator route, with a superadmin bearer:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">scrape_configs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kiban</span>
+<span class="w">    </span><span class="nt">scheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https</span>
+<span class="w">    </span><span class="nt">metrics_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/api/platform/metrics</span>
+<span class="w">    </span><span class="nt">authorization</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Bearer</span>
+<span class="w">      </span><span class="nt">credentials_file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/prometheus/kiban-superadmin-token</span>
+<span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">targets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"gateway:8443"</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">scrape_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15s</span>
+</code></pre></div>
+<p>The bearer must be a valid superadmin access token; Prometheus re-reads <code>credentials_file</code> on
+every scrape, so a sidecar that refreshes the token keeps the target authenticated. A
+Prometheus instance deployed on the same compose network as the stack (<code>infra/compose.yaml</code>)
+can instead scrape each service's internal <code>/metrics</code> directly (hostname is the compose service
+name, ports as in the table above) and needs no credential for those; the gateway is still
+only reachable through the operator route. Kiban does not ship a Prometheus instance; that is
+the operator's deployment choice.</p>
+<p>The gateway does not offer a per-module metrics proxy route (<code>/api/&lt;module&gt;/metrics</code>): fanning
+every module's metrics out through per-module gateway routes would make the gateway's
+route-label set a function of which modules happen to be installed (see the cardinality rule
+above). The one aggregated route has a single, fixed route label.</p>
+<h2 id="what-to-alert-on-first">What to alert on first<a class="headerlink" href="#what-to-alert-on-first" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Authz denial reasons spiking.</strong> A sudden rise in
+  <code>rate(kiban_authz_decisions_total{reason!="ALLOWED"}[5m])</code>, especially concentrated on one
+  <code>reason</code>, is the highest-value signal this metric set carries. <code>DEPENDENCY_UNAVAILABLE</code> means
+  one of authz's upstreams (identity, registry, org) is down; <code>COMPANY_ACCESS_BLOCKED</code> means a
+  lockout affecting real users. Authz denials are invisible everywhere else: a 403 to the caller
+  looks the same whether it is an expected permission boundary or a platform outage.</li>
+<li><strong>Delivery dead-letter growth.</strong> <code>kiban_delivery_jobs{state="dead"}</code> trending up, or
+  <code>rate(kiban_delivery_attempts_total{outcome="dead"}[15m]) &gt; 0</code> sustained, means notification
+  or webhook deliveries are being permanently dropped. Investigate the target (webhook endpoint
+  down, SMTP misconfigured) before the backlog grows further.</li>
+<li><strong>5xx rate.</strong> <code>rate(http_requests_total{status=~"5.."}[5m])</code> per service. A sustained non-zero
+  rate on a foundation service (registry, identity, org, authz) is worse than the same rate on a
+  module, since every module's request path depends on those services staying up.</li>
+<li><strong>DB pool saturation.</strong> <code>kiban_db_pool_acquired_conns / kiban_db_pool_max_conns</code> approaching 1
+  on any service is an early warning of request queuing and latency about to get much worse.
+  Check this before <code>http_request_duration_seconds</code> p99 starts moving, not after.</li>
+<li><strong>Gateway upstream latency and errors.</strong> <code>kiban_gateway_upstream_duration_seconds</code> p99 per
+  <code>module</code>, and <code>rate(kiban_gateway_upstream_requests_total{status="503"}[5m])</code>. This is the
+  gateway's view of whether a module is reachable and fast, independent of that module's
+  self-reported <code>http_request_duration_seconds</code>. If the module reports fast handling but the
+  gateway sees slow upstream calls, the gap is in the network or proxy layer.</li>
+</ul>
+<h2 id="how-this-page-is-kept-true">How this page is kept true<a class="headerlink" href="#how-this-page-is-kept-true" title="Permanent link">&para;</a></h2>
+<p>This page is the source of truth for the metric set. <code>internal/obs/metrics</code>'s unit test
+(<code>metrics_test.go</code>) parses the tables above and fails if the package registers a metric the
+tables do not list, or lists one the package cannot register. The same package's
+<code>docs_metrics_live_test.go</code> (build-tagged <code>live</code>, kiban-test only) scrapes every running
+service's <code>/metrics</code> and fails if any name above is never observed, and proves the aggregated
+operator route carries every service's series with <code>kiban_metrics_scrape_up</code> at <code>1</code> for each.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../operating/">Operating Kiban</a>: the stack (the gateway is the only edge)</li>
+<li><code>internal/authz/decision</code>: the 13-reason enum <code>kiban_authz_decisions_total{reason}</code> reports</li>
+<li><a href="../building/">Building on Kiban</a>: module ports and base paths</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.sections", "navigation.top", "content.code.copy", "search.suggest"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.525ec568.min.js"></script>
+      
+    
+  </body>
+</html>
