@@ -11,7 +11,7 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
   global policy.
 - **Only decisions are revocation-aware.** A route that verifies the bearer without asking for
   a decision, such as `GET /api/org/me/companies`, serves a disabled user until the token expires
-  (five minutes by default). Decisions deny on the next check.
+  (`KIBAN_ACCESS_TOKEN_LIFESPAN`, 300 seconds by default). Decisions deny on the next check.
 - **No field-level or row-level policy on member data.** Every active member of a company can
   read the directory, including email addresses.
 - **Keycloak's own container holds two secrets as environment variables**: its database

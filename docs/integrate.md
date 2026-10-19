@@ -203,7 +203,7 @@ A verified token says who the user was when it was issued, nothing more. It does
 the user has since been disabled in Keycloak or deactivated in the company. Only a decision
 (step 7) checks that, on every call. So make a decision before serving data, and never treat a
 verified token alone as "still allowed". A disabled user's token verifies until it expires,
-five minutes by default.
+`KIBAN_ACCESS_TOKEN_LIFESPAN` seconds, 300 by default.
 
 **Recommendation: verify the token locally, then ask for a decision, on every request, in one
 helper.**
@@ -349,14 +349,18 @@ company; without it every check on the object is denied.
     )
     ```
 
-`revoke` removes what `grant` wrote. You should see `403 AUTHORIZATION_DENIED` if you name
+`revoke` removes what `grant` wrote. When your app deletes an object, revoke its anchor:
+every other tuple on the object goes with it, in the same transaction, each recorded in the
+ledger. Anchoring the same id again starts from nothing. You should see `403 AUTHORIZATION_DENIED` if you name
 another enabled app's or module's object type: outside its own types an app's backend needs
 the company's `admin` relation (`company:<id>#admin`), and a service account that is only a
 member of the company (step 10) is refused with reason `COMPANY_ROLE_REQUIRED`. A base type
 such as `company`, or a type no enabled app declares, is `422 VALIDATION_FAILED`. A subject can also be a position (`subjectType:
 "position"`, `subjectRelation: "holder"`) or a group (`subjectType: "group"`, `subjectRelation:
-"member"`), so access follows the chair or the membership. Without the `subjectRelation` the
-tuple is stored and never matches.
+"member"`), so access follows the chair or the membership. The position, group or member
+must belong to the same company; another company's is `422 VALIDATION_FAILED`, and a check
+in this company never resolves through it. Without the `subjectRelation` the tuple is stored
+and never matches.
 
 ### 9. Look the member up
 
@@ -777,7 +781,7 @@ All on the gateway origin. The full contract is the [Platform API](api/platform.
 | `GET /api/org/companies/{id}/members?q=&page=&pageSize=` | Member directory of one company | Active members of that company, or a superadmin |
 | `/api/org/admin/units`, `/api/org/admin/units/{id}`, `.../subtree` | Company and org-unit administration | Superadmin |
 | `/api/org/admin/members`, `/api/org/admin/members/{id}`, `.../link-user` | Member administration | Superadmin, or an administrator of that company |
-| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
+| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
 | `POST /api/platform/admin/apps` | Register an app from its manifest | Superadmin |
 | `GET /api/platform/capabilities[/{module}]`, `GET /api/platform/catalog` | What is registered, installed and enabled | Any bearer |
 | `POST /api/platform/admin/modules/{key}/enable`, `.../disable`; `POST /api/platform/admin/platform-roles`, `DELETE .../platform-roles/{role}/{subjectId}` | App and module enablement, the superadmin role | Superadmin |

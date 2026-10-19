@@ -73,6 +73,13 @@ DELETE FROM authz.tuple
 WHERE object_type = $1 AND object_id = $2 AND relation = $3
   AND subject_type = $4 AND subject_id = $5 AND subject_relation = $6`
 
+// deleteObjectTuplesSQL removes every remaining tuple on an object once its anchor is revoked:
+// revoking the anchor means "this object is gone", and nothing on it may outlive it.
+const deleteObjectTuplesSQL = `
+DELETE FROM authz.tuple
+WHERE object_type = $1 AND object_id = $2
+RETURNING relation, subject_type, subject_id, subject_relation`
+
 const insertLedgerSQL = `
 INSERT INTO authz.grant_ledger
   (actor, object_type, object_id, relation, subject_type, subject_id, subject_relation, op, correlation_id)
@@ -119,6 +126,17 @@ func AnchorOf(ctx context.Context, q Rower, objectType, objectID string) (string
 		return "", fmt.Errorf("authz/store: anchor of %s:%s: %w", objectType, objectID, err)
 	}
 	return anchor, nil
+}
+
+// MemberOfCompany reports whether `company:<companyID>#member @ member:<memberID>#mapped_user`
+// exists: the member belongs to that company.
+func MemberOfCompany(ctx context.Context, q Rower, companyID, memberID string) (bool, error) {
+	var n int
+	err := q.QueryRow(ctx, `SELECT count(*) FROM authz.tuple WHERE object_type = 'company' AND object_id = $1 AND relation = 'member' AND subject_type = 'member' AND subject_id = $2 AND subject_relation = 'mapped_user'`, companyID, memberID).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("authz/store: member %s of company %s: %w", memberID, companyID, err)
+	}
+	return n > 0, nil
 }
 
 // Queryer is the minimal read interface ListDirectTuplesForSubject needs — satisfied by both
@@ -208,6 +226,42 @@ func writeTuples(ctx context.Context, tx pgx.Tx, actor, correlationID, op string
 		}
 		if _, err := tx.Exec(ctx, insertLedgerSQL,
 			actor, tp.ObjectType, tp.ObjectID, tp.Relation, tp.SubjectType, tp.SubjectID, tp.SubjectRelation, op, corrID,
+		); err != nil {
+			return fmt.Errorf("authz/store: insert grant_ledger row: %w", err)
+		}
+		if op == "revoke" && tp.Relation == "company_module" && tp.SubjectType == "company_module" {
+			if err := revokeObjectRest(ctx, tx, actor, corrID, tp.ObjectType, tp.ObjectID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// revokeObjectRest deletes every tuple still on objectType:objectID and records each in the
+// ledger, so revoking an anchor leaves nothing behind that a later anchor on the same id
+// could revive.
+func revokeObjectRest(ctx context.Context, tx pgx.Tx, actor string, corrID any, objectType, objectID string) error {
+	rows, err := tx.Query(ctx, deleteObjectTuplesSQL, objectType, objectID)
+	if err != nil {
+		return fmt.Errorf("authz/store: delete tuples of %s:%s: %w", objectType, objectID, err)
+	}
+	var gone []Tuple
+	for rows.Next() {
+		var t Tuple
+		if err := rows.Scan(&t.Relation, &t.SubjectType, &t.SubjectID, &t.SubjectRelation); err != nil {
+			rows.Close()
+			return fmt.Errorf("authz/store: scan deleted tuple: %w", err)
+		}
+		gone = append(gone, t)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("authz/store: iterate deleted tuples: %w", err)
+	}
+	for _, t := range gone {
+		if _, err := tx.Exec(ctx, insertLedgerSQL,
+			actor, objectType, objectID, t.Relation, t.SubjectType, t.SubjectID, t.SubjectRelation, "revoke", corrID,
 		); err != nil {
 			return fmt.Errorf("authz/store: insert grant_ledger row: %w", err)
 		}

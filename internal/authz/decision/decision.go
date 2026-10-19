@@ -167,6 +167,13 @@ type EngineChecker interface {
 	Check(ctx context.Context, objType, objID, relation, subjType, subjID string) (bool, error)
 }
 
+// CompanyScopedChecker is an EngineChecker that can bind a check to the request's company: a
+// position, group or member userset from another company is ignored while expanding. The
+// company-scope relation check uses it when the engine offers it.
+type CompanyScopedChecker interface {
+	CheckInCompany(ctx context.Context, objType, objID, relation, subjType, subjID, companyID string) (bool, error)
+}
+
 // RelationDefiner answers whether the EFFECTIVE model (base + enabled fragments) defines
 // relation on objType — the step-7 company-binding rule is model-driven: an object type
 // that defines `company` binds through `company`, one that defines `company_module` binds

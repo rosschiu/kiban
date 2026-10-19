@@ -877,6 +877,32 @@ func TestHandleGrants(t *testing.T) {
 			expect(t, post(t, memberSub, map[string]any{"op": op, "tuples": []map[string]string{tuple("hg_doc", "hg-doc-other", "viewer", "user", "hg-u1")}}), http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
 		}
 	})
+	t.Run("subject from another company: 422 on grant, nothing written", func(t *testing.T) {
+		grantTestTuple(t, pool, store.Tuple{ObjectType: "position", ObjectID: "hg-pos-mine", Relation: "company", SubjectType: "company", SubjectID: companyID})
+		grantTestTuple(t, pool, store.Tuple{ObjectType: "position", ObjectID: "hg-pos-theirs", Relation: "company", SubjectType: "company", SubjectID: otherCompany})
+		grantTestTuple(t, pool, store.Tuple{ObjectType: "group", ObjectID: "hg-grp-theirs", Relation: "company", SubjectType: "company", SubjectID: otherCompany})
+		grantTestTuple(t, pool, store.Tuple{ObjectType: "company", ObjectID: companyID, Relation: "member", SubjectType: "member", SubjectID: "hg-mem-mine", SubjectRelation: "mapped_user"})
+		grantTestTuple(t, pool, store.Tuple{ObjectType: "company", ObjectID: otherCompany, Relation: "member", SubjectType: "member", SubjectID: "hg-mem-theirs", SubjectRelation: "mapped_user"})
+		anchorTuple := tuple("hg_doc", "hg-doc-subj", "company_module", "company_module", anchor)
+		userset := func(subjType, subjID, subjRel string) map[string]string {
+			return map[string]string{"objectType": "hg_doc", "objectId": "hg-doc-subj", "relation": "viewer", "subjectType": subjType, "subjectId": subjID, "subjectRelation": subjRel}
+		}
+		for _, foreign := range []map[string]string{userset("position", "hg-pos-theirs", "holder"), userset("group", "hg-grp-theirs", "member"), userset("member", "hg-mem-theirs", "mapped_user")} {
+			rec := post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{anchorTuple, foreign}})
+			expect(t, rec, http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+			if !strings.Contains(rec.Body.String(), "does not belong to company") {
+				t.Fatalf("body must say the subject is not in the company, body=%s", rec.Body.String())
+			}
+			if tupleCount(t, "hg-doc-subj") != 0 {
+				t.Fatalf("a refused subject must write nothing (%s)", foreign["subjectType"])
+			}
+		}
+		// The same shapes from this company are accepted.
+		expect(t, post(t, adminSub, map[string]any{"op": "grant", "tuples": []map[string]string{anchorTuple, userset("position", "hg-pos-mine", "holder"), userset("member", "hg-mem-mine", "mapped_user")}}), http.StatusOK, "")
+		if tupleCount(t, "hg-doc-subj") != 3 {
+			t.Fatalf("tuples on hg-doc-subj = %d, want 3", tupleCount(t, "hg-doc-subj"))
+		}
+	})
 	t.Run("module object with no anchor: 422", func(t *testing.T) {
 		expect(t, post(t, memberSub, map[string]any{"op": "grant", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-none", "viewer", "user", "hg-u1")}}), http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
 	})
@@ -1015,10 +1041,13 @@ func TestHandleGrantsSubjectShape(t *testing.T) {
 		map[string]fakeCompanyFact{companyID: {exists: true, active: true}},
 		map[string]fakeMembershipFact{companyID + "/" + adminSub: {isMember: true, active: true}}, false)
 	t.Cleanup(func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id = $1`, anchor)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.tuple WHERE object_id IN ($1, 'http-grant-shape-p1')`, anchor)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM authz.grant_ledger WHERE object_id = $1`, anchor)
 	})
 	grantTestTuple(t, pool, store.Tuple{ObjectType: "company_module", ObjectID: anchor, Relation: "admin", SubjectType: "user", SubjectID: adminSub})
+	// The position belongs to this company (org writes this at creation); a subject from
+	// another company is refused, see TestHandleGrants.
+	grantTestTuple(t, pool, store.Tuple{ObjectType: "position", ObjectID: "http-grant-shape-p1", Relation: "company", SubjectType: "company", SubjectID: companyID})
 	bearer := "Bearer " + issuer.sign(t, adminSub, time.Now().Add(time.Hour))
 
 	post := func(t *testing.T, tuples []map[string]string) *httptest.ResponseRecorder {

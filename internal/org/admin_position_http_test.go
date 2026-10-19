@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Org-side coverage for the admin position surface (handleAdminPositionList /
-// handleAdminCreatePosition) — list-with-holder shape, body-ID-mismatch 422 (any body
-// companyId/orgUnitId is rejected, not trusted), org-unit
-// defaults to the company root, and audit actor = the real bearer subject (reusing
+// handleAdminCreatePosition / handleAdminUpdatePosition) — list-with-holder shape, body
+// companyId 422 (never trusted), orgUnitId accepted under the company and refused elsewhere,
+// org-unit defaults to the company root, retitle and move, and audit actor = the real bearer subject (reusing
 // position_holder_test.go's unsignedJWTWithSubject/doJSONWithAuth helpers, same pattern
 // TestPositionHolder_Actor_RealBearerSubject already established). The gateway-level negative
 // matrix (401/403/503/forged-header) lives in internal/gateway/admin_position_routes_test.go —
@@ -13,6 +13,8 @@ package org
 import (
 	"context"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestHTTP_AdminListPositions_IncludesCurrentHolder(t *testing.T) {
@@ -112,16 +114,79 @@ func TestHTTP_AdminCreatePosition_BodyCompanyId_Rejected422(t *testing.T) {
 	}
 }
 
-func TestHTTP_AdminCreatePosition_BodyOrgUnitId_Rejected422(t *testing.T) {
+func TestHTTP_AdminCreatePosition_OrgUnitUnderCompany_Accepted(t *testing.T) {
 	f := newAllowAllFixture(t, nil)
 	store := f.svc.store
 	company := mustCreateCompany(t, store, "ADM5")
-	unit := mustCreateUnit(t, store, "business_unit", company.ID, "ADM5-DEPT")
+	unit := mustCreateUnit(t, store, "business_unit", company.ID, "ADM5-BU")
 
 	rec := doJSON(t, f, "POST", "/internal/org/companies/"+company.ID.String()+"/positions",
 		`{"code":"cfo","title":"CFO","orgUnitId":"`+unit.ID.String()+`"}`)
+	if rec.Code != 201 {
+		t.Fatalf("status = %d, want 201, body=%s", rec.Code, rec.Body.String())
+	}
+	data := mustEnvelopeData(t, rec)
+	if data["orgUnitId"] != unit.ID.String() || data["companyId"] != company.ID.String() {
+		t.Fatalf("position = %v, want orgUnitId %s under company %s", data, unit.ID, company.ID)
+	}
+}
+
+func TestHTTP_AdminCreatePosition_OrgUnitOfOtherCompany_Rejected422(t *testing.T) {
+	f := newAllowAllFixture(t, nil)
+	store := f.svc.store
+	company := mustCreateCompany(t, store, "ADM6")
+	other := mustCreateCompany(t, store, "ADM6B")
+	foreign := mustCreateUnit(t, store, "business_unit", other.ID, "ADM6B-BU")
+
+	rec := doJSON(t, f, "POST", "/internal/org/companies/"+company.ID.String()+"/positions",
+		`{"code":"cfo","title":"CFO","orgUnitId":"`+foreign.ID.String()+`"}`)
 	if rec.Code != 422 {
-		t.Fatalf("status = %d, want 422 for a body orgUnitId, body=%s", rec.Code, rec.Body.String())
+		t.Fatalf("status = %d, want 422 for another company's unit, body=%s", rec.Code, rec.Body.String())
+	}
+	if errObj := mustEnvelopeError(t, rec); errObj["code"] != "VALIDATION_ERROR" {
+		t.Fatalf("error.code = %v, want VALIDATION_ERROR", errObj["code"])
+	}
+}
+
+func TestHTTP_AdminUpdatePosition_RetitleAndMove(t *testing.T) {
+	f := newAllowAllFixture(t, nil)
+	store := f.svc.store
+	company := mustCreateCompany(t, store, "ADM7")
+	unit := mustCreateUnit(t, store, "business_unit", company.ID, "ADM7-BU")
+	position := mustCreatePosition(t, store, company.ID, company.ID, "CFO")
+
+	rec := doJSON(t, f, "PUT", "/internal/org/admin/positions/"+position.ID.String(), `{"title":"CFO (interim)"}`)
+	if rec.Code != 200 {
+		t.Fatalf("retitle: status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	data := mustEnvelopeData(t, rec)
+	if data["title"] != "CFO (interim)" || data["orgUnitId"] != company.ID.String() {
+		t.Fatalf("after retitle = %v, want new title and unchanged org unit", data)
+	}
+	rec = doJSON(t, f, "PUT", "/internal/org/admin/positions/"+position.ID.String(), `{"orgUnitId":"`+unit.ID.String()+`"}`)
+	if rec.Code != 200 {
+		t.Fatalf("move: status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	data = mustEnvelopeData(t, rec)
+	if data["orgUnitId"] != unit.ID.String() || data["title"] != "CFO (interim)" {
+		t.Fatalf("after move = %v, want new org unit and unchanged title", data)
+	}
+}
+
+func TestHTTP_AdminUpdatePosition_OtherCompanyUnit_Rejected422(t *testing.T) {
+	f := newAllowAllFixture(t, nil)
+	store := f.svc.store
+	company := mustCreateCompany(t, store, "ADM8")
+	other := mustCreateCompany(t, store, "ADM8B")
+	foreign := mustCreateUnit(t, store, "business_unit", other.ID, "ADM8B-BU")
+	position := mustCreatePosition(t, store, company.ID, company.ID, "CFO")
+
+	rec := doJSON(t, f, "PUT", "/internal/org/admin/positions/"+position.ID.String(), `{"orgUnitId":"`+foreign.ID.String()+`"}`)
+	if rec.Code != 422 {
+		t.Fatalf("status = %d, want 422 for another company's unit, body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := doJSON(t, f, "PUT", "/internal/org/admin/positions/"+uuid.New().String(), `{"title":"x"}`); rec.Code != 404 {
+		t.Fatalf("unknown position: status = %d, want 404", rec.Code)
 	}
 }
 

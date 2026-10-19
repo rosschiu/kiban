@@ -65,7 +65,7 @@ func (RealmStep) Run(ctx context.Context, deps *Deps) (Outcome, string, error) {
 	applied := false
 
 	// 1. Realm settings.
-	changed, err := reconcileRealmSettings(ctx, kc)
+	changed, err := reconcileRealmSettings(ctx, kc, realmSettings(deps.AccessTokenLifespan))
 	if err != nil {
 		return OutcomeFailed, strings.Join(details, "; "), fmt.Errorf("realm: settings: %w", err)
 	}
@@ -256,16 +256,29 @@ func reconcileUserProfileAttributes(ctx context.Context, kc *kcMasterClient) (bo
 	return true, nil
 }
 
-func reconcileRealmSettings(ctx context.Context, kc *kcMasterClient) (bool, error) {
+// realmSettings is realmTargetSettings with the per-deployment knobs applied:
+// accessTokenLifespan from KIBAN_ACCESS_TOKEN_LIFESPAN (seconds; <= 0 keeps the default).
+func realmSettings(accessTokenLifespan int) map[string]any {
+	settings := make(map[string]any, len(realmTargetSettings))
+	for k, v := range realmTargetSettings {
+		settings[k] = v
+	}
+	if accessTokenLifespan > 0 {
+		settings["accessTokenLifespan"] = float64(accessTokenLifespan)
+	}
+	return settings
+}
+
+func reconcileRealmSettings(ctx context.Context, kc *kcMasterClient, want map[string]any) (bool, error) {
 	current, err := kc.getRealm(ctx)
 	if err != nil {
 		return false, err
 	}
 
 	patch := map[string]any{}
-	for k, want := range realmTargetSettings {
-		if !equalRealmValue(current[k], want) {
-			patch[k] = want
+	for k, v := range want {
+		if !equalRealmValue(current[k], v) {
+			patch[k] = v
 		}
 	}
 	if len(patch) == 0 {
