@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Node SDK: `AppClient.api` sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was `401`
+
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the
