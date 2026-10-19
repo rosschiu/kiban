@@ -3,7 +3,7 @@
 Thanks for your interest. This page describes how changes are made and checked in this
 repository. It reflects how the project actually works, not an aspiration. The fuller version,
 with setup steps and the conventions that matter, is the documentation's
-[Contributing](https://rosschiu.github.io/kiban/contributing/) page.
+[Contributing](https://rosschiu.github.io/kiban/latest/contributing/) page.
 
 ## Before you write code
 
