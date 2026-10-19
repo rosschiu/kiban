@@ -66,8 +66,8 @@ session. The default storage is `sessionStorage`: per tab, cleared on tab close,
 the next 401; an expired set without one is dropped. Without `persistTokens` the tokens never
 reach browser storage and a reload needs a new login, which Keycloak's SSO cookie usually
 completes without a password prompt. The login transaction (PKCE verifier, `state`, `nonce`) is
-always written to `storage` for the redirect, so `createMemoryStorage()` is for tests and hosts
-without browser storage, not for a browser login. Tokens are
+written to `storage` and must survive the redirect, so with `createMemoryStorage()` use
+`loginPopup()`: the login runs in a popup and this window completes the exchange. Tokens are
 readable by any script on the origin, so the gateway serves the sample shell with a
 Content-Security-Policy (`default-src 'self'`, no inline scripts) and the other security headers.
 A host embedding this SDK is expected to do the same.

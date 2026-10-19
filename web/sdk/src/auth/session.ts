@@ -58,6 +58,23 @@ export interface SessionConfig {
   now?: () => number;
 }
 
+/** The window `loginPopup()` watches: a `window.open` result, or a test double. */
+export interface PopupWindow {
+  readonly closed: boolean;
+  /** Throws while the popup is on another origin (Keycloak); readable once it is back on ours. */
+  readonly location?: { href: string };
+  /** Closes the popup. */
+  close(): void;
+}
+
+/** Options for {@link Session.loginPopup}. */
+export interface LoginPopupOptions {
+  /** Opens the popup; defaults to `window.open(url, "kiban-login", "popup,width=480,height=640")`. */
+  openWindow?: (url: string) => PopupWindow | null;
+  /** How often the popup's URL is checked, in ms. Defaults to 100. */
+  pollMs?: number;
+}
+
 interface OidcTransaction {
   verifier: string;
   state: string;
@@ -81,6 +98,12 @@ export interface Session {
   /** Builds the login redirect URL and records the PKCE transaction, without navigating —
    * useful for tests and for hosts that want to control navigation themselves. */
   buildLoginUrl(): Promise<string>;
+  /** Logs in through a popup and completes the code exchange in this window, so the PKCE
+   * transaction never leaves this window's memory: the way to log in with
+   * `createMemoryStorage()`. Resolves with the tokens; rejects when the popup is blocked, closed
+   * early, or the IdP answers with an error. The callback page the popup lands on should do
+   * nothing when `window.opener` is set: this window reads the code and closes the popup. */
+  loginPopup(options?: LoginPopupOptions): Promise<TokenSet>;
   /** Handles the OIDC callback URL (must contain `code` and `state`). Idempotent: a second
    * invocation with the same `code` (React StrictMode double-effect) returns the same result
    * instead of re-exchanging an already-consumed authorization code. */
@@ -110,6 +133,12 @@ export interface Session {
    * session). Presence alone is not enough: an expired set without a refresh token is not
    * authenticated. Synchronous, like `getAccessToken()`; never triggers a refresh. */
   isAuthenticated(): boolean;
+}
+
+function defaultOpenWindow(url: string): PopupWindow | null {
+  const open = (globalThis as { open?: (u: string, name: string, features: string) => PopupWindow | null }).open;
+  if (!open) throw new Error("No openWindow() hook provided and no global `open` is available");
+  return open(url, "kiban-login", "popup,width=480,height=640");
 }
 
 function defaultNavigate(url: string): void {
@@ -278,6 +307,38 @@ export function createSession(config: SessionConfig): Session {
     navigate(await buildLoginUrl());
   }
 
+  async function loginPopup(options: LoginPopupOptions = {}): Promise<TokenSet> {
+    const url = await buildLoginUrl();
+    const popup = (options.openWindow ?? defaultOpenWindow)(url);
+    if (!popup) {
+      storage.removeItem(TRANSACTION_KEY);
+      throw new Error("Login popup was blocked; allow popups for this site or use login()");
+    }
+    const redirectOrigin = new URL(config.redirectUri).origin;
+    return new Promise<TokenSet>((resolve, reject) => {
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          storage.removeItem(TRANSACTION_KEY);
+          reject(new Error("Login popup was closed before the login completed"));
+          return;
+        }
+        let href: string | undefined;
+        try {
+          href = popup.location?.href;
+        } catch {
+          return; // still on the IdP's origin
+        }
+        if (!href || !href.startsWith(redirectOrigin)) return;
+        const params = new URL(href).searchParams;
+        if (!params.has("code") && !params.has("error")) return;
+        clearInterval(timer);
+        popup.close();
+        handleCallback(href).then(resolve, reject);
+      }, options.pollMs ?? 100);
+    });
+  }
+
   async function exchangeCode(code: string, state: string): Promise<TokenSet> {
     const raw = storage.getItem(TRANSACTION_KEY);
     if (!raw) {
@@ -436,6 +497,7 @@ export function createSession(config: SessionConfig): Session {
 
   return {
     login,
+    loginPopup,
     buildLoginUrl,
     handleCallback,
     getAccessToken,

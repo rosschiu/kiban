@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Browser SDK: `session.loginPopup()` logs in through a popup and completes the exchange in the opener, so `createMemoryStorage()` can finish a login; 0.1.3 lost the PKCE transaction on the redirect and the guide showed a setup that could not work
+
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, `409 POSITION_HELD` with the holder, and the
