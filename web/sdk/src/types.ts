@@ -57,6 +57,7 @@ export const ApiErrorCode = {
   ValidationFailed: "VALIDATION_FAILED",
   IdempotencyConflict: "IDEMPOTENCY_CONFLICT",
   GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED",
+  AssignmentAlreadyEnded: "ASSIGNMENT_ALREADY_ENDED",
   PositionHeld: "POSITION_HELD"
 } as const;
 
