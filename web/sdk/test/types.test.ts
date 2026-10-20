@@ -30,6 +30,7 @@ describe("ApiErrorCode — internal/errenv canonical error codes", () => {
       ValidationFailed: "VALIDATION_FAILED",
       IdempotencyConflict: "IDEMPOTENCY_CONFLICT",
       GroupExternallyManaged: "GROUP_EXTERNALLY_MANAGED",
+      AssignmentAlreadyEnded: "ASSIGNMENT_ALREADY_ENDED",
       PositionHeld: "POSITION_HELD"
     });
   });

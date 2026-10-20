@@ -136,4 +136,17 @@ describe("createAppClient", () => {
     expect(members[0]?.memberDisplayName).toBe("Alice");
     expect(calls.slice(5).map((c) => c.auth)).toEqual(["Bearer user-token", "Bearer user-token", "Bearer svc-token", "Bearer svc-token", "Bearer svc-token"]);
   });
+
+  it("api sends the service bearer on any other route, unless the caller sets one", async () => {
+    const auths: string[] = [];
+    const fetchFn = vi.fn(async (_url: string, init?: RequestInit) => {
+      auths.push((init?.headers as Record<string, string>).Authorization ?? "");
+      return json(200, { data: { ok: true } });
+    });
+    const app = createAppClient({ gatewayOrigin: ORIGIN, appKey: "tokidesk", credentials: { getAccessToken: async () => "svc-token" }, fetchFn });
+    await app.api.request("/api/org/admin/companies/co-1/positions");
+    await app.api.request("/api/org/me/companies", { headers: { Authorization: "Bearer user-token" } });
+    expect(auths).toEqual(["Bearer svc-token", "Bearer user-token"]);
+    expect(app.api.baseUrl).toBe(ORIGIN);
+  });
 });

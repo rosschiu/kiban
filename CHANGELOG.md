@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- `ASSIGNMENT_ALREADY_ENDED` is in `contracts/wire-enums.json` and the TypeScript SDK's `ApiErrorCode`; 0.1.3 answered it from the org service without the contract knowing it
+- Node SDK: `AppClient.api` sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was `401`
 - Browser SDK: `session.loginPopup()` logs in through a popup and completes the exchange in the opener, so `createMemoryStorage()` can finish a login; 0.1.3 lost the PKCE transaction on the redirect and the guide showed a setup that could not work
 
 ## [0.1.3] — 2026-10-19
