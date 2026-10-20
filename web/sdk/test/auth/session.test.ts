@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSession, decodeIdTokenClaims, type PopupWindow } from "../../src/auth/session.js";
+import { createSession, decodeIdTokenClaims } from "../../src/auth/session.js";
 import { createMemoryStorage } from "../../src/storage.js";
 
 function base64url(json: Record<string, unknown>): string {
@@ -749,65 +749,5 @@ describe("decodeIdTokenClaims", () => {
   it("returns undefined for a token with no decodable JSON payload segment", () => {
     expect(decodeIdTokenClaims("not-a-jwt")).toBeUndefined();
     expect(decodeIdTokenClaims("a.!!!.c")).toBeUndefined();
-  });
-});
-
-describe("createSession — loginPopup (memory storage)", () => {
-  function fakePopup(): PopupWindow & { href: string; closed: boolean } {
-    const popup = {
-      closed: false,
-      href: "about:blank",
-      get location() {
-        if (popup.href.startsWith("https://idp.test")) throw new Error("cross-origin");
-        return { href: popup.href };
-      },
-      close: () => {
-        popup.closed = true;
-      }
-    };
-    return popup;
-  }
-
-  it("completes a login in the opener with the transaction held in memory only", async () => {
-    const fetchFn = vi.fn();
-    const session = createSession(baseConfig({ fetchFn }));
-    const popup = fakePopup();
-    let openedUrl = "";
-    const pending = session.loginPopup({ openWindow: (url) => ((openedUrl = url), popup), pollMs: 5 });
-    await vi.waitFor(() => expect(openedUrl).not.toBe(""));
-    const loginUrl = new URL(openedUrl);
-    expect(loginUrl.pathname).toBe("/auth/realms/kiban/protocol/openid-connect/auth");
-    fetchFn.mockResolvedValue(tokenResponseWithNonce(loginUrl.searchParams.get("nonce")!));
-
-    popup.href = "https://idp.test/login"; // on the IdP: location throws, keep waiting
-    await new Promise((r) => setTimeout(r, 20));
-    popup.href = `https://app.test/oidc/callback?code=abc123&state=${loginUrl.searchParams.get("state")}`;
-
-    const tokens = await pending;
-    expect(tokens.accessToken).toBe("access-1");
-    expect(session.isAuthenticated()).toBe(true);
-    expect(popup.closed).toBe(true);
-  });
-
-  it("rejects when the popup is blocked, and when it is closed early", async () => {
-    const storage = createMemoryStorage();
-    const session = createSession(baseConfig({ storage }));
-    await expect(session.loginPopup({ openWindow: () => null })).rejects.toThrow(/blocked/);
-    expect(storage.getItem("kiban.oidc.transaction")).toBeNull();
-
-    const popup = fakePopup();
-    const pending = session.loginPopup({ openWindow: () => popup, pollMs: 5 });
-    popup.close();
-    await expect(pending).rejects.toThrow(/closed/);
-    expect(storage.getItem("kiban.oidc.transaction")).toBeNull();
-  });
-
-  it("rejects with the IdP's error when the popup lands on the callback with error", async () => {
-    const session = createSession(baseConfig());
-    const popup = fakePopup();
-    const pending = session.loginPopup({ openWindow: () => popup, pollMs: 5 });
-    popup.href = "https://app.test/oidc/callback?error=access_denied&error_description=nope";
-    await expect(pending).rejects.toThrow(/access_denied/);
-    expect(popup.closed).toBe(true);
   });
 });

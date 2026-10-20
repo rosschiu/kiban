@@ -76,7 +76,7 @@ export type { StorageAdapter } from "./storage.js";
 export { createMemoryStorage, defaultLocalStorage, defaultSessionStorage } from "./storage.js";
 
 export { createSession, decodeIdTokenClaims } from "./auth/session.js";
-export type { LoginPopupOptions, PopupWindow, Session, SessionConfig, TokenSet } from "./auth/session.js";
+export type { Session, SessionConfig, TokenSet } from "./auth/session.js";
 
 export { createSessionContext } from "./auth/context.js";
 export type { Preferences, SessionContext, SessionContextConfig } from "./auth/context.js";
