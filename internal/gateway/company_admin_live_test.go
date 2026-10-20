@@ -184,6 +184,11 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 	if st, env = call(t, http.MethodPost, "/api/org/admin/assignments/"+assignment+"/end", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol ends an assignment: %d %v", st, env)
 	}
+	// Ending it again is 409 ASSIGNMENT_ALREADY_ENDED, a code the contract (wire-enums) pins.
+	st, env = call(t, http.MethodPost, "/api/org/admin/assignments/"+assignment+"/end", carolBearer, nil)
+	if errObj, _ := env["error"].(map[string]any); st != http.StatusConflict || errObj["code"] != "ASSIGNMENT_ALREADY_ENDED" {
+		t.Fatalf("Carol ends an ended assignment: %d %v, want 409 ASSIGNMENT_ALREADY_ENDED", st, env)
+	}
 	st, env = call(t, http.MethodPost, "/api/org/admin/companies/"+mine+"/groups", carolBearer, map[string]any{"code": "SUPPORT", "name": "Support"})
 	if st != http.StatusCreated {
 		t.Fatalf("Carol creates a group: %d %v", st, env)

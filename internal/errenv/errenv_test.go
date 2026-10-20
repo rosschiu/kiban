@@ -28,6 +28,7 @@ func TestErrorCodesExactStrings(t *testing.T) {
 		CodeValidationFailed:         "VALIDATION_FAILED",
 		CodeIdempotencyConflict:      "IDEMPOTENCY_CONFLICT",
 		CodeGroupExternallyManaged:   "GROUP_EXTERNALLY_MANAGED",
+		CodeAssignmentAlreadyEnded:   "ASSIGNMENT_ALREADY_ENDED",
 		CodePositionHeld:             "POSITION_HELD",
 	}
 	for got, want := range cases {
@@ -35,8 +36,8 @@ func TestErrorCodesExactStrings(t *testing.T) {
 			t.Errorf("code constant = %q, want %q", got, want)
 		}
 	}
-	if len(cases) != 19 {
-		t.Fatalf("expected 19 codes covered, got %d", len(cases))
+	if len(cases) != 20 {
+		t.Fatalf("expected 20 codes covered, got %d", len(cases))
 	}
 }
 
