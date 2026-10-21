@@ -41,6 +41,17 @@ type ModuleManifest struct {
 	// (Seed refuses) when the deployment taxonomy (org.org_unit_type) lacks one (module-contract
 	// §8, install-time).
 	RequiredOrgUnitTypes []string
+
+	// Dependencies is module.manifest.json's dependencies[]: modules that must be installed and
+	// enabled for this one to serve (the gateway's MODULE_DEPENDENCY_MISSING check). Seed
+	// writes them to platform.module_dependency on every boot.
+	Dependencies []ModuleDependency
+}
+
+// ModuleDependency is one entry of a manifest's dependencies[].
+type ModuleDependency struct {
+	ModuleKey    string
+	VersionRange string
 }
 
 var moduleKeyPattern = regexp.MustCompile(`^[a-z][a-z0-9_]{1,31}$`)
@@ -64,6 +75,14 @@ func validateKnownManifests(known []ModuleManifest) error {
 		if !strings.HasPrefix(m.HealthPath, "/") {
 			return fmt.Errorf("registry: seed: module %q healthPath %q must be an absolute path", m.ModuleKey, m.HealthPath)
 		}
+		for _, d := range m.Dependencies {
+			if d.ModuleKey == m.ModuleKey {
+				return fmt.Errorf("registry: seed: module %q depends on itself", m.ModuleKey)
+			}
+			if !knownKey(known, d.ModuleKey) {
+				return fmt.Errorf("registry: seed: module %q depends on unknown module %q", m.ModuleKey, d.ModuleKey)
+			}
+		}
 		for _, kv := range []string{"key:" + m.ModuleKey, "basePath:" + m.BasePath, fmt.Sprintf("port:%d", m.Port)} {
 			if other, dup := seen[kv]; dup {
 				return fmt.Errorf("registry: seed: modules %q and %q both claim %s", other, m.ModuleKey, kv)
@@ -72,6 +91,15 @@ func validateKnownManifests(known []ModuleManifest) error {
 		}
 	}
 	return nil
+}
+
+func knownKey(known []ModuleManifest, key string) bool {
+	for _, m := range known {
+		if m.ModuleKey == key {
+			return true
+		}
+	}
+	return false
 }
 
 // checkOrgUnitTaxonomy refuses any known module whose org.requiredOrgUnitTypes names a type
@@ -161,9 +189,11 @@ func ParseInstalledModules(csv string, known []ModuleManifest) (map[string]bool,
 }
 
 // Seed applies the manifest to the catalog and seeds installation rows. Catalog metadata is
-// manifest-owned and synced on every boot (safe to overwrite). Installation rows are
-// seed-MISSING-ONLY: an existing row's installed/enabled is never touched, and
-// concurrent seeds (multi-replica boot) race-free via ON CONFLICT DO NOTHING.
+// manifest-owned and synced on every boot (safe to overwrite). Installation rows are seeded
+// when missing, and a row still not installed is installed (and enabled) once its module is
+// listed in KIBAN_INSTALLED_MODULES: `installed` follows the manifest set, while an
+// administrator's enable/disable of an installed module survives every re-seed. Concurrent
+// seeds (multi-replica boot) are race-free via ON CONFLICT DO NOTHING.
 func (s *Store) Seed(ctx context.Context, known []ModuleManifest, installedKeys map[string]bool) error {
 	if err := validateKnownManifests(known); err != nil {
 		return err
@@ -201,6 +231,13 @@ func (s *Store) Seed(ctx context.Context, known []ModuleManifest, installedKeys 
 		}); err != nil {
 			return fmt.Errorf("registry: seed: installation %s: %w", m.ModuleKey, err)
 		}
+		if installedKeys[m.ModuleKey] {
+			// Listed now but not installed at first boot: install it. Only a never-installed
+			// row changes, so a module an administrator disabled stays disabled.
+			if _, err := s.pool.Exec(ctx, `UPDATE platform.module_installation SET installed = true, enabled = true, version = $2 WHERE module_key = $1 AND NOT installed`, m.ModuleKey, m.ManifestVersion); err != nil {
+				return fmt.Errorf("registry: seed: install %s: %w", m.ModuleKey, err)
+			}
+		}
 
 		if len(m.AuthzFragment) > 0 {
 			fragmentKeys = append(fragmentKeys, m.ModuleKey)
@@ -209,6 +246,18 @@ func (s *Store) Seed(ctx context.Context, known []ModuleManifest, installedKeys 
 
 	if len(known) == 0 {
 		return nil
+	}
+
+	// Dependencies are manifest-owned like the catalog: replace each module's rows every boot.
+	for _, m := range known {
+		if _, err := s.pool.Exec(ctx, `DELETE FROM platform.module_dependency WHERE module_key = $1`, m.ModuleKey); err != nil {
+			return fmt.Errorf("registry: seed: dependencies %s: %w", m.ModuleKey, err)
+		}
+		for _, d := range m.Dependencies {
+			if _, err := s.pool.Exec(ctx, `INSERT INTO platform.module_dependency (module_key, depends_on_module_key, version_range) VALUES ($1, $2, $3)`, m.ModuleKey, d.ModuleKey, d.VersionRange); err != nil {
+				return fmt.Errorf("registry: seed: dependency %s -> %s: %w", m.ModuleKey, d.ModuleKey, err)
+			}
+		}
 	}
 
 	// Read back each known module's ACTUAL current enabled state from module_installation (never
