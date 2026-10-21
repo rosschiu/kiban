@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- `make setup` generates secrets from `/dev/urandom` when `openssl` is absent; 0.1.4 failed on hosts without it
+
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
 dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know

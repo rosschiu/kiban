@@ -23,7 +23,7 @@ dev: ## bring up the full stack (postgres + keycloak + migrate + bootstrap + the
 	@# Generated once, idempotently (never overwrites an existing file), so this
 	@# stays a single command with no manual step.
 	@mkdir -p infra/secrets-in
-	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && openssl rand -base64 24 > infra/secrets-in/superadmin-password; }
+	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && head -c 24 /dev/urandom | base64 | tr -d '\n' > infra/secrets-in/superadmin-password; }
 	@chmod 600 infra/secrets-in/superadmin-password
 	$(if $(KIBAN_IMAGE_TAG),$(MAKE) images-preflight,)
 	docker compose --env-file .env --project-directory infra up -d $(if $(KIBAN_IMAGE_TAG),--no-build,--build) --wait
@@ -43,7 +43,7 @@ public-up: ## bring the stack up behind the HOST's shared Traefik edge at https:
 	@# to, and points bootstrap at the public origin so the realm client's redirect URIs/web
 	@# origins include it.
 	@mkdir -p infra/secrets-in
-	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && openssl rand -base64 24 > infra/secrets-in/superadmin-password; }
+	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && head -c 24 /dev/urandom | base64 | tr -d '\n' > infra/secrets-in/superadmin-password; }
 	@chmod 600 infra/secrets-in/superadmin-password
 	$(if $(KIBAN_IMAGE_TAG),$(MAKE) images-preflight,)
 	docker compose --env-file .env -f infra/compose.yaml -f infra/compose.public.yaml --project-directory infra up -d $(if $(KIBAN_IMAGE_TAG),--no-build,--build) --wait
@@ -129,7 +129,7 @@ test-stack-up: ## bring up an ISOLATED test stack (project `kiban-test`, separat
 	@# would otherwise fail with "SuperadminUsername/SuperadminPassword required".
 	@# Same idempotent, write-once generation as `dev`'s own.
 	@mkdir -p infra/secrets-in
-	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && openssl rand -base64 24 > infra/secrets-in/superadmin-password; }
+	@[ -f infra/secrets-in/superadmin-password ] || { umask 077 && head -c 24 /dev/urandom | base64 | tr -d '\n' > infra/secrets-in/superadmin-password; }
 	@chmod 600 infra/secrets-in/superadmin-password
 	docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra up -d --build --wait
 	docker compose -p kiban-test --env-file .env.test -f infra/compose.yaml -f infra/compose.test.yaml --project-directory infra ps
