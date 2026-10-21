@@ -4,6 +4,12 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-10-21
+Bugs from the first audits: a module added after the first boot is installed, manifest
+dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know
+`ASSIGNMENT_ALREADY_ENDED`, and the guide stops showing memory storage for a browser login;
+plus Go 1.26.10 for a `crypto/x509` advisory.
+
 - Go 1.26.10 toolchain and builder image (GO-2026-6809 in `crypto/x509`); 0.1.3 built with 1.26.9
 - `ASSIGNMENT_ALREADY_ENDED` is in `contracts/wire-enums.json` and the TypeScript SDK's `ApiErrorCode`; 0.1.3 answered it from the org service without the contract knowing it
 - Node SDK: `AppClient.api` sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was `401`
@@ -97,7 +103,8 @@ serves its own API; the sample modules are examples, off by default.
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`
 - Documentation site: quickstart, integrate, concepts, building, SDK guide, operating, security, limitations
 
-[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/rosschiu/kiban/releases/tag/v0.1.4
 [0.1.3]: https://github.com/rosschiu/kiban/releases/tag/v0.1.3
 [0.1.2]: https://github.com/rosschiu/kiban/releases/tag/v0.1.2
 [0.1.1]: https://github.com/rosschiu/kiban/releases/tag/v0.1.1
