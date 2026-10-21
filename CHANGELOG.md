@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Docs: a page on the two integration shapes, module inside Kiban or app beside it, and the grant-first order plus reconciliation sweep an app needs; the limitations page no longer says dependencies are never loaded
+
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
 dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know

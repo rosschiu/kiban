@@ -81,10 +81,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A module is compiled into the platform.** The four sample modules are built by the platform's
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.
-- **Dependency resolution between modules is declared but not enforced.** The validator checks
-  that declared dependencies exist, are acyclic and are marked required. The gateway refuses a
-  module whose dependency is not enabled (`MODULE_DEPENDENCY_MISSING`), but nothing loads a
-  manifest's dependencies into the registry, so the check never fires.
+- **Dependency version ranges are validated, not enforced at runtime.** The registry loads a
+  manifest's dependencies and the gateway refuses a module whose dependency is not installed and
+  enabled (`MODULE_DEPENDENCY_MISSING`); the `versionRange` is checked by the validator only.
 - **Entitlement and licensing state exist in the contract but are not enforced.**
 
 ## The differential harness
