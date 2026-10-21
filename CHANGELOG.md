@@ -9,6 +9,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Node SDK: `AppClient.api` sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was `401`
 - Docs: a browser login needs the default `sessionStorage`; the SDK guide showed `createMemoryStorage()` for a login, which cannot complete the redirect
 - A module added to `KIBAN_INSTALLED_MODULES` after the first boot is installed on the next restart; 0.1.3 wrote the installation row once and never installed it, so enabling it answered `409 MODULE_NOT_INSTALLED` forever
+- A module manifest's `dependencies[]` are written to the registry at every boot, so a missing one answers `MODULE_DEPENDENCY_MISSING`; 0.1.3 validated them at build time and then dropped them, so the check never fired
 
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,

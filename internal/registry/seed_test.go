@@ -141,6 +141,44 @@ func TestSeed_ListedLaterIsInstalled(t *testing.T) {
 	}
 }
 
+// TestSeed_WritesManifestDependencies proves a manifest's dependencies[] reach
+// platform.module_dependency, so Capability reports them and flags a disabled one as missing.
+func TestSeed_WritesManifestDependencies(t *testing.T) {
+	admin := adminPool(t)
+	resetRegistryFixtures(t, admin)
+	store := NewStore(registryPool(t))
+	ctx := context.Background()
+	manifests := testManifests()
+	manifests[0].Dependencies = []ModuleDependency{{ModuleKey: "spine", VersionRange: ">=0.1.0"}}
+	installed, _ := ParseInstalledModules("alpha", manifests)
+	if err := store.Seed(ctx, manifests, installed); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	cap, _, err := store.Capability(ctx, "alpha")
+	if err != nil || len(cap.Dependencies) != 1 || cap.Dependencies[0] != "spine" || len(cap.MissingDependencies) != 0 {
+		t.Fatalf("alpha capability = %+v, %v; want dependencies [spine], none missing (0.1.3 stored none)", cap, err)
+	}
+	if _, err := admin.Exec(ctx, `UPDATE platform.module_installation SET enabled = false WHERE module_key = 'spine'`); err != nil {
+		t.Fatalf("disable spine: %v", err)
+	}
+	if cap, _, _ = store.Capability(ctx, "alpha"); len(cap.MissingDependencies) != 1 || cap.MissingDependencies[0] != "spine" {
+		t.Fatalf("alpha with spine disabled = %+v, want missingDependencies [spine]", cap)
+	}
+	// A re-seed without the dependency removes the row: dependencies are manifest-owned.
+	manifests[0].Dependencies = nil
+	if err := store.Seed(ctx, manifests, installed); err != nil {
+		t.Fatalf("reseed: %v", err)
+	}
+	if cap, _, _ = store.Capability(ctx, "alpha"); len(cap.Dependencies) != 0 {
+		t.Fatalf("alpha after dropping the dependency = %+v, want none", cap)
+	}
+	// An unknown or self dependency is refused before anything is written.
+	manifests[0].Dependencies = []ModuleDependency{{ModuleKey: "ghost", VersionRange: "*"}}
+	if err := store.Seed(ctx, manifests, installed); err == nil || !strings.Contains(err.Error(), "ghost") {
+		t.Fatalf("seed with unknown dependency: err = %v, want refusal naming ghost", err)
+	}
+}
+
 // TestSeed_ConcurrentNoErrorNoDuplicate proves the multi-replica boot case: two seeds racing
 // against the same env manifest succeed without error and leave exactly one installation row.
 func TestSeed_ConcurrentNoErrorNoDuplicate(t *testing.T) {

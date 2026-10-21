@@ -53,6 +53,7 @@ var BuiltinModules = []ModuleManifest{
 		LicenseClass:         "foundation",
 		ManifestVersion:      mustManifest(notificationartifacts.ManifestJSON).Version,
 		RequiredOrgUnitTypes: mustManifest(notificationartifacts.ManifestJSON).Org.RequiredOrgUnitTypes,
+		Dependencies:         mustManifest(notificationartifacts.ManifestJSON).dependencies(),
 		AuthzFragment:        notificationAuthzRelations,
 		Features:             mustFeatureKeys(notificationartifacts.AuthzFragmentJSON),
 	},
@@ -67,6 +68,7 @@ var BuiltinModules = []ModuleManifest{
 		LicenseClass:         "foundation",
 		ManifestVersion:      mustManifest(timesheetartifacts.ManifestJSON).Version,
 		RequiredOrgUnitTypes: mustManifest(timesheetartifacts.ManifestJSON).Org.RequiredOrgUnitTypes,
+		Dependencies:         mustManifest(timesheetartifacts.ManifestJSON).dependencies(),
 		AuthzFragment:        timesheetAuthzRelations,
 		Features:             mustFeatureKeys(timesheetartifacts.AuthzFragmentJSON),
 	},
@@ -81,6 +83,7 @@ var BuiltinModules = []ModuleManifest{
 		LicenseClass:         "foundation",
 		ManifestVersion:      mustManifest(docsartifacts.ManifestJSON).Version,
 		RequiredOrgUnitTypes: mustManifest(docsartifacts.ManifestJSON).Org.RequiredOrgUnitTypes,
+		Dependencies:         mustManifest(docsartifacts.ManifestJSON).dependencies(),
 		AuthzFragment:        docsAuthzRelations,
 		Features:             mustFeatureKeys(docsartifacts.AuthzFragmentJSON),
 	},
@@ -95,6 +98,7 @@ var BuiltinModules = []ModuleManifest{
 		LicenseClass:         "foundation",
 		ManifestVersion:      mustManifest(helpdeskartifacts.ManifestJSON).Version,
 		RequiredOrgUnitTypes: mustManifest(helpdeskartifacts.ManifestJSON).Org.RequiredOrgUnitTypes,
+		Dependencies:         mustManifest(helpdeskartifacts.ManifestJSON).dependencies(),
 		AuthzFragment:        helpdeskAuthzRelations,
 		Features:             mustFeatureKeys(helpdeskartifacts.AuthzFragmentJSON),
 	},
@@ -158,6 +162,19 @@ type embeddedManifest struct {
 	Org     struct {
 		RequiredOrgUnitTypes []string `json:"requiredOrgUnitTypes"`
 	} `json:"org"`
+	Dependencies []struct {
+		ModuleKey    string `json:"moduleKey"`
+		VersionRange string `json:"versionRange"`
+	} `json:"dependencies"`
+}
+
+// dependencies converts the manifest's dependencies[] to the seed's shape.
+func (m embeddedManifest) dependencies() []ModuleDependency {
+	out := make([]ModuleDependency, 0, len(m.Dependencies))
+	for _, d := range m.Dependencies {
+		out = append(out, ModuleDependency{ModuleKey: d.ModuleKey, VersionRange: d.VersionRange})
+	}
+	return out
 }
 
 // mustManifest parses the embedded module.manifest.json — a malformed/missing embedded manifest
