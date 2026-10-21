@@ -227,7 +227,8 @@ model, as `timesheet` and `helpdesk` do). Object type, then relation name, then 
 | `{ "union": [ ...expressions ] }` | Any of the children; at least one |
 
 Any other construct (`intersection`, `exclusion`, wildcards, conditions) is outside the subset
-and refused. Every type you declare must define `"company_module": { "this": true }`, the anchor
+and refused; [Modelling folders](modelling-folders.md) shows inheritance, breaking it and
+limited access without them. Every type you declare must define `"company_module": { "this": true }`, the anchor
 every object check binds through. A type may not redeclare a base type (`user`, `system`,
 `module`, `company`, `company_module`, `module_role_binding`, `access_bundle`,
 `access_segment`, `member_directory`, `member`, `project_directory`, `project`,

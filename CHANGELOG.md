@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Docs: a page on modelling folders with inherited, broken and limited access using only parent tuples and direct grants, no exclusion
+
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
 dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know

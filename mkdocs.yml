@@ -35,6 +35,7 @@ nav:
   - Concepts: concepts.md
   - Operating Kiban: operating.md
   - Building on Kiban: building.md
+  - Modelling folders: modelling-folders.md
   - SDK guide: sdk-guide.md
   - Reference: reference.md
   - Metrics: metrics.md
