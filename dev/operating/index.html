@@ -927,7 +927,8 @@ its admin password and that client secret as environment variables. The superadm
   migrations and bootstrap connect as it. <code>KC_DB_PASSWORD</code>: the <code>keycloak</code> role, owner of the
   Keycloak database.</li>
 <li><code>KIBAN_&lt;SERVICE&gt;_DB_PASSWORD</code>: every service connects with its own least-privilege role.</li>
-<li><code>KIBAN_INSTALLED_MODULES</code>: which modules the registry installs at first boot.</li>
+<li><code>KIBAN_INSTALLED_MODULES</code>: which modules the registry installs; a key added later is
+  installed on the next restart.</li>
 <li><code>KIBAN_SUPERADMIN_USERNAME</code> / <code>_EMAIL</code>: the seeded operator account.</li>
 <li><code>KEYCLOAK_REALM</code>: the realm name. Leave it <code>kiban</code>: the imported realm definition names the
   realm by literal.</li>
