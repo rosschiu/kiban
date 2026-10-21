@@ -39,7 +39,8 @@ Key settings:
   migrations and bootstrap connect as it. `KC_DB_PASSWORD`: the `keycloak` role, owner of the
   Keycloak database.
 - `KIBAN_<SERVICE>_DB_PASSWORD`: every service connects with its own least-privilege role.
-- `KIBAN_INSTALLED_MODULES`: which modules the registry installs at first boot.
+- `KIBAN_INSTALLED_MODULES`: which modules the registry installs; a key added later is
+  installed on the next restart.
 - `KIBAN_SUPERADMIN_USERNAME` / `_EMAIL`: the seeded operator account.
 - `KEYCLOAK_REALM`: the realm name. Leave it `kiban`: the imported realm definition names the
   realm by literal.

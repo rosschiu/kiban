@@ -4,6 +4,7 @@ package registry
 
 import (
 	"context"
+	"github.com/rosschiu/kiban/internal/errenv"
 	"strings"
 	"sync"
 	"testing"
@@ -98,6 +99,45 @@ func TestSeed_DisableThenRestart(t *testing.T) {
 	}
 	if cap.Enabled {
 		t.Fatalf("operator disable was overwritten by re-seed (operator state must survive re-seed): cap = %+v, code = %q", cap, code)
+	}
+}
+
+// TestSeed_ListedLaterIsInstalled proves a module left out of KIBAN_INSTALLED_MODULES at first
+// boot is installed and enabled once a later boot lists it, while a module an administrator
+// disabled stays disabled (installed follows the manifest set; enabled is the operator's).
+func TestSeed_ListedLaterIsInstalled(t *testing.T) {
+	admin := adminPool(t)
+	resetRegistryFixtures(t, admin)
+	store := NewStore(registryPool(t))
+	ctx := context.Background()
+	manifests := testManifests()
+
+	first, _ := ParseInstalledModules("", manifests) // alpha left out; spine is mandatory
+	if err := store.Seed(ctx, manifests, first); err != nil {
+		t.Fatalf("first seed: %v", err)
+	}
+	if cap, code, _ := store.Capability(ctx, "alpha"); cap.Installed || code != errenv.CodeModuleNotInstalled {
+		t.Fatalf("alpha after first seed = %+v %q, want not installed", cap, code)
+	}
+
+	later, _ := ParseInstalledModules("alpha", manifests)
+	if err := store.Seed(ctx, manifests, later); err != nil {
+		t.Fatalf("second seed: %v", err)
+	}
+	cap, _, err := store.Capability(ctx, "alpha")
+	if err != nil || !cap.Installed || !cap.Enabled {
+		t.Fatalf("alpha after being listed = %+v, %v; want installed+enabled (0.1.3 left it uninstalled forever)", cap, err)
+	}
+
+	// An administrator disables it; the next boot with the same list leaves that alone.
+	if _, err := admin.Exec(ctx, `UPDATE platform.module_installation SET enabled = false WHERE module_key = 'alpha'`); err != nil {
+		t.Fatalf("operator disable: %v", err)
+	}
+	if err := store.Seed(ctx, manifests, later); err != nil {
+		t.Fatalf("third seed: %v", err)
+	}
+	if cap, _, _ := store.Capability(ctx, "alpha"); !cap.Installed || cap.Enabled {
+		t.Fatalf("alpha after operator disable + reseed = %+v, want installed, disabled", cap)
 	}
 }
 

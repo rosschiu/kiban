@@ -7,6 +7,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - `ASSIGNMENT_ALREADY_ENDED` is in `contracts/wire-enums.json` and the TypeScript SDK's `ApiErrorCode`; 0.1.3 answered it from the org service without the contract knowing it
 - Node SDK: `AppClient.api` sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was `401`
 - Docs: a browser login needs the default `sessionStorage`; the SDK guide showed `createMemoryStorage()` for a login, which cannot complete the redirect
+- A module added to `KIBAN_INSTALLED_MODULES` after the first boot is installed on the next restart; 0.1.3 wrote the installation row once and never installed it, so enabling it answered `409 MODULE_NOT_INSTALLED` forever
 
 ## [0.1.3] — 2026-10-19
 Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,

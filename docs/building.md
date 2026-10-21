@@ -555,11 +555,10 @@ Every item is needed; the platform has no runtime registration in 0.1.
     `POST /api/platform/admin/modules/<key>/disable` and `.../enable` (or the sample shell)
     toggle it. There is no per-company switch.
 
-A module's installation row is written once, the first time a registry that knows the key
-boots. If the key was not in `KIBAN_INSTALLED_MODULES` at that boot, the module stays not
-installed: a later restart with an updated list does not change the row, and the enable route
-answers `409 MODULE_NOT_INSTALLED`. Put the key in the list before the first boot, or start from
-a clean database (`make dev-clean`).
+`installed` follows `KIBAN_INSTALLED_MODULES`: a module left out at the first boot is installed
+and enabled on the first restart that lists it. Removing a key does not uninstall anything.
+`enabled` belongs to the administrator: a module disabled through the route stays disabled
+across restarts.
 
 The four sample modules are the worked examples. `notification` is the smallest complete one;
 `helpdesk` shows position- and group-based assignment; `docs` (DocShare) shows per-object
