@@ -71,6 +71,12 @@ export interface Capability {
   enabled: boolean;
   dependencies: string[];
   missingDependencies: string[];
+  /** An app registered at runtime: it serves itself, the gateway never proxies it. */
+  external: boolean;
+  /** For an external app, the Keycloak client whose token identifies its backend. */
+  serviceClientId?: string;
+  /** The module's declared feature keys; authz refuses any other key. */
+  features: string[];
 }
 
 /** registry catalog entry (internal/registry/store.go) — GET /api/platform/catalog. */
@@ -87,6 +93,12 @@ export interface CatalogEntry {
   isActive: boolean;
   installed: boolean;
   enabled: boolean;
+  /** An app registered at runtime, see {@link Capability.external}. */
+  external: boolean;
+  /** For an external app, the Keycloak client whose token identifies its backend. */
+  serviceClientId?: string;
+  /** The module's declared feature keys. */
+  features: string[];
 }
 
 // ---- effective-access (internal/authz/http.go: canRequestWire/decisionWire) ----------------

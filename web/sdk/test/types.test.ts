@@ -7,7 +7,7 @@
 // contract, not coverage padding: a value drifting here silently breaks every caller matching on
 // `error.code` or `decision.reason`.
 import { describe, expect, it } from "vitest";
-import { ApiErrorCode, EffectiveAccessReason } from "../src/types.js";
+import { ApiErrorCode, EffectiveAccessReason, type Capability, type CatalogEntry } from "../src/types.js";
 
 describe("ApiErrorCode — internal/errenv canonical error codes", () => {
   it("maps every known key to its exact wire string", () => {
@@ -68,5 +68,22 @@ describe("EffectiveAccessReason — internal/authz/decision canonical reasons", 
     for (const [, value] of denials) {
       expect(value).not.toBe("ALLOWED");
     }
+  });
+});
+
+describe("Capability and CatalogEntry — registry wire shape (internal/registry/store.go)", () => {
+  it("carry the registry's external, serviceClientId and features fields", () => {
+    const capability: Capability = {
+      module: "tokidesk", installed: true, enabled: true, dependencies: [], missingDependencies: [],
+      external: true, serviceClientId: "tokidesk-backend", features: ["tokidesk.ticket.view"]
+    };
+    const entry: CatalogEntry = {
+      moduleKey: "tokidesk", displayName: "TokiDesk", scopeType: "company", mandatory: false,
+      basePath: "/api/tokidesk", healthPath: "/health", port: 0, licenseClass: "open",
+      manifestVersion: "1", isActive: true, installed: true, enabled: true,
+      external: true, serviceClientId: "tokidesk-backend", features: ["tokidesk.ticket.view"]
+    };
+    expect(capability.features).toEqual(entry.features);
+    expect(capability.external && entry.external).toBe(true);
   });
 });

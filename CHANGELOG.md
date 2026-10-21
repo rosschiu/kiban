@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- TypeScript SDK: `Capability` has `external`, `serviceClientId` and `features`, `CatalogEntry` has `external`, `serviceClientId` and `features`, as the registry already answers them
+
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
 dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know
