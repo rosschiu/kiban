@@ -189,9 +189,11 @@ func ParseInstalledModules(csv string, known []ModuleManifest) (map[string]bool,
 }
 
 // Seed applies the manifest to the catalog and seeds installation rows. Catalog metadata is
-// manifest-owned and synced on every boot (safe to overwrite). Installation rows are
-// seed-MISSING-ONLY: an existing row's installed/enabled is never touched, and
-// concurrent seeds (multi-replica boot) race-free via ON CONFLICT DO NOTHING.
+// manifest-owned and synced on every boot (safe to overwrite). Installation rows are seeded
+// when missing, and a row still not installed is installed (and enabled) once its module is
+// listed in KIBAN_INSTALLED_MODULES: `installed` follows the manifest set, while an
+// administrator's enable/disable of an installed module survives every re-seed. Concurrent
+// seeds (multi-replica boot) are race-free via ON CONFLICT DO NOTHING.
 func (s *Store) Seed(ctx context.Context, known []ModuleManifest, installedKeys map[string]bool) error {
 	if err := validateKnownManifests(known); err != nil {
 		return err
@@ -228,6 +230,13 @@ func (s *Store) Seed(ctx context.Context, known []ModuleManifest, installedKeys 
 			Version:   &m.ManifestVersion,
 		}); err != nil {
 			return fmt.Errorf("registry: seed: installation %s: %w", m.ModuleKey, err)
+		}
+		if installedKeys[m.ModuleKey] {
+			// Listed now but not installed at first boot: install it. Only a never-installed
+			// row changes, so a module an administrator disabled stays disabled.
+			if _, err := s.pool.Exec(ctx, `UPDATE platform.module_installation SET installed = true, enabled = true, version = $2 WHERE module_key = $1 AND NOT installed`, m.ModuleKey, m.ManifestVersion); err != nil {
+				return fmt.Errorf("registry: seed: install %s: %w", m.ModuleKey, err)
+			}
 		}
 
 		if len(m.AuthzFragment) > 0 {

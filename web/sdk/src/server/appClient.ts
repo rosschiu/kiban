@@ -114,10 +114,15 @@ export function createAppClient(config: AppClientConfig): AppClient {
     getAccessToken: () => null,
     refreshAccessToken: undefined
   });
-  const serviceApi = createApiClient({ baseUrl, fetchFn: config.fetchFn });
   const asService = async (): Promise<Record<string, string>> => ({
     Authorization: `Bearer ${await config.credentials.getAccessToken()}`
   });
+  // `api` is the same client, with the service bearer attached unless the caller sets one.
+  const serviceApi: ApiClient = {
+    baseUrl,
+    request: async (path, options) =>
+      api.request(path, { ...options, headers: { ...(await asService()), ...options?.headers } })
+  };
   const grants = async (op: "grant" | "revoke", companyId: string, tuples: Tuple[]): Promise<void> => {
     await api.request("/api/auth/grants", {
       method: "POST",

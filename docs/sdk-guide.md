@@ -67,22 +67,12 @@ writes tokens to `localStorage`. On reload a persisted set is only trusted if it
 not expired, or expired but carrying a refresh token (the next 401 refreshes it). Anything else
 is dropped and the user logs in again.
 
-To keep tokens out of browser storage entirely, pass a memory adapter:
-
-```ts
-import { createMemoryStorage, createSession } from "@rossbsol/kiban-sdk";
-
-const session = createSession({
-  authOrigin: gatewayOrigin,
-  realm: "kiban",
-  clientId: "kiban-frontend",
-  redirectUri: "http://localhost:5173/callback.html",
-  storage: createMemoryStorage()
-});
-```
-
-A reload then needs a new `login()`, which Keycloak's SSO cookie usually completes without a
-password prompt. Any script on your origin can read the tokens, so serve your application with a
+Keep the default storage for a browser login. The login is a redirect, and the only thing
+written to `sessionStorage` for it is the PKCE transaction: a one-time random verifier,
+`state` and `nonce`, useless without the authorization code and deleted on the callback. It is
+not a credential. `createMemoryStorage()` is for tests and for hosts without browser storage;
+a browser login cannot use it, because the page unloads for the redirect and the transaction
+goes with it. Any script on your origin can read the tokens, so serve your application with a
 Content-Security-Policy as the gateway does for the sample shell.
 
 `decodeIdTokenClaims(idToken)` reads the ID token's claims for display (name, email) without
