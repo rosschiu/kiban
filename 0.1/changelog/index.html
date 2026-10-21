@@ -556,6 +556,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#014-2026-10-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.4 — 2026-10-21
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#013-2026-10-19" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.3 — 2026-10-19
@@ -655,6 +664,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#014-2026-10-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.4 — 2026-10-21
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#013-2026-10-19" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.3 — 2026-10-19
@@ -710,7 +728,20 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <p>One line per change. Versions follow <a href="https://semver.org/">Semantic Versioning</a>; the current version is in <a href="https://github.com/rosschiu/kiban/blob/main/VERSION"><code>VERSION</code></a>.</p>
-<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.1.3...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.1.4...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="014-2026-10-21"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.1.4">0.1.4</a> — 2026-10-21<a class="headerlink" href="#014-2026-10-21" title="Permanent link">&para;</a></h2>
+<p>Bugs from the first audits: a module added after the first boot is installed, manifest
+dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know
+<code>ASSIGNMENT_ALREADY_ENDED</code>, and the guide stops showing memory storage for a browser login;
+plus Go 1.26.10 for a <code>crypto/x509</code> advisory.</p>
+<ul>
+<li>Go 1.26.10 toolchain and builder image (GO-2026-6809 in <code>crypto/x509</code>); 0.1.3 built with 1.26.9</li>
+<li><code>ASSIGNMENT_ALREADY_ENDED</code> is in <code>contracts/wire-enums.json</code> and the TypeScript SDK's <code>ApiErrorCode</code>; 0.1.3 answered it from the org service without the contract knowing it</li>
+<li>Node SDK: <code>AppClient.api</code> sends the service bearer; 0.1.3 sent its requests with no token, so every call through it was <code>401</code></li>
+<li>Docs: a browser login needs the default <code>sessionStorage</code>; the SDK guide showed <code>createMemoryStorage()</code> for a login, which cannot complete the redirect</li>
+<li>A module added to <code>KIBAN_INSTALLED_MODULES</code> after the first boot is installed on the next restart; 0.1.3 wrote the installation row once and never installed it, so enabling it answered <code>409 MODULE_NOT_INSTALLED</code> forever</li>
+<li>A module manifest's <code>dependencies[]</code> are written to the registry at every boot, so a missing one answers <code>MODULE_DEPENDENCY_MISSING</code>; 0.1.3 validated them at build time and then dropped them, so the check never fired</li>
+</ul>
 <h2 id="013-2026-10-19"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.1.3">0.1.3</a> — 2026-10-19<a class="headerlink" href="#013-2026-10-19" title="Permanent link">&para;</a></h2>
 <p>Fixes from the teams on 0.1.2: positions on org units, the cross-company subject hole in grants,
 anchor revoke taking the object's tuples with it, <code>409 POSITION_HELD</code> with the holder, and the

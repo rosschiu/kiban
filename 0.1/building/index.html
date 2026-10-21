@@ -1164,7 +1164,7 @@ author comments) and the values the table refuses; it does not check that <code>
 <tr>
 <td><code>dependencies[]</code></td>
 <td><code>{ "moduleKey", "versionRange", "required": true }</code></td>
-<td>Each names a module in the same validate batch (or the <code>-catalog</code> snapshot); <code>versionRange</code> is a semver range the target's <code>version</code> must satisfy; <code>required</code> must be <code>true</code>; no cycles. Validated only in 0.1: the registry does not load a manifest's dependencies, so the gateway's <code>MODULE_DEPENDENCY_MISSING</code> check has nothing to act on</td>
+<td>Each names a module in the same validate batch (or the <code>-catalog</code> snapshot); <code>versionRange</code> is a semver range the target's <code>version</code> must satisfy; <code>required</code> must be <code>true</code>; no cycles. The registry writes them to its catalog at every boot; a dependency that is not installed and enabled makes the gateway answer <code>MODULE_DEPENDENCY_MISSING</code> for the module</td>
 </tr>
 <tr>
 <td><code>org.requiredOrgUnitTypes</code></td>
@@ -1806,11 +1806,10 @@ identifiers, and each route's
     <code>POST /api/platform/admin/modules/&lt;key&gt;/disable</code> and <code>.../enable</code> (or the sample shell)
     toggle it. There is no per-company switch.</li>
 </ol>
-<p>A module's installation row is written once, the first time a registry that knows the key
-boots. If the key was not in <code>KIBAN_INSTALLED_MODULES</code> at that boot, the module stays not
-installed: a later restart with an updated list does not change the row, and the enable route
-answers <code>409 MODULE_NOT_INSTALLED</code>. Put the key in the list before the first boot, or start from
-a clean database (<code>make dev-clean</code>).</p>
+<p><code>installed</code> follows <code>KIBAN_INSTALLED_MODULES</code>: a module left out at the first boot is installed
+and enabled on the first restart that lists it. Removing a key does not uninstall anything.
+<code>enabled</code> belongs to the administrator: a module disabled through the route stays disabled
+across restarts.</p>
 <p>The four sample modules are the worked examples. <code>notification</code> is the smallest complete one;
 <code>helpdesk</code> shows position- and group-based assignment; <code>docs</code> (DocShare) shows per-object
 sharing as live tuples.</p>

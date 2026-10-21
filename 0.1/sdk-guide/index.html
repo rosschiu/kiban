@@ -949,19 +949,12 @@ reload or a direct link keeps the session; the entry goes away when the tab clos
 writes tokens to <code>localStorage</code>. On reload a persisted set is only trusted if it is still usable:
 not expired, or expired but carrying a refresh token (the next 401 refreshes it). Anything else
 is dropped and the user logs in again.</p>
-<p>To keep tokens out of browser storage entirely, pass a memory adapter:</p>
-<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">createMemoryStorage</span><span class="p">,</span><span class="w"> </span><span class="nx">createSession</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">"@rossbsol/kiban-sdk"</span><span class="p">;</span>
-
-<span class="kd">const</span><span class="w"> </span><span class="nx">session</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">createSession</span><span class="p">({</span>
-<span class="w">  </span><span class="nx">authOrigin</span><span class="o">:</span><span class="w"> </span><span class="kt">gatewayOrigin</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">realm</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">clientId</span><span class="o">:</span><span class="w"> </span><span class="s2">"kiban-frontend"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">redirectUri</span><span class="o">:</span><span class="w"> </span><span class="s2">"http://localhost:5173/callback.html"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">storage</span><span class="o">:</span><span class="w"> </span><span class="kt">createMemoryStorage</span><span class="p">()</span>
-<span class="p">});</span>
-</code></pre></div>
-<p>A reload then needs a new <code>login()</code>, which Keycloak's SSO cookie usually completes without a
-password prompt. Any script on your origin can read the tokens, so serve your application with a
+<p>Keep the default storage for a browser login. The login is a redirect, and the only thing
+written to <code>sessionStorage</code> for it is the PKCE transaction: a one-time random verifier,
+<code>state</code> and <code>nonce</code>, useless without the authorization code and deleted on the callback. It is
+not a credential. <code>createMemoryStorage()</code> is for tests and for hosts without browser storage;
+a browser login cannot use it, because the page unloads for the redirect and the transaction
+goes with it. Any script on your origin can read the tokens, so serve your application with a
 Content-Security-Policy as the gateway does for the sample shell.</p>
 <p><code>decodeIdTokenClaims(idToken)</code> reads the ID token's claims for display (name, email) without
 verifying the signature. Use it for the header, never for an authorization decision.</p>
