@@ -7,8 +7,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Docs: a page on modelling folders with inherited, broken and limited access using only parent tuples and direct grants, no exclusion
 - Docs: a page on the two integration shapes, module inside Kiban or app beside it, and the grant-first order plus reconciliation sweep an app needs; the limitations page no longer says dependencies are never loaded
 - Docs: a modelling-practices page, structure in the model and policy in the data: a role matrix as tuples, "and" moved to the writer, inheritance without exclusion, and what is a grant versus a re-registration
-
 - `make help` lists every target; the contributing pages referred to it and it did not exist
+- TypeScript SDK: `Capability` has `external`, `serviceClientId` and `features`, `CatalogEntry` has `external`, `serviceClientId` and `features`, as the registry already answers them
 
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
