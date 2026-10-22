@@ -16,7 +16,7 @@
         <link rel="prev" href="../operating/">
       
       
-        <link rel="next" href="../sdk-guide/">
+        <link rel="next" href="../modelling-folders/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -535,6 +535,66 @@
   
   
     <li class="md-nav__item">
+      <a href="../modelling-folders/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling folders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inside-or-beside/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Module inside or app beside
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelling/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sdk-guide/" class="md-nav__link">
         
   
@@ -852,7 +912,8 @@ platform.</p>
 <div class="admonition note">
 <p class="admonition-title">Apps and modules</p>
 <p>Most applications should not be modules. An app runs beside Kiban, registers one manifest and
-calls the API through an SDK in any language; <a href="../integrate/">Integrate your app</a> is that path.
+calls the API through an SDK in any language; <a href="../integrate/">Integrate your app</a> is that path,
+and <a href="../inside-or-beside/">Module inside or app beside</a> says what each shape gives up.
 This page is the deeper, in-tree contract the four sample modules follow: Go, built by the
 platform, routed by the gateway. Read it to contribute a sample or to understand how the
 samples work.</p>
@@ -1247,7 +1308,8 @@ model, as <code>timesheet</code> and <code>helpdesk</code> do). Object type, the
 </tbody>
 </table>
 <p>Any other construct (<code>intersection</code>, <code>exclusion</code>, wildcards, conditions) is outside the subset
-and refused. Every type you declare must define <code>"company_module": { "this": true }</code>, the anchor
+and refused; <a href="../modelling-folders/">Modelling folders</a> shows inheritance, breaking it and
+limited access without them. Every type you declare must define <code>"company_module": { "this": true }</code>, the anchor
 every object check binds through. A type may not redeclare a base type (<code>user</code>, <code>system</code>,
 <code>module</code>, <code>company</code>, <code>company_module</code>, <code>module_role_binding</code>, <code>access_bundle</code>,
 <code>access_segment</code>, <code>member_directory</code>, <code>member</code>, <code>project_directory</code>, <code>project</code>,

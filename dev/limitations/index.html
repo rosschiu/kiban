@@ -381,6 +381,66 @@
   
   
     <li class="md-nav__item">
+      <a href="../modelling-folders/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling folders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inside-or-beside/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Module inside or app beside
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelling/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sdk-guide/" class="md-nav__link">
         
   
@@ -807,10 +867,9 @@ nothing here is promised for a date. The <a href="../roadmap/">roadmap</a> lists
 <li><strong>A module is compiled into the platform.</strong> The four sample modules are built by the platform's
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.</li>
-<li><strong>Dependency resolution between modules is declared but not enforced.</strong> The validator checks
-  that declared dependencies exist, are acyclic and are marked required. The gateway refuses a
-  module whose dependency is not enabled (<code>MODULE_DEPENDENCY_MISSING</code>), but nothing loads a
-  manifest's dependencies into the registry, so the check never fires.</li>
+<li><strong>Dependency version ranges are validated, not enforced at runtime.</strong> The registry loads a
+  manifest's dependencies and the gateway refuses a module whose dependency is not installed and
+  enabled (<code>MODULE_DEPENDENCY_MISSING</code>); the <code>versionRange</code> is checked by the validator only.</li>
 <li><strong>Entitlement and licensing state exist in the contract but are not enforced.</strong></li>
 </ul>
 <h2 id="the-differential-harness">The differential harness<a class="headerlink" href="#the-differential-harness" title="Permanent link">&para;</a></h2>

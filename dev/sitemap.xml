@@ -2,62 +2,74 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/building/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/changelog/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/concepts/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/contributing/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/glossary/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://rosschiu.github.io/kiban/dev/inside-or-beside/</loc>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/integrate/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/limitations/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/metrics/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://rosschiu.github.io/kiban/dev/modelling-folders/</loc>
+         <lastmod>2026-10-22</lastmod>
+    </url>
+    <url>
+         <loc>https://rosschiu.github.io/kiban/dev/modelling/</loc>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/operating/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/quickstart/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/reference/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/roadmap/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/sdk-guide/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
     <url>
          <loc>https://rosschiu.github.io/kiban/dev/security/</loc>
-         <lastmod>2026-10-21</lastmod>
+         <lastmod>2026-10-22</lastmod>
     </url>
 </urlset>
