@@ -46,7 +46,7 @@ Four sample modules ship in the repository as worked examples of a deeper integr
 
 ## Quickstart
 
-Needs `docker` (with the Compose plugin), `make` and `openssl` on a Linux x86_64 host. Every service builds
+Needs `docker` (with the Compose plugin) and `make` on a Linux x86_64 host. Every service builds
 inside containers.
 
 ```
