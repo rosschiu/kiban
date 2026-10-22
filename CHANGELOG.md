@@ -10,6 +10,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - `make help` lists every target; the contributing pages referred to it and it did not exist
 - TypeScript SDK: `Capability` has `external`, `serviceClientId` and `features`, `CatalogEntry` has `external`, `serviceClientId` and `features`, as the registry already answers them
 - `make setup` generates secrets from `/dev/urandom` when `openssl` is absent; 0.1.4 failed on hosts without it
+- README: how to set Kiban up with a coding agent, pointing at `AGENTS.md` with three starter prompts
 
 ## [0.1.4] — 2026-10-21
 Bugs from the first audits: a module added after the first boot is installed, manifest
