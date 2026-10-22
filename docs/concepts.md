@@ -84,6 +84,9 @@ Two grant styles make this practical:
   with zero permission edits.
 - **Group-based access**: grant to `group:12 # member`. Every current member has it.
 
+[Modelling practices](modelling.md) turns these into patterns: structure in the model, policy
+in the data.
+
 The engine is a Postgres-native subset of the
 [Zanzibar](https://research.google/pubs/zanzibar-googles-consistent-global-authorization-system/)
 model. The full test suite compares it

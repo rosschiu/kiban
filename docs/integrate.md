@@ -349,6 +349,10 @@ company; without it every check on the object is denied.
     )
     ```
 
+A grant is idempotent: granting a tuple that exists writes nothing. Your database and Kiban
+are two commits; [Module inside or app beside](inside-or-beside.md) gives the order to write
+them in and the sweep that reconciles a crash between them.
+
 `revoke` removes what `grant` wrote. When your app deletes an object, revoke its anchor:
 every other tuple on the object goes with it, in the same transaction, each recorded in the
 ledger. Anchoring the same id again starts from nothing. You should see `403 AUTHORIZATION_DENIED` if you name

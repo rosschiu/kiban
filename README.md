@@ -46,7 +46,7 @@ Four sample modules ship in the repository as worked examples of a deeper integr
 
 ## Quickstart
 
-Needs `docker` (with the Compose plugin), `make` and `openssl` on a Linux x86_64 host. Every service builds
+Needs `docker` (with the Compose plugin) and `make` on a Linux x86_64 host. Every service builds
 inside containers.
 
 ```
@@ -62,6 +62,23 @@ removes the volumes.
 
 A checkout-free variant lives in `deploy/quickstart/`: it pulls the foundation images only
 (no sample modules).
+
+## Set up with a coding agent
+
+`AGENTS.md` at the repository root tells a coding agent (Claude Code, Codex, Cursor, Copilot)
+what Kiban is, which pages to read in which order, which checks to run and which files never
+to edit by hand. Point the agent at the checkout and give it one of these:
+
+- Run it locally: "Read AGENTS.md, then bring Kiban up with `make setup` and `make dev` and tell
+  me the login URL and where the superadmin password is."
+- Connect my app: "Read AGENTS.md and docs/integrate.md. My backend is Node in `./server`. Add a
+  service client, write the manifest, register the app, and gate the `/tickets` routes with
+  `requireAccess`."
+- Deploy: "Read AGENTS.md and docs/operating.md. Prepare a production deployment on one host
+  with `make public-up`, a real hostname and operator certificates; list every secret I must
+  supply."
+
+The agent should run `make check` before claiming anything works; `AGENTS.md` says so.
 
 ## Requirements
 

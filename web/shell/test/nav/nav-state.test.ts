@@ -40,7 +40,7 @@ describe("useNavState", () => {
 
   it("composes nav entries + companies once fetched, when authenticated", async () => {
     fetchPlatformComposition.mockResolvedValue({
-      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [] }],
+      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [] }],
       catalog: [
         {
           moduleKey: "diagnostics",
@@ -52,6 +52,8 @@ describe("useNavState", () => {
           port: 9000,
           licenseClass: "standard",
           manifestVersion: "1.0.0",
+          external: false,
+          features: [],
           isActive: true,
           installed: true,
           enabled: true,
@@ -94,7 +96,7 @@ describe("useNavState", () => {
 
   it("merges an unread badge onto the matching entry when the registered module supplies one", async () => {
     fetchPlatformComposition.mockResolvedValue({
-      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [] }],
+      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [] }],
       catalog: [
         {
           moduleKey: "diagnostics",
@@ -106,6 +108,8 @@ describe("useNavState", () => {
           port: 9000,
           licenseClass: "standard",
           manifestVersion: "1.0.0",
+          external: false,
+          features: [],
           isActive: true,
           installed: true,
           enabled: true,
@@ -122,7 +126,7 @@ describe("useNavState", () => {
 
   it("omits the badge field when the registered module's hook returns undefined", async () => {
     fetchPlatformComposition.mockResolvedValue({
-      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [] }],
+      capabilities: [{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [] }],
       catalog: [
         {
           moduleKey: "diagnostics",
@@ -134,6 +138,8 @@ describe("useNavState", () => {
           port: 9000,
           licenseClass: "standard",
           manifestVersion: "1.0.0",
+          external: false,
+          features: [],
           isActive: true,
           installed: true,
           enabled: true,
