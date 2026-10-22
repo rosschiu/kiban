@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Docs: a modelling-practices page, structure in the model and policy in the data: a role matrix as tuples, "and" moved to the writer, inheritance without exclusion, and what is a grant versus a re-registration
+
 - `make help` lists every target; the contributing pages referred to it and it did not exist
 
 ## [0.1.4] — 2026-10-21
