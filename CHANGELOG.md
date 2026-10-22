@@ -4,6 +4,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- `make help` lists every target; the contributing pages referred to it and it did not exist
 - TypeScript SDK: `Capability` has `external`, `serviceClientId` and `features`, `CatalogEntry` has `external`, `serviceClientId` and `features`, as the registry already answers them
 
 ## [0.1.4] — 2026-10-21
