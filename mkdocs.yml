@@ -35,6 +35,7 @@ nav:
   - Concepts: concepts.md
   - Operating Kiban: operating.md
   - Building on Kiban: building.md
+  - Module inside or app beside: inside-or-beside.md
   - Modelling practices: modelling.md
   - SDK guide: sdk-guide.md
   - Reference: reference.md

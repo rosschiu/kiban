@@ -5,7 +5,8 @@ platform.
 
 !!! note "Apps and modules"
     Most applications should not be modules. An app runs beside Kiban, registers one manifest and
-    calls the API through an SDK in any language; [Integrate your app](integrate.md) is that path.
+    calls the API through an SDK in any language; [Integrate your app](integrate.md) is that path,
+    and [Module inside or app beside](inside-or-beside.md) says what each shape gives up.
     This page is the deeper, in-tree contract the four sample modules follow: Go, built by the
     platform, routed by the gateway. Read it to contribute a sample or to understand how the
     samples work.
