@@ -4,6 +4,13 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-10-22
+Small fixes and three documentation pages from the first audits: modelling practices (a role
+matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
+app beside with the dual-write pattern; the SDK types match the registry, `make help` exists,
+`make setup` no longer needs `openssl`, and the README shows how to set Kiban up with a
+coding agent.
+
 - Docs: a page on modelling folders with inherited, broken and limited access using only parent tuples and direct grants, no exclusion
 - Docs: a page on the two integration shapes, module inside Kiban or app beside it, and the grant-first order plus reconciliation sweep an app needs; the limitations page no longer says dependencies are never loaded
 - Docs: a modelling-practices page, structure in the model and policy in the data: a role matrix as tuples, "and" moved to the writer, inheritance without exclusion, and what is a grant versus a re-registration
@@ -111,7 +118,8 @@ serves its own API; the sample modules are examples, off by default.
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`
 - Documentation site: quickstart, integrate, concepts, building, SDK guide, operating, security, limitations
 
-[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/rosschiu/kiban/releases/tag/v0.1.5
 [0.1.4]: https://github.com/rosschiu/kiban/releases/tag/v0.1.4
 [0.1.3]: https://github.com/rosschiu/kiban/releases/tag/v0.1.3
 [0.1.2]: https://github.com/rosschiu/kiban/releases/tag/v0.1.2
