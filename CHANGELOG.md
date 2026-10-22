@@ -4,6 +4,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Docs: a page on modelling folders with inherited, broken and limited access using only parent tuples and direct grants, no exclusion
 - Docs: a page on the two integration shapes, module inside Kiban or app beside it, and the grant-first order plus reconciliation sweep an app needs; the limitations page no longer says dependencies are never loaded
 - Docs: a modelling-practices page, structure in the model and policy in the data: a role matrix as tuples, "and" moved to the writer, inheritance without exclusion, and what is a grant versus a re-registration
 
