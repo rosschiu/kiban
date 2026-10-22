@@ -727,6 +727,66 @@
   
   
     <li class="md-nav__item">
+      <a href="../modelling-folders/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling folders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inside-or-beside/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Module inside or app beside
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelling/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sdk-guide/" class="md-nav__link">
         
   
@@ -1529,6 +1589,9 @@ company; without it every check on the object is denied.</p>
 </div>
 </div>
 </div>
+<p>A grant is idempotent: granting a tuple that exists writes nothing. Your database and Kiban
+are two commits; <a href="../inside-or-beside/">Module inside or app beside</a> gives the order to write
+them in and the sweep that reconciles a crash between them.</p>
 <p><code>revoke</code> removes what <code>grant</code> wrote. When your app deletes an object, revoke its anchor:
 every other tuple on the object goes with it, in the same transaction, each recorded in the
 ledger. Anchoring the same id again starts from nothing. You should see <code>403 AUTHORIZATION_DENIED</code> if you name

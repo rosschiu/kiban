@@ -381,6 +381,66 @@
   
   
     <li class="md-nav__item">
+      <a href="../modelling-folders/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling folders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inside-or-beside/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Module inside or app beside
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelling/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Modelling practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../sdk-guide/" class="md-nav__link">
         
   
@@ -556,6 +616,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#015-2026-10-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.5 — 2026-10-22
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#014-2026-10-21" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.4 — 2026-10-21
@@ -664,6 +733,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#015-2026-10-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.1.5 — 2026-10-22
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#014-2026-10-21" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.4 — 2026-10-21
@@ -728,7 +806,22 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <p>One line per change. Versions follow <a href="https://semver.org/">Semantic Versioning</a>; the current version is in <a href="https://github.com/rosschiu/kiban/blob/main/VERSION"><code>VERSION</code></a>.</p>
-<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.1.4...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.1.5...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="015-2026-10-22"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.1.5">0.1.5</a> — 2026-10-22<a class="headerlink" href="#015-2026-10-22" title="Permanent link">&para;</a></h2>
+<p>Small fixes and three documentation pages from the first audits: modelling practices (a role
+matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
+app beside with the dual-write pattern; the SDK types match the registry, <code>make help</code> exists,
+<code>make setup</code> no longer needs <code>openssl</code>, and the README shows how to set Kiban up with a
+coding agent.</p>
+<ul>
+<li>Docs: a page on modelling folders with inherited, broken and limited access using only parent tuples and direct grants, no exclusion</li>
+<li>Docs: a page on the two integration shapes, module inside Kiban or app beside it, and the grant-first order plus reconciliation sweep an app needs; the limitations page no longer says dependencies are never loaded</li>
+<li>Docs: a modelling-practices page, structure in the model and policy in the data: a role matrix as tuples, "and" moved to the writer, inheritance without exclusion, and what is a grant versus a re-registration</li>
+<li><code>make help</code> lists every target; the contributing pages referred to it and it did not exist</li>
+<li>TypeScript SDK: <code>Capability</code> has <code>external</code>, <code>serviceClientId</code> and <code>features</code>, <code>CatalogEntry</code> has <code>external</code>, <code>serviceClientId</code> and <code>features</code>, as the registry already answers them</li>
+<li><code>make setup</code> generates secrets from <code>/dev/urandom</code> when <code>openssl</code> is absent; 0.1.4 failed on hosts without it</li>
+<li>README: how to set Kiban up with a coding agent, pointing at <code>AGENTS.md</code> with three starter prompts</li>
+</ul>
 <h2 id="014-2026-10-21"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.1.4">0.1.4</a> — 2026-10-21<a class="headerlink" href="#014-2026-10-21" title="Permanent link">&para;</a></h2>
 <p>Bugs from the first audits: a module added after the first boot is installed, manifest
 dependencies reach the registry, the Node SDK's raw client sends its token, the wire enums know
