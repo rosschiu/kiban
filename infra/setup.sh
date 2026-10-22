@@ -100,7 +100,12 @@ else
     # after host"). Hex output ([0-9a-f] only, 48 chars from 24 bytes) is never URL-meaningful
     # and needs no encoding anywhere a generated secret ends up embedded (DSN, HTTP header,
     # shell arg).
-    value="$(openssl rand -hex 24)"
+    # openssl is not on every host (lean images); the kernel's random source is.
+    if command -v openssl >/dev/null 2>&1; then
+      value="$(openssl rand -hex 24)"
+    else
+      value="$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    fi
     sed -i "s|^${key}=.*|${key}=${value}|" .env
   done
   log "generated a value for each of: $(echo "$secret_keys" | tr '\n' ' ')"

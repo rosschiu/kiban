@@ -7,7 +7,7 @@ pulls published images and needs no checkout.
 
 - Linux on x86_64 (what the project builds and tests on; other platforms are untested).
 - Docker Engine with the Compose plugin. The project is tested against Docker 29 and Compose v5.
-- `make` and `openssl` for the checkout path.
+- `make` for the checkout path; `openssl` only for the hand-run secret lines of the checkout-free path.
 - Roughly 4 GB of RAM and 2 CPU cores as a practical floor, and 10 GB of free disk. The idle
   stack uses about 1.2 GB, most of it Keycloak.
 
