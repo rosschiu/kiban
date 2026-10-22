@@ -2,7 +2,7 @@
 # Wire each target to real commands as the stack solidifies. A target that isn't
 # wired yet must fail loudly, not pass silently.
 
-.PHONY: k8s-check sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
+.PHONY: help k8s-check sdk-python-check vulncheck setup dev dev-down dev-clean public-up images-preflight images images-quickstart images-all pin-images test-stack-up test-stack-down test check fmt migrate-registry migrate-identity migrate-org migrate-authz migrate-notification migrate-timesheet migrate-docs migrate-helpdesk bench-authz test-harness web-check coverage-gate coverage-report validate-modules validate-migrations ratchet-guard license-check license-scan secret-scan docs-api docs-sdk docs docs-freshness-check docs-site quickstart-compose
 
 # VERSION defaults from the VERSION file (`v` + its contents, e.g. "v0.1.0") so `make images`
 # needs no argument on a normal release cut; `make images VERSION=v0.1.0-rc2` overrides it for an
@@ -10,6 +10,9 @@
 # pre-built images instead of building from source — see infra/compose.yaml's per-service
 # `image:` keys.
 VERSION ?= v$(shell cat VERSION)
+
+help: ## list every target with its one-line description
+	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN{FS=":.*## "}{printf "  %-24s %s\n", $$1, $$2}'
 
 setup: ## verify/report the host toolchain (docker+compose required; go/node/npm reported), scaffold .env (write-once) + infra/secrets-in/
 	@./infra/setup.sh

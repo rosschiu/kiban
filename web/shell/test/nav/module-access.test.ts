@@ -86,7 +86,7 @@ describe("useModuleAccess", () => {
 
   it("never consults the session itself: with a resolved snapshot and an expired token it keeps the real access data (GuardedRoot is the one auth gate)", async () => {
     isAuthenticated.mockReturnValue(true);
-    listCapabilities.mockResolvedValue([{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [] }]);
+    listCapabilities.mockResolvedValue([{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [] }]);
     getCatalog.mockResolvedValue([
       {
         moduleKey: "diagnostics",
@@ -98,6 +98,8 @@ describe("useModuleAccess", () => {
         port: 9000,
         licenseClass: "standard",
         manifestVersion: "1.0.0",
+        external: false,
+        features: [],
         isActive: true,
         installed: true,
         enabled: true,
@@ -134,7 +136,7 @@ describe("useModuleAccess", () => {
 
   it("returns real access data once fetched, when authenticated", async () => {
     isAuthenticated.mockReturnValue(true);
-    listCapabilities.mockResolvedValue([{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [] }]);
+    listCapabilities.mockResolvedValue([{ module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [] }]);
     getCatalog.mockResolvedValue([
       {
         moduleKey: "diagnostics",
@@ -146,6 +148,8 @@ describe("useModuleAccess", () => {
         port: 9000,
         licenseClass: "standard",
         manifestVersion: "1.0.0",
+        external: false,
+        features: [],
         isActive: true,
         installed: true,
         enabled: true,

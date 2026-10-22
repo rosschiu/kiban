@@ -6,7 +6,7 @@ import type { RegisteredModule } from "../../src/modules/registry";
 import { computeModuleAccess, computeNavEntries, emptyModuleAccess, type PlatformComposition } from "../../src/nav/compose";
 
 function capability(overrides: Partial<Capability> = {}): Capability {
-  return { module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], ...overrides };
+  return { module: "diagnostics", installed: true, enabled: true, dependencies: [], missingDependencies: [], external: false, features: [], ...overrides };
 }
 
 function catalogEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
@@ -20,6 +20,8 @@ function catalogEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     port: 9000,
     licenseClass: "standard",
     manifestVersion: "1.0.0",
+    external: false,
+    features: [],
     isActive: true,
     installed: true,
     enabled: true,
@@ -66,7 +68,7 @@ describe("computeModuleAccess", () => {
     const access = computeModuleAccess(
       composition({
         capabilities: [
-          capability({ module: "broken", missingDependencies: ["core"] }),
+          capability({ module: "broken", missingDependencies: ["core"], external: false, features: [] }),
           capability({ module: "off", enabled: false }),
           capability({ module: "absent", installed: false }),
         ],

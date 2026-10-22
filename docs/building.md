@@ -5,7 +5,8 @@ platform.
 
 !!! note "Apps and modules"
     Most applications should not be modules. An app runs beside Kiban, registers one manifest and
-    calls the API through an SDK in any language; [Integrate your app](integrate.md) is that path.
+    calls the API through an SDK in any language; [Integrate your app](integrate.md) is that path,
+    and [Module inside or app beside](inside-or-beside.md) says what each shape gives up.
     This page is the deeper, in-tree contract the four sample modules follow: Go, built by the
     platform, routed by the gateway. Read it to contribute a sample or to understand how the
     samples work.
@@ -227,7 +228,8 @@ model, as `timesheet` and `helpdesk` do). Object type, then relation name, then 
 | `{ "union": [ ...expressions ] }` | Any of the children; at least one |
 
 Any other construct (`intersection`, `exclusion`, wildcards, conditions) is outside the subset
-and refused. Every type you declare must define `"company_module": { "this": true }`, the anchor
+and refused; [Modelling folders](modelling-folders.md) shows inheritance, breaking it and
+limited access without them. Every type you declare must define `"company_module": { "this": true }`, the anchor
 every object check binds through. A type may not redeclare a base type (`user`, `system`,
 `module`, `company`, `company_module`, `module_role_binding`, `access_bundle`,
 `access_segment`, `member_directory`, `member`, `project_directory`, `project`,
