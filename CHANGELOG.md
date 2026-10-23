@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Merging the release PR tags the release: a push to main that changes `VERSION` creates `v<VERSION>` and starts the release workflow; 0.1.x needed a hand-pushed tag
+
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
