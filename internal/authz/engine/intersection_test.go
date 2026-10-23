@@ -17,7 +17,9 @@ func TestIntersection_AllChildrenMustHold(t *testing.T) {
 	    "on_deal": {"this": true},
 	    "side": {"this": true},
 	    "viewer": {"intersection": [{"computedUserset": "side"}, {"computedUserset": "on_deal"}]},
-	    "reader": {"union": [{"this": true}, {"computedUserset": "viewer"}]}
+	    "reader": {"union": [{"this": true}, {"computedUserset": "viewer"}]},
+	    "ref": {"this": true},
+	    "broken": {"intersection": [{"computedUserset": "side"}, {"tupleToUserset": {"tupleset": "ref", "computedUserset": "viewer"}}]}
 	  }}`))
 	if err != nil {
 		t.Fatal(err)
@@ -42,6 +44,13 @@ func TestIntersection_AllChildrenMustHold(t *testing.T) {
 	want := map[string]map[string]bool{
 		"viewer": {"both": true, "side-only": false, "deal-only": false, "direct": false, "nobody": false},
 		"reader": {"both": true, "side-only": false, "deal-only": false, "direct": true, "nobody": false},
+	}
+	// A child that errors (a ref tuple to a type the model does not know) fails the whole check.
+	if _, err := pool.Exec(ctx, `INSERT INTO authz.tuple (object_type, object_id, relation, subject_type, subject_id, subject_relation) VALUES ('ix_line','ix-1','ref','ghost_type','g-1','') ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := eng.Check(ctx, "ix_line", "ix-1", "broken", "user", "both"); err == nil {
+		t.Fatal("an erroring child must fail the intersection, never decide it")
 	}
 	for rel, subjects := range want {
 		for subj, allowed := range subjects {
