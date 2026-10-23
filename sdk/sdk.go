@@ -138,6 +138,38 @@ type DirectoryPage struct {
 	TotalPages int              `json:"totalPages"`
 }
 
+// PositionEntry is a position as the member-level directory lists it.
+type PositionEntry struct {
+	ID    string `json:"id"`
+	Code  string `json:"code"`
+	Title string `json:"title"`
+}
+
+// GroupEntry is an active group as the member-level directory lists it.
+type GroupEntry struct {
+	ID   string `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// PositionPage is one page of a company's positions.
+type PositionPage struct {
+	Items      []PositionEntry `json:"items"`
+	Total      int             `json:"total"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"pageSize"`
+	TotalPages int             `json:"totalPages"`
+}
+
+// GroupPage is one page of a company's active groups.
+type GroupPage struct {
+	Items      []GroupEntry `json:"items"`
+	Total      int          `json:"total"`
+	Page       int          `json:"page"`
+	PageSize   int          `json:"pageSize"`
+	TotalPages int          `json:"totalPages"`
+}
+
 // Assignment is a member holding a position for a validity window.
 type Assignment struct {
 	ID         string  `json:"id"`
@@ -323,6 +355,40 @@ func (c *Client) MemberDirectory(ctx context.Context, companyID, q string, page,
 
 // PositionHolder answers who holds positionID in companyID on date, as the app's service
 // account. A 404 APIError means nobody holds it that day.
+// PositionDirectory lists the company's positions (id, code, title) as the service account,
+// which must be a member of the company: the share-with or assign-to picker beside MemberDirectory.
+func (c *Client) PositionDirectory(ctx context.Context, companyID string, page, pageSize int) (PositionPage, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return PositionPage{}, err
+	}
+	var out PositionPage
+	err = c.do(ctx, tok, http.MethodGet, "/api/org/companies/"+url.PathEscape(companyID)+"/positions?"+pageQuery(page, pageSize), nil, &out)
+	return out, err
+}
+
+// GroupDirectory lists the company's active groups (id, code, name) as the service account.
+func (c *Client) GroupDirectory(ctx context.Context, companyID string, page, pageSize int) (GroupPage, error) {
+	tok, err := c.ServiceToken(ctx)
+	if err != nil {
+		return GroupPage{}, err
+	}
+	var out GroupPage
+	err = c.do(ctx, tok, http.MethodGet, "/api/org/companies/"+url.PathEscape(companyID)+"/groups?"+pageQuery(page, pageSize), nil, &out)
+	return out, err
+}
+
+func pageQuery(page, pageSize int) string {
+	q := url.Values{}
+	if page > 0 {
+		q.Set("page", strconv.Itoa(page))
+	}
+	if pageSize > 0 {
+		q.Set("pageSize", strconv.Itoa(pageSize))
+	}
+	return q.Encode()
+}
+
 func (c *Client) PositionHolder(ctx context.Context, companyID, positionID string, date time.Time) (Assignment, error) {
 	tok, err := c.ServiceToken(ctx)
 	if err != nil {
