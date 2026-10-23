@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- App fragments may use `intersection` ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness
+
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
