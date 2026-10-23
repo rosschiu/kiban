@@ -28,6 +28,11 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 
 ## Identity
 
+- **Decisions read one column of Keycloak's internal schema.** With `KEYCLOAK_DB_NAME` set,
+  identity reads `user_entity.enabled` from Keycloak's database and asserts that table and
+  column at start-up; a Keycloak release that renames them makes identity fall back to the
+  admin REST API with a warning, not fail. Other identity providers are not supported as a
+  state source yet; Keycloak is the embedded one.
 - **A service credential is created at bootstrap, not at runtime.** `KIBAN_SERVICE_CLIENTS`
   names the confidential clients; adding one means a restart of the `bootstrap` one-shot. The
   secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.

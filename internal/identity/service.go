@@ -77,6 +77,19 @@ type Service struct {
 	verifier *TokenVerifier
 	authz    AdminAuthorizer
 	audit    *audit.Writer
+	// userState answers the decision's "is the login enabled" step; nil means the admin client.
+	userState UserStateSource
+}
+
+// SetUserStateSource makes the state endpoint read Keycloak's enabled flag from source instead
+// of the admin client (cmd/identity/main.go picks KCDBReader or a cached admin client).
+func (svc *Service) SetUserStateSource(source UserStateSource) { svc.userState = source }
+
+func (svc *Service) userStateSource() UserStateSource {
+	if svc.userState != nil {
+		return svc.userState
+	}
+	return svc.admin
 }
 
 // NewService builds a Service. auditWriter must be constructed against
