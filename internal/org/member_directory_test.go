@@ -354,6 +354,8 @@ func TestHandlePositionAndGroupDirectory_ActiveMember_ReducedView(t *testing.T) 
 			t.Fatalf("%s: stranger status = %d, want 403", tc.path, rec.Code)
 		}
 	}
+}
+
 // TestGuestMember_RefusedTheDirectories: a guest is an active member (the company member tuple
 // exists) but every member-level read refuses them; clearing the flag restores the reads.
 func TestGuestMember_RefusedTheDirectories(t *testing.T) {

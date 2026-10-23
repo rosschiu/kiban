@@ -181,6 +181,36 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 	if st, _ = call(t, http.MethodGet, "/api/org/admin/companies/"+mine+"/positions", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol lists positions: %d", st)
 	}
+	// A guest member with a login is a member for decisions but reads no directory until Carol
+	// clears the flag.
+	gusUsername := "cadm-gus-" + strings.ToLower(platformRandString(t, 8))
+	gusPassword := "cadm-gus-" + platformRandString(t, 16)
+	platformKCEnsurePlainUser(t, plainHTTP, adminBase, kcAdmin, gusUsername, gusPassword)
+	gusBearer := platformInteractiveLogin(t, gwBase, realm, gusUsername, gusPassword)
+	gusSub := platformKCFindUser(t, plainHTTP, adminBase, kcAdmin, gusUsername)
+	if st, _ = call(t, http.MethodGet, "/api/org/me/companies", gusBearer, nil); st != http.StatusOK {
+		t.Fatalf("Gus's first request (identity provisions the user): %d", st)
+	}
+	st, env = call(t, http.MethodPost, "/api/org/admin/members", carolBearer, map[string]any{"companyId": mine, "code": "GUS", "displayName": "Gus", "isGuest": true})
+	if st != http.StatusCreated || data(env)["isGuest"] != true {
+		t.Fatalf("Carol creates a guest: %d %v", st, env)
+	}
+	gus := id(env)
+	if st, env = call(t, http.MethodPost, "/api/org/admin/members/"+gus+"/link-user", carolBearer, map[string]any{"kcSub": gusSub}); st != http.StatusOK {
+		t.Fatalf("link Gus: %d %v", st, env)
+	}
+	for _, dir := range []string{"members", "positions", "groups"} {
+		if st, _ = call(t, http.MethodGet, "/api/org/companies/"+mine+"/"+dir, gusBearer, nil); st != http.StatusForbidden {
+			t.Fatalf("guest reads the %s directory: %d, want 403", dir, st)
+		}
+	}
+	if st, env = call(t, http.MethodPut, "/api/org/admin/members/"+gus, carolBearer, map[string]any{"displayName": "Gus", "isGuest": false}); st != http.StatusOK || data(env)["isGuest"] != false {
+		t.Fatalf("Carol clears the guest flag: %d %v", st, env)
+	}
+	if st, _ = call(t, http.MethodGet, "/api/org/companies/"+mine+"/members", gusBearer, nil); st != http.StatusOK {
+		t.Fatalf("former guest reads the member directory: %d, want 200", st)
+	}
+
 	// Any active member reads the position and group directories of their company; Carol is
 	// no member of the other company and gets 403 there.
 	for _, dir := range []string{"positions", "groups"} {
