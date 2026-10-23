@@ -313,6 +313,27 @@ func TestFoundationRoutes_MemberDirectory_InjectsBearerKcSub_IgnoresClientSuppli
 	}
 }
 
+func TestFoundationRoutes_PositionAndGroupDirectory_ForwardToOrgWithBearerKcSub(t *testing.T) {
+	f := newFoundationTestFixture(t, nil)
+	bearer := f.bearerFor("alice")
+	for _, tc := range []struct{ in, out string }{
+		{"/api/org/companies/co-1/positions?kcSub=eve&page=2", "/internal/org/companies/co-1/positions/directory"},
+		{"/api/org/companies/co-1/groups?kcSub=eve", "/internal/org/companies/co-1/groups/directory"},
+	} {
+		rec := doFoundationRequest(t, f.mux, http.MethodGet, tc.in, bearer, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want 200; body=%s", tc.in, rec.Code, rec.Body.String())
+		}
+		call := f.backend.lastCall()
+		if call.path != tc.out || call.query.Get("kcSub") != "alice" {
+			t.Fatalf("%s: forwarded %s?kcSub=%s, want %s with the bearer's subject", tc.in, call.path, call.query.Get("kcSub"), tc.out)
+		}
+	}
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/groups", "", ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("no bearer: status = %d, want 401", rec.Code)
+	}
+}
+
 func TestFoundationRoutes_MemberDirectory_RequiresBearer(t *testing.T) {
 	f := newFoundationTestFixture(t, nil)
 	rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/members", "", "")
