@@ -268,6 +268,8 @@ export interface OrgMember {
   email: string;
   userId: string | null;
   isActive: boolean;
+  /** An external person the company shares with: refused the member-level directory reads. */
+  isGuest: boolean;
   user?: OrgMemberUser;
 }
 
@@ -281,6 +283,20 @@ export interface MemberDirectoryEntry {
   hasLinkedUser: boolean;
   /** `service` when the linked user is an app's service account, `person` otherwise. */
   kind: "person" | "service";
+}
+
+/** A position as the member-level directory lists it: a picker row, nothing more. */
+export interface PositionDirectoryEntry {
+  id: string;
+  code: string;
+  title: string;
+}
+
+/** An active group as the member-level directory lists it. */
+export interface GroupDirectoryEntry {
+  id: string;
+  code: string;
+  name: string;
 }
 
 /** A named seat in a company's org structure (the position mechanism behind position-based access). */

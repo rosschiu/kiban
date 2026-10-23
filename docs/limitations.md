@@ -12,8 +12,8 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **Only decisions are revocation-aware.** A route that verifies the bearer without asking for
   a decision, such as `GET /api/org/me/companies`, serves a disabled user until the token expires
   (`KIBAN_ACCESS_TOKEN_LIFESPAN`, 300 seconds by default). Decisions deny on the next check.
-- **No field-level or row-level policy on member data.** Every active member of a company can
-  read the directory, including email addresses.
+- **No field-level or row-level policy on member data.** Every active member of a company that
+  is not a guest can read the directory, including email addresses; a guest reads none of it.
 - **Keycloak's own container holds two secrets as environment variables**: its database
   password and its bootstrap admin password. Keycloak reads neither from a file. Kiban's
   services read the superadmin's initial password, the identity client secret and the Keycloak

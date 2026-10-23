@@ -16,7 +16,10 @@ Three records describe where a person sits:
 - An **org unit** is a node in a typed tree (company, division, team, territory, whatever your
   taxonomy declares). A company is always the top of its tree, and only companies sit at the top.
 - A **member** is a person's record inside one company. A member may be linked to a login (a
-  user account) or exist without one, for people who never sign in.
+  user account) or exist without one, for people who never sign in. A member marked **guest**
+  is an external person the company shares objects with: decisions treat a guest like any
+  other member, but a guest cannot read the company's directories of members, positions and
+  groups, nor a group's member list.
 - A **position** is a slot on an org unit ("Head of Sales, Region West"). An **assignment** says
   which member holds a position and for which dates. The **holder** is whoever holds it today.
 
