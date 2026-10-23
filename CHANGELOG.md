@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Member-level directories of positions and groups: `GET /api/org/companies/{id}/positions` and `.../groups` list id, code and title or name for any active member and an app's service account that is a member, in all three SDKs; the integrate page says to share with a person by granting to `member:<id>#mapped_user`
+
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or

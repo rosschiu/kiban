@@ -33,6 +33,8 @@ Every route family, in one place. Everything under `/api/` needs a bearer unless
 | `/api/auth/grants` | `POST` (grant or revoke tuples) | Superadmin, or a registered app's backend (service-client token) on its own types |
 | `/api/org/me/companies` | `GET` | Any user |
 | `/api/org/companies/{id}/members` | `GET ?q=&page=&pageSize=` | Active members of the company, or a superadmin |
+| `/api/org/companies/{id}/positions` | `GET ?page=&pageSize=` | Active members of the company, or a superadmin: id, code, title |
+| `/api/org/companies/{id}/groups` | `GET ?page=&pageSize=` | Active members of the company, or a superadmin: id, code, name of active groups |
 | `/api/org/companies/{id}/members/by-subject/{subject}` | `GET` | Superadmin, or a registered app's backend |
 | `/api/org/companies/{id}/positions/{positionId}/holder` | `GET ?date=YYYY-MM-DD` | Active members of the company, or a superadmin |
 | `/api/org/companies/{id}/groups/{groupId}/members` | `GET` | Active members of the company, or a superadmin |
