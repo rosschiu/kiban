@@ -45,16 +45,17 @@ SELECT subtree.id, subtree.type_key, subtree.parent_id, subtree.code, subtree.na
 FROM subtree ORDER BY depth, code;
 
 -- name: CreateMember :one
-INSERT INTO org.member (company_id, code, display_name, email, is_active)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO org.member (company_id, code, display_name, email, is_active, is_guest)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetMember :one
 SELECT * FROM org.member WHERE id = $1;
 
 -- name: UpdateMember :one
+-- is_guest is optional: NULL keeps the current value.
 UPDATE org.member
-SET display_name = $2, email = $3, is_active = $4
+SET display_name = $2, email = $3, is_active = $4, is_guest = COALESCE(sqlc.narg('is_guest'), is_guest)
 WHERE id = $1
 RETURNING *;
 
@@ -67,7 +68,7 @@ UPDATE org.member SET user_id = NULL WHERE id = $1 RETURNING *;
 -- name: ListMembers :many
 -- Member directory read: one SQL query, JOIN identity.user_read_v for linked-user display
 -- fields, paginated/authorized in SQL — never per-row API calls.
-SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
+SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active, m.is_guest,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
        u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
        u.kind AS user_kind
@@ -81,7 +82,7 @@ LIMIT $2 OFFSET $3;
 SELECT count(*) FROM org.member WHERE company_id = $1;
 
 -- name: GetMemberWithUser :one
-SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
+SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active, m.is_guest,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
        u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
        u.kind AS user_kind
@@ -177,7 +178,7 @@ WHERE ou.id = $1 AND ut.is_company = true;
 -- Membership fact for authz's decision.MembershipSource. Resolves the member linked to
 -- kcSub within companyId via the published identity.user_read_v join (same read path
 -- ListMembers/GetMemberWithUser already use) — never a per-row identity call.
-SELECT m.id, m.is_active
+SELECT m.id, m.is_active, m.is_guest
 FROM org.member m
 JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1 AND u.kc_sub = $2;

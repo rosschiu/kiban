@@ -119,7 +119,7 @@ func seedCompanyAndMember(t *testing.T, f *realOrgFixture, admin *pgxpool.Pool, 
 	if err != nil {
 		t.Fatalf("create company: %v", err)
 	}
-	member, err := f.store.CreateMember(ctx, "test-actor", company.ID, memberCode, "Company Scope Member", "", true)
+	member, err := f.store.CreateMember(ctx, "test-actor", company.ID, memberCode, "Company Scope Member", "", true, false)
 	if err != nil {
 		t.Fatalf("create member: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestDecisionCompanyAccessBlockedWiredToOrg(t *testing.T) {
 	if err != nil || len(members) == 0 {
 		t.Fatalf("list members: %v (n=%d)", err, len(members))
 	}
-	if _, err := f.store.UpdateMember(context.Background(), "test-actor", members[0].ID, members[0].DisplayName, members[0].Email, false); err != nil {
+	if _, err := f.store.UpdateMember(context.Background(), "test-actor", members[0].ID, members[0].DisplayName, members[0].Email, false, nil); err != nil {
 		t.Fatalf("deactivate member: %v", err)
 	}
 

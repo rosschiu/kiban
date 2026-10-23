@@ -34,7 +34,7 @@ func TestDecisionEngineRelationCheck_PositionHolderFlip(t *testing.T) {
 
 	// A second member, linked to kcSubB, in the SAME company (seedCompanyAndMember's own
 	// registerCompanyCleanup already tears down every org.member row for this companyID).
-	memberB, err := orgFixture.store.CreateMember(ctx, "test-actor", companyID, "POSACCMB", "Position Access Member B", "", true)
+	memberB, err := orgFixture.store.CreateMember(ctx, "test-actor", companyID, "POSACCMB", "Position Access Member B", "", true, false)
 	if err != nil {
 		t.Fatalf("create member B: %v", err)
 	}
