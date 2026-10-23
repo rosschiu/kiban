@@ -47,6 +47,7 @@ func freshPostgres(t *testing.T) (host string, port string) {
 		"-e", "POSTGRES_DB=kiban",
 		"-e", "KC_DB_PASSWORD="+freshPostgresPassword,
 		"-e", "KIBAN_DB_PASSWORD="+freshPostgresPassword,
+		"-e", "KIBAN_IDENTITY_DB_PASSWORD="+freshPostgresPassword,
 		"-v", bootstrapRepoRoot(t)+"/infra/postgres-init:/docker-entrypoint-initdb.d:ro",
 		"-p", fmt.Sprintf("127.0.0.1:%s:5432", freePort),
 		"postgres:18-alpine",
