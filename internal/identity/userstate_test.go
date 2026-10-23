@@ -4,7 +4,10 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -63,5 +66,32 @@ func TestCachedUserState_NeverCachesUnknown(t *testing.T) {
 	zero.UserEnabled(context.Background(), "u1") //nolint:errcheck
 	if zero.inner.(*scriptedSource).calls != 2 {
 		t.Fatal("ttl 0 must disable caching")
+	}
+}
+
+// TestHTTP_UserState_ReadsFromTheConfiguredSource: once SetUserStateSource is called, the state
+// endpoint reports what that source says, not what the admin API would.
+func TestHTTP_UserState_ReadsFromTheConfiguredSource(t *testing.T) {
+	f := newHTTPTestFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]bool{"enabled": true}) // the admin API says enabled
+	})
+	f.svc.SetUserStateSource(&scriptedSource{answer: KCStateFalse}) // the configured source says disabled
+
+	resolveReq := httptest.NewRequest(http.MethodPost, "/internal/identity/resolve", nil)
+	resolveReq.Header.Set("Authorization", "Bearer "+f.bearer(t, "kc-sub-source", "src@example.com", "source"))
+	resolveRec := httptest.NewRecorder()
+	f.svc.Routes().ServeHTTP(resolveRec, resolveReq)
+	if resolveRec.Code != http.StatusOK {
+		t.Fatalf("setup resolve failed: %d %s", resolveRec.Code, resolveRec.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodGet, "/internal/identity/users/kc-sub-source/state", nil)
+	rec := httptest.NewRecorder()
+	f.svc.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", rec.Code, rec.Body.String())
+	}
+	if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["kcEnabled"] != "false" {
+		t.Fatalf("kcEnabled = %v, want false from the configured source", data["kcEnabled"])
 	}
 }
