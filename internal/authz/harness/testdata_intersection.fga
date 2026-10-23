@@ -1,0 +1,16 @@
+model
+  schema 1.1
+
+type user
+
+type company_module
+  relations
+    define member: [user]
+
+type ix_line
+  relations
+    define company_module: [company_module]
+    define on_deal: [user]
+    define side: [user]
+    define viewer: side and on_deal
+    define reader: [user] or viewer

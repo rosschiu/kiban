@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package engine is the evaluator for the supported Zanzibar subset (this, computedUserset,
-// tupleToUserset, union). vectors.json is the regression floor and model.json is the
+// tupleToUserset, union, intersection). vectors.json is the regression floor and model.json is the
 // relations-JSON translation of internal/authz/harness/model.fga.
 package engine
 
@@ -12,7 +12,7 @@ import (
 	"slices"
 )
 
-// exprKind identifies which of the four subset constructs a relation-definition
+// exprKind identifies which of the five subset constructs a relation-definition
 // expression uses.
 type exprKind int
 
@@ -21,6 +21,7 @@ const (
 	kindComputedUserset
 	kindTupleToUserset
 	kindUnion
+	kindIntersection
 )
 
 // TupleToUserset is the `X from tupleset` construct: for every tuple (obj, Tupleset, X),
@@ -31,7 +32,7 @@ type TupleToUserset struct {
 }
 
 // Expr is a relation-definition expression restricted to the supported subset. Any other
-// OpenFGA construct (intersection, exclusion, wildcard, condition, ...) is rejected at
+// OpenFGA construct (exclusion, wildcard, condition, ...) is rejected at
 // json.Unmarshal time — the subset wall.
 type Expr struct {
 	kind            exprKind
@@ -39,11 +40,12 @@ type Expr struct {
 	computedUserset string
 	tupleToUserset  *TupleToUserset
 	union           []Expr
+	intersection    []Expr
 }
 
 // UnmarshalJSON enforces the subset wall: a relation expression object must carry exactly
 // one recognized key. Any other key (including known-outside-subset names like
-// "intersection", "exclusion", "wildcard", "condition") is rejected with the offending key
+// "exclusion", "wildcard", "condition") is rejected with the offending key
 // named in the error, fail-closed.
 func (e *Expr) UnmarshalJSON(data []byte) error {
 	var raw map[string]json.RawMessage
@@ -91,9 +93,19 @@ func (e *Expr) UnmarshalJSON(data []byte) error {
 				return fmt.Errorf(`relation expr: "union" must have at least one child`)
 			}
 			e.kind, e.union = kindUnion, children
+		case "intersection":
+			// Every child must hold. Two children at least: one would be the child itself.
+			var children []Expr
+			if err := json.Unmarshal(v, &children); err != nil {
+				return fmt.Errorf(`relation expr: "intersection": %w`, err)
+			}
+			if len(children) < 2 {
+				return fmt.Errorf(`relation expr: "intersection" must have at least two children`)
+			}
+			e.kind, e.intersection = kindIntersection, children
 		default:
 			return fmt.Errorf(
-				"relation expr: construct %q is outside the supported subset (allowed: this, computedUserset, tupleToUserset, union)",
+				"relation expr: construct %q is outside the supported subset (allowed: this, computedUserset, tupleToUserset, union, intersection)",
 				k,
 			)
 		}
@@ -167,7 +179,7 @@ func (m Model) ValidateTupleToUsersetTargets() error {
 		if ttu := e.tupleToUserset; ttu != nil && !defined[ttu.ComputedUserset] {
 			return fmt.Errorf("model: %s#%s: tupleToUserset computedUserset %q is not defined on any type of the effective model", typ, rel, ttu.ComputedUserset)
 		}
-		for _, child := range e.union {
+		for _, child := range append(append([]Expr{}, e.union...), e.intersection...) {
 			if err := walk(typ, rel, child); err != nil {
 				return err
 			}
@@ -213,8 +225,8 @@ func validateSelfRefs(m Model, typ, rel string, e Expr) error {
 			return fmt.Errorf("model: %s#%s: tupleToUserset tupleset %q not defined on type %q", typ, rel, e.tupleToUserset.Tupleset, typ)
 		}
 		return nil
-	case kindUnion:
-		for _, child := range e.union {
+	case kindUnion, kindIntersection:
+		for _, child := range append(append([]Expr{}, e.union...), e.intersection...) {
 			if err := validateSelfRefs(m, typ, rel, child); err != nil {
 				return err
 			}
