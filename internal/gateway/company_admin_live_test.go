@@ -196,7 +196,7 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 	if st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/handover", carolBearer, map[string]any{"memberId": dave}); st != http.StatusOK {
 		t.Fatalf("Carol hands it back: %d %v", st, env)
 	}
-	assignment = id(env["data"].(map[string]any)["assignment"].(map[string]any))
+	assignment, _ = env["data"].(map[string]any)["assignment"].(map[string]any)["id"].(string)
 	if st, env = call(t, http.MethodPost, "/api/org/admin/assignments/"+assignment+"/end", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol ends an assignment: %d %v", st, env)
 	}
