@@ -4,6 +4,8 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+- Decisions read the user's enabled flag from Keycloak's database with one local `SELECT` (read-only role `kiban_kcread`, `KEYCLOAK_DB_NAME`), instead of calling the admin REST API on every check; without that database the API answer is cached for `KIBAN_USER_STATE_CACHE_SECONDS`
+
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
