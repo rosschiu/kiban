@@ -7,11 +7,13 @@ import type {
   EffectiveAccessBatchResult,
   EffectiveAccessDecision,
   EffectiveAccessRequest,
+  GroupDirectoryEntry,
   MemberDirectoryEntry,
   OrgAssignment,
   OrgGroupMember,
   OrgMeCompany,
-  Page
+  Page,
+  PositionDirectoryEntry
 } from "../types.js";
 import type { ServiceCredentials } from "./credentials.js";
 
@@ -95,6 +97,11 @@ export interface AppClient {
   /** One page of the company's active members, as the app's service account (which must be a
    * member of the company); `q` filters on a substring of display name or email. */
   memberDirectory(companyId: string, q?: string, page?: number, pageSize?: number): Promise<Page<MemberDirectoryEntry>>;
+  /** The company's positions (id, code, title), as the app's service account, for a share-with
+   * or assign-to picker. */
+  positionDirectory(companyId: string, page?: number, pageSize?: number): Promise<Page<PositionDirectoryEntry>>;
+  /** The company's active groups (id, code, name), as the app's service account. */
+  groupDirectory(companyId: string, page?: number, pageSize?: number): Promise<Page<GroupDirectoryEntry>>;
   /** Who holds the position on `date` (`YYYY-MM-DD`, default today); a 404 means nobody. */
   positionHolder(companyId: string, positionId: string, date?: string): Promise<OrgAssignment>;
   /** The group's current members, as the app's service account. */
@@ -179,6 +186,14 @@ export function createAppClient(config: AppClientConfig): AppClient {
         { headers: await asService() }
       );
     },
+    positionDirectory: async (companyId, page, pageSize) =>
+      api.request<Page<PositionDirectoryEntry>>(`/api/org/companies/${encodeURIComponent(companyId)}/positions`, {
+        headers: await asService(), query: { page, pageSize }
+      }),
+    groupDirectory: async (companyId, page, pageSize) =>
+      api.request<Page<GroupDirectoryEntry>>(`/api/org/companies/${encodeURIComponent(companyId)}/groups`, {
+        headers: await asService(), query: { page, pageSize }
+      }),
     positionHolder: async (companyId, positionId, date) =>
       api.request<OrgAssignment>(
         `/api/org/companies/${encodeURIComponent(companyId)}/positions/${encodeURIComponent(positionId)}/holder?date=${date ?? new Date().toISOString().slice(0, 10)}`,
