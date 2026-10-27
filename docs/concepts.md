@@ -64,7 +64,7 @@ is created or deactivated, so "is an active member" is answered by the same grap
 else.
 
 Every request a module handles becomes a **decision**, eight ordered steps: the subject exists;
-the login is enabled; the user lifecycle is active; for a global-scope question, the required
+the login is enabled (read from Keycloak's own store, see [Operating](operating.md#configuration)); the user lifecycle is active; for a global-scope question, the required
 platform role is held; for a company-scope question, the company is active, the subject is a
 member, not blocked, and holds any required company role; the module is enabled (for the
 whole deployment); the object is bound to that company and the relation holds through the tuple

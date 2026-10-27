@@ -46,6 +46,14 @@ cover.
 The actor of every request is the verified bearer token; client-supplied identity headers are
 rejected.
 
+A decision reads the user's state from two places: Kiban's own lifecycle column, and Keycloak's
+enabled flag. The flag is read from Keycloak's database directly when it is on the same
+Postgres server (the shipped shape, `KEYCLOAK_DB_NAME`), so a disable in Keycloak is refused on
+the very next check; when identity has to ask the admin REST API instead, the answer is cached
+for `KIBAN_USER_STATE_CACHE_SECONDS` and a disable is refused within that window. Any failure to
+read the flag is an unknown state and the decision is refused, never allowed. See
+[Operating](operating.md#configuration).
+
 Every mutation is audited in the same transaction, with the actor taken from the verified token
 (never from the request body) and the request's correlation id. A definite denial on an
 administrative route is audited with its reason. Foundation audit tables refuse updates, deletes
