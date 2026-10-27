@@ -70,12 +70,18 @@ func newSubjectScopedProxy(target *url.URL, internalPath string) http.Handler {
 // bearer's own subject, overwriting any client-supplied value. "q"/"page"/"pageSize" pass
 // through unchanged (query scoping, not identity, per newSubjectScopedProxy's own doc comment).
 func newMemberDirectoryProxy(target *url.URL) http.Handler {
+	return newDirectoryProxy(target, "/members")
+}
+
+// newDirectoryProxy forwards a company directory read (members, positions or groups) to org
+// with the bearer's own subject as kcSub; org's handler enforces active membership or superadmin.
+func newDirectoryProxy(target *url.URL, suffix string) http.Handler {
 	return &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.Out.URL.Scheme = target.Scheme
 			pr.Out.URL.Host = target.Host
 			pr.Out.Host = target.Host
-			pr.Out.URL.Path = "/internal/org/companies/" + pr.In.PathValue("companyId") + "/members"
+			pr.Out.URL.Path = "/internal/org/companies/" + pr.In.PathValue("companyId") + suffix
 			pr.Out.URL.RawPath = ""
 
 			authCtx, _ := AuthFromContext(pr.In.Context())
@@ -115,6 +121,9 @@ func mountFoundationRoutes(mux routeMux, verifier *TokenVerifier, prov *Provisio
 	// gate (internal/org/http.go's requireMemberOrAdmin); this route's own job is only bearer
 	// auth + kcSub injection, same division of labor as summary/me-companies above.
 	mux.Handle("GET /api/org/companies/{companyId}/members", authed(newMemberDirectoryProxy(orgTarget)))
+	// The same picker for positions and groups (id, code, title or name; active only).
+	mux.Handle("GET /api/org/companies/{companyId}/positions", authed(newDirectoryProxy(orgTarget, "/positions/directory")))
+	mux.Handle("GET /api/org/companies/{companyId}/groups", authed(newDirectoryProxy(orgTarget, "/groups/directory")))
 
 	// A position's holder on a date and a group's members: readable by any active member of
 	// the company (an app's service account included, once it is a member) or the superadmin;
