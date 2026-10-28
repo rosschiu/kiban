@@ -1121,6 +1121,50 @@ paths:
         "409": { $ref: "#/components/responses/PositionHeld" }
         "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
 
+  /api/org/admin/positions/{id}/handover:
+    post:
+      operationId: adminHandoverPosition
+      summary: Hand a held position to another member in one step (superadmin, or an administrator of the company)
+      description: >
+        Ends the current assignment and creates the new one in one transaction, so no check
+        between the two finds the position empty. An empty position is a 422 (assign instead);
+        a stale `expectedAssignmentId` is a 409 so two administrators cannot hand the same
+        chair over twice; handing it to the current holder changes nothing and answers 200.
+        Both audit events carry the same `handoverId`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId: { type: string, format: uuid }
+                expectedAssignmentId: { type: string, format: uuid, description: "The assignment the caller believes is current; 409 when it is not." }
+      responses:
+        "200":
+          description: The ended assignment and the new one
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/OrgHandover" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/PositionHeld" }
+        "422":
+          description: The position has no current holder (VALIDATION_ERROR); assign instead
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+        "503": { $ref: "#/components/responses/AuthorizationUnavailable" }
+
   /api/org/admin/assignments/{id}/end:
     post:
       operationId: adminEndAssignmentNow
@@ -1638,6 +1682,12 @@ components:
         memberId: { type: string, format: uuid }
         validFrom: { type: string, format: date, description: "Plain date (YYYY-MM-DD), not date-time." }
         validTo: { type: string, format: date, nullable: true, description: "Plain date (YYYY-MM-DD), not date-time." }
+
+    OrgHandover:
+      type: object
+      properties:
+        ended: { allOf: [ { $ref: "#/components/schemas/OrgAssignment" } ], nullable: true, description: "Null when the member already held the position." }
+        assignment: { $ref: "#/components/schemas/OrgAssignment" }
 
     OrgGroup:
       type: object

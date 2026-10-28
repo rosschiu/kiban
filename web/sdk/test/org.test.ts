@@ -94,6 +94,20 @@ describe("createOrgClient", () => {
     expect(JSON.parse(init.body as string)).toEqual({ title: "CFO (interim)", orgUnitId: "bu1" });
   });
 
+  it("adminHandoverPosition() posts {memberId, expectedAssignmentId} to /api/org/admin/positions/{id}/handover", async () => {
+    const ended = { id: "a1", positionId: "p1", memberId: "m1", validFrom: "2026-08-17", validTo: "2026-10-23" };
+    const assignment = { id: "a2", positionId: "p1", memberId: "m2", validFrom: "2026-10-23", validTo: null };
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(200, { data: { ended, assignment } }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    const result = await client.adminHandoverPosition("p1", { memberId: "m2", expectedAssignmentId: "a1" });
+
+    expect(result).toEqual({ ended, assignment });
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://gateway.test/api/org/admin/positions/p1/handover");
+    expect(JSON.parse(init.body as string)).toEqual({ memberId: "m2", expectedAssignmentId: "a1" });
+  });
+
   it("adminAssignPosition() posts {memberId} to /api/org/admin/positions/{id}/assignments", async () => {
     const assignment = { id: "a1", positionId: "p1", memberId: "m1", validFrom: "2026-08-17", validTo: null };
     const fetchFn = vi.fn().mockResolvedValue(jsonResponse(201, { data: assignment }));
