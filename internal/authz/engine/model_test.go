@@ -28,8 +28,10 @@ func TestModel(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects intersection", func(t *testing.T) {
-		expectRejected(t, `{"thing":{"viewer":{"intersection":[{"this":true},{"computedUserset":"admin"}]}}}`, "intersection")
+	t.Run("accepts intersection", func(t *testing.T) {
+		if _, err := LoadModel([]byte(`{"thing":{"admin":{"this":true},"viewer":{"intersection":[{"this":true},{"computedUserset":"admin"}]}}}`)); err != nil {
+			t.Fatalf("intersection is in the subset since 0.2.0: %v", err)
+		}
 	})
 	t.Run("rejects exclusion", func(t *testing.T) {
 		expectRejected(t, `{"thing":{"viewer":{"exclusion":{"base":{"this":true},"subtract":{"computedUserset":"banned"}}}}}`, "exclusion")

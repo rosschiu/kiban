@@ -6,6 +6,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 - Member-level directories of positions and groups: `GET /api/org/companies/{id}/positions` and `.../groups` list id, code and title or name for any active member and an app's service account that is a member, in all three SDKs; the integrate page says to share with a person by granting to `member:<id>#mapped_user`
 - Decisions read the user's enabled flag from Keycloak's database with one local `SELECT` (read-only role `kiban_kcread`, `KEYCLOAK_DB_NAME`), instead of calling the admin REST API on every check; without that database the API answer is cached for `KIBAN_USER_STATE_CACHE_SECONDS`
+- App fragments may use `intersection` ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness
 
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role

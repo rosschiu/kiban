@@ -202,6 +202,19 @@ func (ec *evalCtx) evalExpr(ctx context.Context, objType, objID, rel string, e E
 			}
 		}
 		return false, nil
+	case kindIntersection:
+		// Every child must hold; the first false child decides. A cycle cut beneath a child
+		// makes it false, and check() already refuses to memoize a false computed under a cut.
+		for _, child := range e.intersection {
+			ok, err := ec.evalExpr(ctx, objType, objID, rel, child, depth)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				return false, nil
+			}
+		}
+		return true, nil
 	default:
 		return false, &CheckError{Code: "UNKNOWN_RELATION", Msg: "unrecognized expression kind"}
 	}
