@@ -22,6 +22,18 @@ describe("createOrgClient", () => {
     expect(init.method ?? "GET").toBe("GET");
   });
 
+  it("positionDirectory() and groupDirectory() call the member-level company routes with paging", async () => {
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: { items: [{ id: "p1", code: "CFO", title: "CFO" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { items: [{ id: "g1", code: "SALES", name: "Sales" }], total: 1, page: 2, pageSize: 10, totalPages: 1 } }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    expect((await client.positionDirectory("c1")).items[0]?.title).toBe("CFO");
+    expect((await client.groupDirectory("c1", 2, 10)).items[0]?.name).toBe("Sales");
+    expect((fetchFn.mock.calls[0] as [string])[0]).toBe("https://gateway.test/api/org/companies/c1/positions");
+    expect((fetchFn.mock.calls[1] as [string])[0]).toBe("https://gateway.test/api/org/companies/c1/groups?page=2&pageSize=10");
+  });
+
   // ---- The gateway-exposed `/api/org/admin/...` position surface. ----
 
   it("adminListPositions() calls GET /api/org/admin/companies/{companyId}/positions with page/pageSize query params", async () => {
@@ -80,6 +92,20 @@ describe("createOrgClient", () => {
     expect(url).toBe("https://gateway.test/api/org/admin/positions/p1");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body as string)).toEqual({ title: "CFO (interim)", orgUnitId: "bu1" });
+  });
+
+  it("adminHandoverPosition() posts {memberId, expectedAssignmentId} to /api/org/admin/positions/{id}/handover", async () => {
+    const ended = { id: "a1", positionId: "p1", memberId: "m1", validFrom: "2026-08-17", validTo: "2026-10-23" };
+    const assignment = { id: "a2", positionId: "p1", memberId: "m2", validFrom: "2026-10-23", validTo: null };
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(200, { data: { ended, assignment } }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    const result = await client.adminHandoverPosition("p1", { memberId: "m2", expectedAssignmentId: "a1" });
+
+    expect(result).toEqual({ ended, assignment });
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://gateway.test/api/org/admin/positions/p1/handover");
+    expect(JSON.parse(init.body as string)).toEqual({ memberId: "m2", expectedAssignmentId: "a1" });
   });
 
   it("adminAssignPosition() posts {memberId} to /api/org/admin/positions/{id}/assignments", async () => {

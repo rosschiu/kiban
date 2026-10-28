@@ -181,6 +181,36 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 	if st, _ = call(t, http.MethodGet, "/api/org/admin/companies/"+mine+"/positions", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol lists positions: %d", st)
 	}
+	// One call hands the position from Dave to Erin, and back, so the ended assignment below is
+	// Dave's again.
+	st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/handover", carolBearer, map[string]any{"memberId": erin, "expectedAssignmentId": assignment})
+	if st != http.StatusOK {
+		t.Fatalf("Carol hands the position over: %d %v", st, env)
+	}
+	if data, _ := env["data"].(map[string]any); data["ended"].(map[string]any)["id"] != assignment || data["assignment"].(map[string]any)["memberId"] != erin {
+		t.Fatalf("handover body = %v", env)
+	}
+	if st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/handover", carolBearer, map[string]any{"memberId": dave, "expectedAssignmentId": assignment}); st != http.StatusConflict {
+		t.Fatalf("stale expectedAssignmentId: %d %v, want 409", st, env)
+	}
+	if st, env = call(t, http.MethodPost, "/api/org/admin/positions/"+position+"/handover", carolBearer, map[string]any{"memberId": dave}); st != http.StatusOK {
+		t.Fatalf("Carol hands it back: %d %v", st, env)
+	}
+	assignment, _ = env["data"].(map[string]any)["assignment"].(map[string]any)["id"].(string)
+
+	// Any active member reads the position and group directories of their company; Carol is
+	// no member of the other company and gets 403 there.
+	for _, dir := range []string{"positions", "groups"} {
+		if st, env = call(t, http.MethodGet, "/api/org/companies/"+mine+"/"+dir, carolBearer, nil); st != http.StatusOK {
+			t.Fatalf("Carol reads the %s directory: %d %v", dir, st, env)
+		}
+		if st, _ = call(t, http.MethodGet, "/api/org/companies/"+other+"/"+dir, carolBearer, nil); st != http.StatusForbidden {
+			t.Fatalf("outsider reads the %s directory: %d, want 403", dir, st)
+		}
+	}
+	if data, _ := env["data"].(map[string]any); data["total"] == nil {
+		t.Fatalf("group directory is not a page: %v", env)
+	}
 	if st, env = call(t, http.MethodPost, "/api/org/admin/assignments/"+assignment+"/end", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol ends an assignment: %d %v", st, env)
 	}

@@ -1528,6 +1528,19 @@ func (s *Store) AssignNow(ctx context.Context, actor string, positionID, memberI
 	case !errors.Is(err, pgx.ErrNoRows):
 		return Assignment{}, fmt.Errorf("org: current holder: %w", err)
 	}
+	assignment, err := s.createAssignmentTx(ctx, tx, q, actor, positionID, memberID, validFrom, nil)
+	if err != nil {
+		return Assignment{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
+	}
+	return assignment, nil
+}
+
+// createAssignmentTx inserts the open assignment, grants the holder tuple and audits, inside
+// the caller's transaction. extra is merged into the audit payload (a handover names its pair).
+func (s *Store) createAssignmentTx(ctx context.Context, tx pgx.Tx, q *Queries, actor string, positionID, memberID uuid.UUID, validFrom time.Time, extra map[string]any) (Assignment, error) {
 	asgRow, err := q.CreateAssignment(ctx, CreateAssignmentParams{
 		PositionID: pgFromUUID(positionID), MemberID: pgFromUUID(memberID), ValidFrom: pgDate(validFrom), ValidTo: pgtype.Date{},
 	})
@@ -1543,16 +1556,16 @@ func (s *Store) AssignNow(ctx context.Context, actor string, positionID, memberI
 		return Assignment{}, fmt.Errorf("org: grant position holder tuple: %w", err)
 	}
 
+	payload := map[string]any{
+		"positionId": positionID.String(), "memberId": memberID.String(), "validFrom": validFrom.Format("2006-01-02"),
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
 	if err := s.audit.Record(ctx, tx, audit.Event{
-		Actor: actor, Action: "org.assignment.create", Subject: "assignment:" + assignment.ID.String(),
-		Payload: map[string]any{
-			"positionId": positionID.String(), "memberId": memberID.String(), "validFrom": validFrom.Format("2006-01-02"),
-		},
+		Actor: actor, Action: "org.assignment.create", Subject: "assignment:" + assignment.ID.String(), Payload: payload,
 	}); err != nil {
 		return Assignment{}, fmt.Errorf("org: audit mutation: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
 	}
 	return assignment, nil
 }
@@ -1590,6 +1603,19 @@ func (s *Store) EndAssignment(ctx context.Context, actor string, id uuid.UUID) (
 		return Assignment{}, &ValidationError{Field: "validTo", Message: "cannot end an assignment before it starts"}
 	}
 
+	assignment, err := s.endAssignmentTx(ctx, tx, q, actor, id, validTo, nil)
+	if err != nil {
+		return Assignment{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
+	}
+	return assignment, nil
+}
+
+// endAssignmentTx closes the assignment as of validTo, revokes the holder tuple when no other
+// open assignment for the pair still confers it, and audits, inside the caller's transaction.
+func (s *Store) endAssignmentTx(ctx context.Context, tx pgx.Tx, q *Queries, actor string, id uuid.UUID, validTo time.Time, extra map[string]any) (Assignment, error) {
 	row, err := q.EndAssignment(ctx, EndAssignmentParams{ID: pgFromUUID(id), ValidTo: pgDate(validTo)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1616,17 +1642,17 @@ func (s *Store) EndAssignment(ctx context.Context, actor string, id uuid.UUID) (
 		}
 	}
 
+	payload := map[string]any{
+		"positionId": assignment.PositionID.String(), "memberId": assignment.MemberID.String(),
+		"validFrom": assignment.ValidFrom.Format("2006-01-02"), "validTo": validTo.Format("2006-01-02"),
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
 	if err := s.audit.Record(ctx, tx, audit.Event{
-		Actor: actor, Action: "org.assignment.end", Subject: "assignment:" + id.String(),
-		Payload: map[string]any{
-			"positionId": assignment.PositionID.String(), "memberId": assignment.MemberID.String(),
-			"validFrom": assignment.ValidFrom.Format("2006-01-02"), "validTo": validTo.Format("2006-01-02"),
-		},
+		Actor: actor, Action: "org.assignment.end", Subject: "assignment:" + id.String(), Payload: payload,
 	}); err != nil {
 		return Assignment{}, fmt.Errorf("org: audit mutation: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
 	}
 	return assignment, nil
 }

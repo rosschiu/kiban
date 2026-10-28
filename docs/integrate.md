@@ -435,14 +435,18 @@ the app defining its own model, not acting in the company.
 
 ### 11. Read the org
 
-Four reads cover most approval and routing needs. The app's service account must be a member of
-the company for the last three (step 10).
+Six reads cover most approval, routing and sharing needs. The app's service account must be a
+member of the company for all but the first (step 10). The three directories are the source
+for a "share with" or "assign to" picker: people, positions and groups, each reduced to what a
+picker shows.
 
 === "Node"
 
     ```ts
     const companies = await kiban.meCompanies(userBearer);                 // what this user may see
-    const page      = await kiban.memberDirectory(companyId, "ali");       // active members, kind person|service
+    const people    = await kiban.memberDirectory(companyId, "ali");       // active members, kind person|service
+    const positions = await kiban.positionDirectory(companyId);            // id, code, title
+    const groups    = await kiban.groupDirectory(companyId);               // id, code, name (active)
     const holder    = await kiban.positionHolder(companyId, positionId, "2026-10-01");
     const members   = await kiban.groupMembers(companyId, groupId);
     ```
@@ -451,7 +455,9 @@ the company for the last three (step 10).
 
     ```python
     companies = kiban.me_companies(user_bearer)
-    page      = kiban.member_directory(company_id, q="ali")
+    people    = kiban.member_directory(company_id, q="ali")
+    positions = kiban.position_directory(company_id)
+    groups    = kiban.group_directory(company_id)
     holder    = kiban.position_holder(company_id, position_id, "2026-10-01")   # KibanApiError 404: nobody that day
     members   = kiban.group_members(company_id, group_id)
     ```
@@ -460,10 +466,17 @@ the company for the last three (step 10).
 
     ```go
     companies, err := kiban.MeCompanies(ctx, userBearer)
-    page, err      := kiban.MemberDirectory(ctx, companyID, "ali", 1, 25)
+    people, err    := kiban.MemberDirectory(ctx, companyID, "ali", 1, 25)
+    positions, err := kiban.PositionDirectory(ctx, companyID, 1, 25)
+    groups, err    := kiban.GroupDirectory(ctx, companyID, 1, 25)
     holder, err    := kiban.PositionHolder(ctx, companyID, positionID, time.Now())
     members, err   := kiban.GroupMembers(ctx, companyID, groupID)
     ```
+
+To share with a person picked from the member directory, grant to the member, not to a
+subject: `subjectType: "member"`, `subjectId: <member id>`, `subjectRelation: "mapped_user"`.
+Kiban keeps the member-to-user link itself, so the share follows the person's current login
+and ends with the membership, and no subject lookup is needed.
 
 For a page with many permission-driven controls, ask once: `batchCan` / `batch_can` / `BatchCan`
 take up to 100 object-relation pairs with the user's bearer and answer one decision each.
@@ -679,7 +692,8 @@ try {
       // the module is off for this deployment
       break;
     case ApiErrorCode.PositionHeld:
-      // someone holds the position: err.details.assignmentId is the tenure to end first
+      // someone holds the position: call adminHandoverPosition with err.details.assignmentId
+      // as expectedAssignmentId, which ends it and assigns in one step
       break;
     case ApiErrorCode.ValidationError: // org and the platform routes
     case ApiErrorCode.ValidationFailed: // the authorization service
@@ -785,7 +799,7 @@ All on the gateway origin. The full contract is the [Platform API](api/platform.
 | `GET /api/org/companies/{id}/members?q=&page=&pageSize=` | Member directory of one company | Active members of that company, or a superadmin |
 | `/api/org/admin/units`, `/api/org/admin/units/{id}`, `.../subtree` | Company and org-unit administration | Superadmin |
 | `/api/org/admin/members`, `/api/org/admin/members/{id}`, `.../link-user` | Member administration | Superadmin, or an administrator of that company |
-| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
+| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/positions/{id}/handover`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
 | `POST /api/platform/admin/apps` | Register an app from its manifest | Superadmin |
 | `GET /api/platform/capabilities[/{module}]`, `GET /api/platform/catalog` | What is registered, installed and enabled | Any bearer |
 | `POST /api/platform/admin/modules/{key}/enable`, `.../disable`; `POST /api/platform/admin/platform-roles`, `DELETE .../platform-roles/{role}/{subjectId}` | App and module enablement, the superadmin role | Superadmin |

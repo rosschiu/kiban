@@ -33,6 +33,9 @@ func TestExprUnmarshalErrors(t *testing.T) {
 		{"zero keys", `{"thing":{"r":{}}}`, `expected exactly 1 key, got 0`},
 		{"two keys triggers sortedKeys in the error message", `{"thing":{"r":{"this":true,"computedUserset":"x"}}}`, `got 2 ([computedUserset this])`},
 		{"unrecognized construct outside the subset", `{"thing":{"r":{"exclusion":{}}}}`, `outside the supported subset`},
+		{"intersection malformed payload", `{"thing":{"r":{"intersection":"not an array"}}}`, `"intersection":`},
+		{"intersection with one child", `{"thing":{"r":{"intersection":[{"this":true}]}}}`, `at least two children`},
+		{"intersection child references an unknown relation", `{"thing":{"r":{"intersection":[{"this":true},{"computedUserset":"ghost"}]}}}`, `computedUserset "ghost" not defined`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

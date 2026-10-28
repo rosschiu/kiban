@@ -283,6 +283,20 @@ export interface MemberDirectoryEntry {
   kind: "person" | "service";
 }
 
+/** A position as the member-level directory lists it: a picker row, nothing more. */
+export interface PositionDirectoryEntry {
+  id: string;
+  code: string;
+  title: string;
+}
+
+/** An active group as the member-level directory lists it. */
+export interface GroupDirectoryEntry {
+  id: string;
+  code: string;
+  name: string;
+}
+
 /** A named seat in a company's org structure (the position mechanism behind position-based access). */
 export interface OrgPosition {
   id: string;
@@ -299,6 +313,13 @@ export interface OrgAssignment {
   memberId: string;
   validFrom: string;
   validTo: string | null;
+}
+
+/** The result of a position handover: the assignment that ended (null when the member already
+ * held the position) and the one that now holds it. */
+export interface OrgHandover {
+  ended: OrgAssignment | null;
+  assignment: OrgAssignment;
 }
 
 /** The admin position-list row — a position plus its CURRENT assignment

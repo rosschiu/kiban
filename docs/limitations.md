@@ -28,6 +28,13 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 
 ## Identity
 
+- **Decisions read one column of Keycloak's internal schema.** With `KEYCLOAK_DB_NAME` set,
+  identity reads `user_entity.enabled` from Keycloak's database and asserts that table and
+  column at start-up; a Keycloak release that renames them makes identity fall back to the
+  admin REST API with a warning, not fail. The read is tested against the Keycloak release
+  Kiban embeds (26.6, pinned by digest in `infra/keycloak-build/Dockerfile`), not against
+  other releases. Other identity providers are not supported as a state source yet; Keycloak
+  is the embedded one.
 - **A service credential is created at bootstrap, not at runtime.** `KIBAN_SERVICE_CLIENTS`
   names the confidential clients; adding one means a restart of the `bootstrap` one-shot. The
   secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.
@@ -81,6 +88,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A module is compiled into the platform.** The four sample modules are built by the platform's
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.
+- **No exclusion, wildcards or conditions in a fragment.** `union` and `intersection` are
+  supported; "everyone except Carol" is modelled through groups and direct grants
+  ([Modelling practices](modelling.md)).
 - **Dependency version ranges are validated, not enforced at runtime.** The registry loads a
   manifest's dependencies and the gateway refuses a module whose dependency is not installed and
   enabled (`MODULE_DEPENDENCY_MISSING`); the `versionRange` is checked by the validator only.

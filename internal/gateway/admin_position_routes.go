@@ -45,6 +45,14 @@ func rewriteAdminPositionAssignmentsPath() func(*http.Request) string {
 	}
 }
 
+// rewriteAdminPositionHandoverPath rewrites the handover admin route to org's
+// `/internal/org/positions/{id}/handover`; the company comes from the position server-side.
+func rewriteAdminPositionHandoverPath() func(*http.Request) string {
+	return func(r *http.Request) string {
+		return "/internal/org/positions/" + r.PathValue("id") + "/handover"
+	}
+}
+
 // rewriteAdminAssignmentEndPath rewrites the end-now admin route to org's existing
 // `/internal/org/assignments/{id}/end` — no body is read on either side (server-dated).
 func rewriteAdminAssignmentEndPath() func(*http.Request) string {
@@ -74,6 +82,8 @@ func mountAdminPositionRoutes(mux routeMux, verifier *TokenVerifier, prov *Provi
 		guarded("org.position.admin_update", companyFromOrg(orgTarget, "positions", "id"), rewriteAdminPositionUpdatePath()))
 	mux.Handle("POST /api/org/admin/positions/{id}/assignments",
 		guarded("org.assignment.admin_create", companyFromOrg(orgTarget, "positions", "id"), rewriteAdminPositionAssignmentsPath()))
+	mux.Handle("POST /api/org/admin/positions/{id}/handover",
+		guarded("org.assignment.admin_handover", companyFromOrg(orgTarget, "positions", "id"), rewriteAdminPositionHandoverPath()))
 	mux.Handle("POST /api/org/admin/assignments/{id}/end",
 		guarded("org.assignment.admin_end", companyFromOrg(orgTarget, "assignments", "id"), rewriteAdminAssignmentEndPath()))
 }

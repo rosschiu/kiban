@@ -150,8 +150,12 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	}, http.StatusUnprocessableEntity)
 	step("registerApp", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{
 		"key": appKey, "displayName": "Live Story", "version": "1.0.0", "serviceClientId": clientID,
-		"features":      []string{appKey + ".ticket.view"},
-		"authzFragment": map[string]any{"livestory_ticket": map[string]any{"company_module": map[string]any{"this": true}, "viewer": map[string]any{"this": true}}},
+		"features": []string{appKey + ".ticket.view"},
+		"authzFragment": map[string]any{"livestory_ticket": map[string]any{
+			"company_module": map[string]any{"this": true}, "viewer": map[string]any{"this": true},
+			"on_deal": map[string]any{"this": true}, "delivery_side": map[string]any{"this": true},
+			"delivery_viewer": map[string]any{"intersection": []any{map[string]any{"computedUserset": "delivery_side"}, map[string]any{"computedUserset": "on_deal"}}},
+		}},
 	}, http.StatusOK)
 	step("registerApp/422", http.MethodPost, "/api/platform/admin/apps", adminBearer, map[string]any{"key": "Bad Key"}, http.StatusUnprocessableEntity)
 	step("enableApp", http.MethodPost, "/api/platform/admin/modules/"+appKey+"/enable", adminBearer, nil, http.StatusOK)
@@ -277,6 +281,27 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if err := app.Revoke(ctx, companyID, viaPos(posA)); err != nil {
 		t.Fatalf("revoke position viewer: %v", err)
 	}
+	// "And": delivery_viewer needs both delivery_side and on_deal. One fact alone grants nothing.
+	andReq := sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "delivery_viewer"}
+	andFact := func(rel string) sdk.Tuple {
+		return sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: rel, SubjectType: "user", SubjectID: userSub}
+	}
+	if err := app.Grant(ctx, companyID, andFact("delivery_side")); err != nil {
+		t.Fatalf("grant delivery_side: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, andReq); d.Allowed {
+		t.Fatal("one fact of an intersection must not grant")
+	}
+	if err := app.Grant(ctx, companyID, andFact("on_deal")); err != nil {
+		t.Fatalf("grant on_deal: %v", err)
+	}
+	if d, _ := app.Can(ctx, userBearer, andReq); !d.Allowed {
+		t.Fatalf("both facts must grant: %+v", d)
+	}
+	if err := app.Revoke(ctx, companyID, andFact("delivery_side"), andFact("on_deal")); err != nil {
+		t.Fatalf("revoke facts: %v", err)
+	}
+
 	// Revoking the anchor deletes the object: every other tuple on it goes too, the user is
 	// denied at once, and anchoring the same id again revives nothing.
 	obj2 := &struct {
