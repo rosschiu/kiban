@@ -47,6 +47,9 @@ Three kinds of administrator exist:
 A user is a person or a service: an app's backend signs in as its service account, a Keycloak
 user that authenticates with a client secret. Authorization treats both alike, membership
 included; the member directory carries the kind so people and services can be told apart.
+Any active member reads the company's three directories, members, positions and groups, each
+reduced to what a share-with or assign-to picker shows; the structure behind them is
+administration.
 
 Multi-factor policy (authenticator app or passkey) can be required globally or per user; a
 per-user override can only raise the requirement.

@@ -74,7 +74,7 @@ check for the anchor; see [limitations](limitations.md).
 ```
 
 Relations follow the base model's grammar (`this`, `computedUserset`, `tupleToUserset`,
-`union`); the
+`union`, `intersection`); the
 [Building](building.md#authorization-fragment-authzfragmentjson) page documents it. A type the
 base model or another app already declares is refused.
 
