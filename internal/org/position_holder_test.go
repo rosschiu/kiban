@@ -100,7 +100,7 @@ func TestPositionHolder_AssignNow_InactiveMemberRejected(t *testing.T) {
 
 	company := mustCreateCompany(t, store, "PH2")
 	position := mustCreatePosition(t, store, company.ID, company.ID, "PH2-POS")
-	member, err := store.CreateMember(ctx, "test-actor", company.ID, "PH2-MEM", "Inactive Member", "", false)
+	member, err := store.CreateMember(ctx, "test-actor", company.ID, "PH2-MEM", "Inactive Member", "", false, false)
 	if err != nil {
 		t.Fatalf("create inactive member: %v", err)
 	}

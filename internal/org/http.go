@@ -492,12 +492,12 @@ func (svc *Service) requireMemberOrAdmin(w http.ResponseWriter, r *http.Request,
 		return "", false
 	}
 
-	isMember, _, isActive, err := svc.store.MemberByCompanyAndKcSub(r.Context(), companyID, kcSub)
+	fact, err := svc.store.MemberFactByKcSub(r.Context(), companyID, kcSub)
 	if err != nil {
 		httpx.WriteInternalError(w, err)
 		return "", false
 	}
-	if isMember && isActive {
+	if fact.IsMember && fact.IsActive && !fact.IsGuest {
 		return kcSub, true
 	}
 
@@ -506,9 +506,11 @@ func (svc *Service) requireMemberOrAdmin(w http.ResponseWriter, r *http.Request,
 		return kcSub, true
 	}
 
-	errenv.WriteError(w, http.StatusForbidden, errenv.APIError{
-		Code: errenv.CodeForbidden, Message: "not an active member of this company",
-	})
+	message := "not an active member of this company"
+	if fact.IsMember && fact.IsActive && fact.IsGuest {
+		message = "a guest member cannot read the company's directories"
+	}
+	errenv.WriteError(w, http.StatusForbidden, errenv.APIError{Code: errenv.CodeForbidden, Message: message})
 	return "", false
 }
 
@@ -619,6 +621,7 @@ type memberRequest struct {
 	DisplayName string `json:"displayName"`
 	Email       string `json:"email"`
 	IsActive    *bool  `json:"isActive"`
+	IsGuest     *bool  `json:"isGuest"`
 }
 
 func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
@@ -639,7 +642,7 @@ func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
-	member, err := svc.store.CreateMember(r.Context(), actorFor(authCtx), companyID, req.Code, req.DisplayName, req.Email, isActive)
+	member, err := svc.store.CreateMember(r.Context(), actorFor(authCtx), companyID, req.Code, req.DisplayName, req.Email, isActive, req.IsGuest != nil && *req.IsGuest)
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -715,7 +718,7 @@ func (svc *Service) handleUpdateMember(w http.ResponseWriter, r *http.Request) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
-	member, err := svc.store.UpdateMember(r.Context(), actorFor(authCtx), id, req.DisplayName, req.Email, isActive)
+	member, err := svc.store.UpdateMember(r.Context(), actorFor(authCtx), id, req.DisplayName, req.Email, isActive, req.IsGuest)
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -796,6 +799,7 @@ func memberView(m Member) map[string]any {
 		"email":       m.Email,
 		"userId":      userID,
 		"isActive":    m.IsActive,
+		"isGuest":     m.IsGuest,
 		"kind":        memberKind(m),
 	}
 	if m.UserID != nil {
@@ -1087,6 +1091,16 @@ func (svc *Service) handleHolderOnDate(w http.ResponseWriter, r *http.Request) {
 		errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid date query param (want YYYY-MM-DD)", Details: map[string]string{"field": "date"}})
 		return
 	}
+	if r.URL.Query().Get("kcSub") != "" { // the gateway's member-level route names the caller
+		position, err := svc.store.GetPosition(r.Context(), id)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if _, ok := svc.requireMemberOrAdmin(w, r, position.CompanyID); !ok {
+			return
+		}
+	}
 	assignment, err := svc.store.AssignmentOnDate(r.Context(), id, date)
 	if err != nil {
 		writeStoreError(w, err)
@@ -1354,6 +1368,18 @@ func (svc *Service) handleListGroupMembers(w http.ResponseWriter, r *http.Reques
 	groupID, ok := parsePathUUID(w, r, "id")
 	if !ok {
 		return
+	}
+	// The gateway's member-level route names the caller (kcSub); the admin route does not and
+	// is guarded at the gateway. A named caller must be an active, non-guest member.
+	if r.URL.Query().Get("kcSub") != "" {
+		group, err := svc.store.GetGroup(r.Context(), groupID)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if _, ok := svc.requireMemberOrAdmin(w, r, group.CompanyID); !ok {
+			return
+		}
 	}
 	members, err := svc.store.ListGroupMembers(r.Context(), groupID)
 	if err != nil {

@@ -104,7 +104,7 @@ func TestCompanyFacts_Store(t *testing.T) {
 		if err != nil {
 			t.Fatalf("link user: %v", err)
 		}
-		if _, err := store.UpdateMember(ctx, "test-actor", linked.ID, linked.DisplayName, linked.Email, false); err != nil {
+		if _, err := store.UpdateMember(ctx, "test-actor", linked.ID, linked.DisplayName, linked.Email, false, nil); err != nil {
 			t.Fatalf("deactivate member: %v", err)
 		}
 		isMember, _, isActive, err := store.MemberByCompanyAndKcSub(ctx, company.ID, "cf-kcsub-6")

@@ -248,7 +248,7 @@ func TestGroup_AddMember_InactiveMember_Rejected(t *testing.T) {
 
 	company := mustCreateCompany(t, store, "GRP6")
 	group := mustCreateGroup(t, store, company.ID, "TEAM")
-	inactive, err := store.CreateMember(ctx, "test-actor", company.ID, "GRP6-MEM", "Inactive Member", "", false)
+	inactive, err := store.CreateMember(ctx, "test-actor", company.ID, "GRP6-MEM", "Inactive Member", "", false, false)
 	if err != nil {
 		t.Fatalf("create inactive member: %v", err)
 	}
