@@ -692,7 +692,8 @@ try {
       // the module is off for this deployment
       break;
     case ApiErrorCode.PositionHeld:
-      // someone holds the position: err.details.assignmentId is the tenure to end first
+      // someone holds the position: call adminHandoverPosition with err.details.assignmentId
+      // as expectedAssignmentId, which ends it and assigns in one step
       break;
     case ApiErrorCode.ValidationError: // org and the platform routes
     case ApiErrorCode.ValidationFailed: // the authorization service
