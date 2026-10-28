@@ -131,6 +131,7 @@ paths:
         kcSub forced to the bearer's own subject. org's own handler enforces
         active-membership-or-superadmin (`requireMemberOrAdmin`), a non-member caller gets
         403, not a 404 (never leaks whether the company exists to an outsider vs. a non-member).
+        A guest member is refused with 403 as well.
       parameters:
         - name: companyId
           in: path
@@ -173,7 +174,8 @@ paths:
       summary: The company's positions, reduced to id, code and title (any active member, or a superadmin)
       description: >
         Bearer-gated fixed proxy to org's `/internal/org/companies/{companyId}/positions/directory`,
-        kcSub forced to the bearer's own subject; the same guard as the member directory. The
+        kcSub forced to the bearer's own subject; the same guard as the member directory, so a
+        guest member is refused with 403. The
         share-with or assign-to picker source beside it: no org unit, no holder. Grant to
         `position:<id>#holder` so access follows the chair.
       parameters:
@@ -215,7 +217,8 @@ paths:
       summary: The company's active groups, reduced to id, code and name (any active member, or a superadmin)
       description: >
         Bearer-gated fixed proxy to org's `/internal/org/companies/{companyId}/groups/directory`,
-        same guard as the member directory; inactive groups are left out. Grant to
+        same guard as the member directory, so a guest member is refused with 403; inactive
+        groups are left out. Grant to
         `group:<id>#member` so access follows the membership.
       parameters:
         - name: companyId
@@ -256,8 +259,8 @@ paths:
       summary: The member holding a position on a date (any member of the company, or a superadmin)
       description: >
         Proxied to org's `/internal/org/positions/{id}/holder`. The caller must be an active
-        member of the company (an app's service account counts once it is a member) or the
-        superadmin; a position of another company answers 404. Resolves approvers and
+        member of the company (an app's service account counts once it is a member, a guest
+        member does not) or the superadmin; a position of another company answers 404. Resolves approvers and
         owners "as of" a date.
       parameters:
         - name: companyId
@@ -294,7 +297,8 @@ paths:
       summary: A group's current members (any member of the company, or a superadmin)
       description: >
         Proxied to org's `/internal/org/groups/{id}/members`, with the same guard as the
-        position holder read; a group of another company answers 404.
+        position holder read, so a guest member is refused with 403; a group of another company
+        answers 404.
       parameters:
         - name: companyId
           in: path
@@ -1597,6 +1601,7 @@ components:
         email: { type: string, nullable: true }
         userId: { type: string, nullable: true, description: "The linked identity user, or null" }
         isActive: { type: boolean }
+        isGuest: { type: boolean, description: "An external person the company shares objects with: a member for every decision, refused the directories" }
         kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account; `person` otherwise" }
     OrgMemberCreateRequest:
       type: object
@@ -1606,12 +1611,14 @@ components:
         code: { type: string }
         displayName: { type: string }
         email: { type: string }
+        isGuest: { type: boolean, default: false }
     OrgMemberUpdateRequest:
       type: object
       properties:
         displayName: { type: string }
         email: { type: string }
         isActive: { type: boolean }
+        isGuest: { type: boolean, description: "Absent keeps the current value" }
     OrgPosition:
       type: object
       properties:
