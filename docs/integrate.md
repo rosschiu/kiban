@@ -692,7 +692,8 @@ try {
       // the module is off for this deployment
       break;
     case ApiErrorCode.PositionHeld:
-      // someone holds the position: err.details.assignmentId is the tenure to end first
+      // someone holds the position: call adminHandoverPosition with err.details.assignmentId
+      // as expectedAssignmentId, which ends it and assigns in one step
       break;
     case ApiErrorCode.ValidationError: // org and the platform routes
     case ApiErrorCode.ValidationFailed: // the authorization service
@@ -798,7 +799,7 @@ All on the gateway origin. The full contract is the [Platform API](api/platform.
 | `GET /api/org/companies/{id}/members?q=&page=&pageSize=` | Member directory of one company | Active members of that company, or a superadmin |
 | `/api/org/admin/units`, `/api/org/admin/units/{id}`, `.../subtree` | Company and org-unit administration | Superadmin |
 | `/api/org/admin/members`, `/api/org/admin/members/{id}`, `.../link-user` | Member administration | Superadmin, or an administrator of that company |
-| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
+| `/api/org/admin/companies/{id}/positions`, `.../groups`, `/api/org/admin/positions/{id}`, `/api/org/admin/positions/{id}/assignments`, `/api/org/admin/positions/{id}/handover`, `/api/org/admin/assignments/{id}/end`, `/api/org/admin/groups/{id}/members` | Position and group administration | Superadmin, or an administrator of that company |
 | `POST /api/platform/admin/apps` | Register an app from its manifest | Superadmin |
 | `GET /api/platform/capabilities[/{module}]`, `GET /api/platform/catalog` | What is registered, installed and enabled | Any bearer |
 | `POST /api/platform/admin/modules/{key}/enable`, `.../disable`; `POST /api/platform/admin/platform-roles`, `DELETE .../platform-roles/{role}/{subjectId}` | App and module enablement, the superadmin role | Superadmin |

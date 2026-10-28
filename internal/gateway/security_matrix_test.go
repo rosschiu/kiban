@@ -62,6 +62,7 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "admin_position_create", Pattern: "POST /api/org/admin/companies/{companyId}/positions", Method: http.MethodPost, Path: "/api/org/admin/companies/co-1/positions", Body: `{"code":"cfo","title":"CFO"}`},
 	{Name: "admin_position_update", Pattern: "PUT /api/org/admin/positions/{id}", Method: http.MethodPut, Path: "/api/org/admin/positions/pos-1", Body: `{"title":"CFO (interim)"}`},
 	{Name: "admin_position_assign", Pattern: "POST /api/org/admin/positions/{id}/assignments", Method: http.MethodPost, Path: "/api/org/admin/positions/pos-1/assignments", Body: `{"memberId":"mem-1"}`},
+	{Name: "admin_position_handover", Pattern: "POST /api/org/admin/positions/{id}/handover", Method: http.MethodPost, Path: "/api/org/admin/positions/pos-1/handover", Body: `{"memberId":"mem-1"}`},
 	{Name: "admin_position_end", Pattern: "POST /api/org/admin/assignments/{id}/end", Method: http.MethodPost, Path: "/api/org/admin/assignments/asg-1/end"},
 	{Name: "admin_group_list", Pattern: "GET /api/org/admin/companies/{companyId}/groups", Method: http.MethodGet, Path: "/api/org/admin/companies/co-1/groups"},
 	{Name: "admin_group_create", Pattern: "POST /api/org/admin/companies/{companyId}/groups", Method: http.MethodPost, Path: "/api/org/admin/companies/co-1/groups", Body: `{"code":"support","name":"Support"}`},

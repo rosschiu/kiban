@@ -315,6 +315,13 @@ export interface OrgAssignment {
   validTo: string | null;
 }
 
+/** The result of a position handover: the assignment that ended (null when the member already
+ * held the position) and the one that now holds it. */
+export interface OrgHandover {
+  ended: OrgAssignment | null;
+  assignment: OrgAssignment;
+}
+
 /** The admin position-list row — a position plus its CURRENT assignment
  * (assignmentId/memberId/holderDisplayName, all null when the position has no holder today) —
  * the fields the Positions admin page needs to render "who holds this seat" and END a tenure
