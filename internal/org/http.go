@@ -48,6 +48,11 @@ func (svc *Service) Routes() http.Handler {
 	// lifecycle) and self-scoped-or-admin gated, where handleListMembers returns the FULL
 	// admin-console shape. Gateway route: GET /api/org/companies/{companyId}/members.
 	mux.HandleFunc("GET /internal/org/companies/{id}/members", svc.handleMemberDirectory)
+	// The same picker for positions and groups: a reduced, active-only view any active member
+	// (an app's service account included) may read, so a share-with or assign-to control needs
+	// no administrator. Guarded like the member directory.
+	mux.HandleFunc("GET /internal/org/companies/{id}/positions/directory", svc.handlePositionDirectory)
+	mux.HandleFunc("GET /internal/org/companies/{id}/groups/directory", svc.handleGroupDirectory)
 
 	// The sample shell's minimal position-admin surface — list-with-holder (the shape
 	// handleListPositions doesn't have) and create-from-path (companyId taken from the path only,
@@ -539,6 +544,67 @@ func (svc *Service) handleMemberDirectory(w http.ResponseWriter, r *http.Request
 			"id": e.ID.String(), "displayName": e.DisplayName, "email": e.Email, "hasLinkedUser": e.HasLinkedUser, "kind": e.Kind,
 		})
 	}
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	errenv.WriteData(w, http.StatusOK, errenv.Page[map[string]any]{Items: views, Total: total, Page: page, PageSize: pageSize, TotalPages: totalPages})
+}
+
+// handlePositionDirectory answers `GET /internal/org/companies/{id}/positions/directory?kcSub=&page=&pageSize=`:
+// id, code and title of the company's positions, nothing else, for the member-level picker.
+func (svc *Service) handlePositionDirectory(w http.ResponseWriter, r *http.Request) {
+	companyID, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, ok := svc.requireMemberOrAdmin(w, r, companyID); !ok {
+		return
+	}
+	page, pageSize, ok := pageParams(w, r)
+	if !ok {
+		return
+	}
+	positions, total, err := svc.store.ListPositions(r.Context(), companyID, page, pageSize)
+	if err != nil {
+		httpx.WriteInternalError(w, err)
+		return
+	}
+	views := make([]map[string]any, 0, len(positions))
+	for _, p := range positions {
+		views = append(views, map[string]any{"id": p.ID.String(), "code": p.Code, "title": p.Title})
+	}
+	writeDirectoryPage(w, views, total, page, pageSize)
+}
+
+// handleGroupDirectory answers `GET /internal/org/companies/{id}/groups/directory?kcSub=&page=&pageSize=`:
+// id, code and name of the company's ACTIVE groups, nothing else.
+func (svc *Service) handleGroupDirectory(w http.ResponseWriter, r *http.Request) {
+	companyID, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, ok := svc.requireMemberOrAdmin(w, r, companyID); !ok {
+		return
+	}
+	page, pageSize, ok := pageParams(w, r)
+	if !ok {
+		return
+	}
+	groups, total, err := svc.store.ListActiveGroups(r.Context(), companyID, page, pageSize)
+	if err != nil {
+		httpx.WriteInternalError(w, err)
+		return
+	}
+	views := make([]map[string]any, 0, len(groups))
+	for _, g := range groups {
+		views = append(views, map[string]any{"id": g.ID.String(), "code": g.Code, "name": g.Name})
+	}
+	writeDirectoryPage(w, views, total, page, pageSize)
+}
+
+func writeDirectoryPage(w http.ResponseWriter, views []map[string]any, total, page, pageSize int) {
+	page, pageSize = clampPage(page, pageSize)
 	totalPages := (total + pageSize - 1) / pageSize
 	if totalPages < 1 {
 		totalPages = 1

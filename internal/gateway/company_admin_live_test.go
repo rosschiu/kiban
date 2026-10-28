@@ -197,6 +197,20 @@ func TestLive_CompanyAdministrator(t *testing.T) {
 		t.Fatalf("Carol hands it back: %d %v", st, env)
 	}
 	assignment, _ = env["data"].(map[string]any)["assignment"].(map[string]any)["id"].(string)
+
+	// Any active member reads the position and group directories of their company; Carol is
+	// no member of the other company and gets 403 there.
+	for _, dir := range []string{"positions", "groups"} {
+		if st, env = call(t, http.MethodGet, "/api/org/companies/"+mine+"/"+dir, carolBearer, nil); st != http.StatusOK {
+			t.Fatalf("Carol reads the %s directory: %d %v", dir, st, env)
+		}
+		if st, _ = call(t, http.MethodGet, "/api/org/companies/"+other+"/"+dir, carolBearer, nil); st != http.StatusForbidden {
+			t.Fatalf("outsider reads the %s directory: %d, want 403", dir, st)
+		}
+	}
+	if data, _ := env["data"].(map[string]any); data["total"] == nil {
+		t.Fatalf("group directory is not a page: %v", env)
+	}
 	if st, env = call(t, http.MethodPost, "/api/org/admin/assignments/"+assignment+"/end", carolBearer, nil); st != http.StatusOK {
 		t.Fatalf("Carol ends an assignment: %d %v", st, env)
 	}

@@ -167,6 +167,89 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/org/companies/{companyId}/positions:
+    get:
+      operationId: orgCompanyPositionDirectory
+      summary: The company's positions, reduced to id, code and title (any active member, or a superadmin)
+      description: >
+        Bearer-gated fixed proxy to org's `/internal/org/companies/{companyId}/positions/directory`,
+        kcSub forced to the bearer's own subject; the same guard as the member directory. The
+        share-with or assign-to picker source beside it: no org unit, no holder. Grant to
+        `position:<id>#holder` so access follows the chair.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Page of position-directory entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/PositionDirectoryEntry" }
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      totalPages: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/org/companies/{companyId}/groups:
+    get:
+      operationId: orgCompanyGroupDirectory
+      summary: The company's active groups, reduced to id, code and name (any active member, or a superadmin)
+      description: >
+        Bearer-gated fixed proxy to org's `/internal/org/companies/{companyId}/groups/directory`,
+        same guard as the member directory; inactive groups are left out. Grant to
+        `group:<id>#member` so access follows the membership.
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        "200":
+          description: Page of group-directory entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: "#/components/schemas/GroupDirectoryEntry" }
+                      total: { type: integer }
+                      page: { type: integer }
+                      pageSize: { type: integer }
+                      totalPages: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/org/companies/{companyId}/positions/{id}/holder:
     get:
       operationId: orgPositionHolder
@@ -1449,6 +1532,20 @@ components:
         email: { type: string }
         hasLinkedUser: { type: boolean }
         kind: { type: string, enum: [person, service], description: "`service` when the linked user is an app's service account" }
+
+    PositionDirectoryEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        title: { type: string }
+
+    GroupDirectoryEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
 
     Capability:
       type: object

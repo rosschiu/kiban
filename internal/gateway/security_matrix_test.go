@@ -94,6 +94,8 @@ var gatewayMatrixRoutes = []testsec.RouteSpec{
 	{Name: "foundation_summary", Pattern: "GET /api/auth/effective-access/summary", Method: http.MethodGet, Path: "/api/auth/effective-access/summary", SkipForbidden: true},
 	{Name: "foundation_me_companies", Pattern: "GET /api/org/me/companies", Method: http.MethodGet, Path: "/api/org/me/companies", SkipForbidden: true},
 	{Name: "foundation_member_directory", Pattern: "GET /api/org/companies/{companyId}/members", Method: http.MethodGet, Path: "/api/org/companies/co-1/members", SkipForbidden: true},
+	{Name: "foundation_position_directory", Pattern: "GET /api/org/companies/{companyId}/positions", Method: http.MethodGet, Path: "/api/org/companies/co-1/positions", SkipForbidden: true},
+	{Name: "foundation_group_directory", Pattern: "GET /api/org/companies/{companyId}/groups", Method: http.MethodGet, Path: "/api/org/companies/co-1/groups", SkipForbidden: true},
 	{Name: "platform_capabilities", Pattern: "GET /api/platform/capabilities", Method: http.MethodGet, Path: "/api/platform/capabilities", SkipForbidden: true},
 	{Name: "platform_capabilities_module", Pattern: "GET /api/platform/capabilities/{module}", Method: http.MethodGet, Path: "/api/platform/capabilities/notification", SkipForbidden: true},
 	{Name: "platform_catalog", Pattern: "GET /api/platform/catalog", Method: http.MethodGet, Path: "/api/platform/catalog", SkipForbidden: true},

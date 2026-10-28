@@ -22,6 +22,18 @@ describe("createOrgClient", () => {
     expect(init.method ?? "GET").toBe("GET");
   });
 
+  it("positionDirectory() and groupDirectory() call the member-level company routes with paging", async () => {
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(200, { data: { items: [{ id: "p1", code: "CFO", title: "CFO" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } }))
+      .mockResolvedValueOnce(jsonResponse(200, { data: { items: [{ id: "g1", code: "SALES", name: "Sales" }], total: 1, page: 2, pageSize: 10, totalPages: 1 } }));
+    const client = createOrgClient(createApiClient({ baseUrl: "https://gateway.test", fetchFn }));
+
+    expect((await client.positionDirectory("c1")).items[0]?.title).toBe("CFO");
+    expect((await client.groupDirectory("c1", 2, 10)).items[0]?.name).toBe("Sales");
+    expect((fetchFn.mock.calls[0] as [string])[0]).toBe("https://gateway.test/api/org/companies/c1/positions");
+    expect((fetchFn.mock.calls[1] as [string])[0]).toBe("https://gateway.test/api/org/companies/c1/groups?page=2&pageSize=10");
+  });
+
   // ---- The gateway-exposed `/api/org/admin/...` position surface. ----
 
   it("adminListPositions() calls GET /api/org/admin/companies/{companyId}/positions with page/pageSize query params", async () => {
