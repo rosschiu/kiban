@@ -94,8 +94,9 @@ Feature pull requests merge into `release/<version>`. One pull request merges th
 `main` carrying the version bump: `VERSION`, the two SDK package versions and the changelog
 section. Merging it is the release. The `tag on merge` workflow tags `v<VERSION>` and starts
 the release workflow, which runs the gate at the tag, pushes the images, publishes both SDKs by
-trusted publishing, builds the versioned documentation and creates the GitHub Release. A tag
-pushed by hand still works the same way, and nothing is released without a tag.
+trusted publishing and creates the GitHub Release; the documentation workflow publishes the
+versioned site for the same tag. A tag pushed by hand still works the same way, and nothing is
+released without a tag.
 
 ## Reporting security issues
 
