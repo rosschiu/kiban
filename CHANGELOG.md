@@ -8,6 +8,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - Decisions read the user's enabled flag from Keycloak's database with one local `SELECT` (read-only role `kiban_kcread`, `KEYCLOAK_DB_NAME`), instead of calling the admin REST API on every check; without that database the API answer is cached for `KIBAN_USER_STATE_CACHE_SECONDS`
 - App fragments may use `intersection` ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness
 - `POST /api/org/admin/positions/{id}/handover` ends the current assignment and assigns the new member in one transaction, idempotent when the member already holds it, with `expectedAssignmentId` against a concurrent administrator; 0.1.x needed two calls and left the position empty in between
+- Merging the release PR tags the release: a push to main that changes `VERSION` creates `v<VERSION>` and starts the release workflow; 0.1.x needed a hand-pushed tag
 
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
