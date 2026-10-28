@@ -42,6 +42,8 @@ spec:
               valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_DB_PASSWORD } }
             - name: KC_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: kiban-secrets, key: KC_DB_PASSWORD } }
+            - name: KIBAN_IDENTITY_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: kiban-secrets, key: KIBAN_IDENTITY_DB_PASSWORD } }
           ports:
             - containerPort: 5432
               name: postgres

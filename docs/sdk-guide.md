@@ -109,7 +109,7 @@ Each client is a function of the API client and returns an object of typed metho
 |---|---|---|
 | `createCapabilitiesClient(api)` | `list()`, `get(moduleKey)` | `GET /api/platform/capabilities[/{module}]` |
 | `createEffectiveAccessClient(api)` | `can(request)`, `batchCan(request)`, `summary(companyId?)` | `POST /api/auth/effective-access/can`, `/batch-can`, `GET .../summary` |
-| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, and the admin methods (a superadmin, or an administrator of that company) `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
+| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, `positionDirectory(companyId, page?, pageSize?)`, `groupDirectory(companyId, page?, pageSize?)`, and the admin methods (a superadmin, or an administrator of that company) `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
 | `createSuperadminClient(api)` | `catalog()`, `enableModule(key)`, `disableModule(key)`, `grantPlatformRole(subjectId, role)`, `revokePlatformRole(subjectId, role)` | `/api/platform/catalog`, `/api/platform/admin/...` |
 | `createDemoModeClient(api)` | `get()` | `GET /api/platform/demo-mode` |
 
@@ -285,7 +285,8 @@ const verifier = createTokenVerifier({ gatewayOrigin });
 - `createAppClient` gives `can(userBearer, request)`, `canService(request)`, `batchCan` and
   `batchCanService`, `grant(companyId, tuples)`, `revoke(companyId, tuples)`,
   `anchorTuple(objectType, objectId, companyId)`, `memberBySubject(companyId, subject)`, the org
-  reads `meCompanies(userBearer)`, `memberDirectory`, `positionHolder` and `groupMembers`, and
+  reads `meCompanies(userBearer)`, `memberDirectory`, `positionDirectory`, `groupDirectory`,
+  `positionHolder` and `groupMembers`, and
   `registerApp(superadminBearer, manifest)`, plus
   `api`, a plain client on the gateway origin for any other route. It attaches no token: pass
   `headers: { Authorization: "Bearer " + (await credentials.getAccessToken()) }` yourself.
@@ -300,7 +301,8 @@ samples are compiled and run by this package's test suite.
 for those languages, with the same surface as the Node `server` entry: the service token, user
 token verification, `can` and `batch_can` (for the user, or for the service account), tuple
 grant and revoke with the anchor helper, member lookup by subject, the org reads (companies the
-user may see, member directory, position holder on a date, group members) and app registration.
+user may see, member, position and group directories, position holder on a date, group members)
+and app registration.
 The [Integrate page](integrate.md) shows every call in all three languages.
 
 ## Wire types

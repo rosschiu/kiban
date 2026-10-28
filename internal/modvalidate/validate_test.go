@@ -167,7 +167,7 @@ func TestValidateModule_RejectRules(t *testing.T) {
 			mutate: func(f map[string]string) {
 				f["authz.fragment.json"] = strings.Replace(f["authz.fragment.json"],
 					`"viewer": { "union": [{ "this": true }, { "computedUserset": "owner" }] }`,
-					`"viewer": { "intersection": [{ "this": true }, { "computedUserset": "owner" }] }`, 1)
+					`"viewer": { "exclusion": { "base": { "this": true }, "subtract": { "computedUserset": "owner" } } }`, 1)
 			},
 		},
 		{
