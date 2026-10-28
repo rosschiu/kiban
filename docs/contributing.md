@@ -88,6 +88,15 @@ from tests that assert real behaviour; assertion-free padding is rejected in rev
   is right, explain it in the issue first.
 - **Vocabulary.** Use the terms in the [glossary](glossary.md) in code, comments and API fields.
 
+## Releasing
+
+Feature pull requests merge into `release/<version>`. One pull request merges that branch into
+`main` carrying the version bump: `VERSION`, the two SDK package versions and the changelog
+section. Merging it is the release. The `tag on merge` workflow tags `v<VERSION>` and starts
+the release workflow, which runs the gate at the tag, pushes the images, publishes both SDKs by
+trusted publishing, builds the versioned documentation and creates the GitHub Release. A tag
+pushed by hand still works the same way, and nothing is released without a tag.
+
 ## Reporting security issues
 
 Security vulnerabilities never go through public issues. Use GitHub's private vulnerability
