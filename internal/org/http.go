@@ -249,8 +249,11 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 // VALIDATION_ERROR naming the field, so no OFFSET is ever computed from it. Missing, non-numeric
 // or sub-minimum values fall through to clampPage's defaults, as before.
 func pageParams(w http.ResponseWriter, r *http.Request) (page, pageSize int, ok bool) {
-	page, _ = strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ = strconv.Atoi(r.URL.Query().Get("pageSize"))
+	// Parsed as 32-bit: a value beyond int32 saturates, is over the limit below, and the LIMIT and
+	// OFFSET computed from these can never overflow their int32 parameters.
+	p, _ := strconv.ParseInt(r.URL.Query().Get("page"), 10, 32)
+	ps, _ := strconv.ParseInt(r.URL.Query().Get("pageSize"), 10, 32)
+	page, pageSize = int(p), int(ps)
 	field := ""
 	switch {
 	case page > maxPage:

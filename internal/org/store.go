@@ -797,13 +797,9 @@ func clampPage(page, pageSize int) (int, int) {
 	return page, pageSize
 }
 
-// pageWindow is clampPage as a LIMIT and OFFSET. The bound is checked again beside the int32
-// conversion so a static analyser sees it there (maxPage*maxPageSize = 1e6 fits).
+// pageWindow is clampPage as a LIMIT and OFFSET (maxPage*maxPageSize = 1e6 fits int32).
 func pageWindow(page, pageSize int) (limit, offset int32) {
 	page, pageSize = clampPage(page, pageSize)
-	if page > maxPage || pageSize > maxPageSize {
-		page, pageSize = maxPage, maxPageSize
-	}
 	return int32(pageSize), int32((page - 1) * pageSize)
 }
 

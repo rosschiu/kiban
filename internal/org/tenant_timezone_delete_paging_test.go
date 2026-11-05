@@ -157,6 +157,8 @@ func TestHTTP_Pagination_OverLimit_400(t *testing.T) {
 	for _, tc := range []struct{ path, field string }{
 		{base + "/positions?page=10001", "page"},
 		{base + "/positions?page=21474838&pageSize=100", "page"},
+		{base + "/positions?page=99999999999", "page"},
+		{base + "/groups?pageSize=99999999999", "pageSize"},
 		{base + "/positions?pageSize=101", "pageSize"},
 		{base + "/groups?page=10001", "page"},
 		{"/internal/org/positions?companyId=" + company.ID.String() + "&pageSize=101", "pageSize"},
