@@ -798,8 +798,8 @@ nothing here is promised for a date. The <a href="../roadmap/">roadmap</a> lists
 <li><strong>Only decisions are revocation-aware.</strong> A route that verifies the bearer without asking for
   a decision, such as <code>GET /api/org/me/companies</code>, serves a disabled user until the token expires
   (<code>KIBAN_ACCESS_TOKEN_LIFESPAN</code>, 300 seconds by default). Decisions deny on the next check.</li>
-<li><strong>No field-level or row-level policy on member data.</strong> Every active member of a company can
-  read the directory, including email addresses.</li>
+<li><strong>No field-level or row-level policy on member data.</strong> Every active member of a company that
+  is not a guest can read the directory, including email addresses; a guest reads none of it.</li>
 <li><strong>Keycloak's own container holds two secrets as environment variables</strong>: its database
   password and its bootstrap admin password. Keycloak reads neither from a file. Kiban's
   services read the superadmin's initial password, the identity client secret and the Keycloak
@@ -814,6 +814,13 @@ nothing here is promised for a date. The <a href="../roadmap/">roadmap</a> lists
 </ul>
 <h2 id="identity">Identity<a class="headerlink" href="#identity" title="Permanent link">&para;</a></h2>
 <ul>
+<li><strong>Decisions read one column of Keycloak's internal schema.</strong> With <code>KEYCLOAK_DB_NAME</code> set,
+  identity reads <code>user_entity.enabled</code> from Keycloak's database and asserts that table and
+  column at start-up; a Keycloak release that renames them makes identity fall back to the
+  admin REST API with a warning, not fail. The read is tested against the Keycloak release
+  Kiban embeds (26.6, pinned by digest in <code>infra/keycloak-build/Dockerfile</code>), not against
+  other releases. Other identity providers are not supported as a state source yet; Keycloak
+  is the embedded one.</li>
 <li><strong>A service credential is created at bootstrap, not at runtime.</strong> <code>KIBAN_SERVICE_CLIENTS</code>
   names the confidential clients; adding one means a restart of the <code>bootstrap</code> one-shot. The
   secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.</li>
@@ -867,6 +874,9 @@ nothing here is promised for a date. The <a href="../roadmap/">roadmap</a> lists
 <li><strong>A module is compiled into the platform.</strong> The four sample modules are built by the platform's
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.</li>
+<li><strong>No exclusion, wildcards or conditions in a fragment.</strong> <code>union</code> and <code>intersection</code> are
+  supported; "everyone except Carol" is modelled through groups and direct grants
+  (<a href="../modelling/">Modelling practices</a>).</li>
 <li><strong>Dependency version ranges are validated, not enforced at runtime.</strong> The registry loads a
   manifest's dependencies and the gateway refuses a module whose dependency is not installed and
   enabled (<code>MODULE_DEPENDENCY_MISSING</code>); the <code>versionRange</code> is checked by the validator only.</li>

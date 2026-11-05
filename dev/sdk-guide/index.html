@@ -1059,7 +1059,7 @@ own endpoints: <code>options</code> takes <code>method</code>, <code>body</code>
 </tr>
 <tr>
 <td><code>createOrgClient(api)</code></td>
-<td><code>meCompanies()</code>, <code>memberDirectory(companyId, q?, page?, pageSize?)</code>, and the admin methods (a superadmin, or an administrator of that company) <code>adminListPositions</code>, <code>adminCreatePosition</code>, <code>adminAssignPosition</code>, <code>adminEndAssignment</code>, <code>adminListGroups</code>, <code>adminCreateGroup</code>, <code>adminListGroupMembers</code>, <code>adminAddGroupMember</code>, <code>adminRemoveGroupMember</code></td>
+<td><code>meCompanies()</code>, <code>memberDirectory(companyId, q?, page?, pageSize?)</code>, <code>positionDirectory(companyId, page?, pageSize?)</code>, <code>groupDirectory(companyId, page?, pageSize?)</code>, and the admin methods (a superadmin, or an administrator of that company) <code>adminListPositions</code>, <code>adminCreatePosition</code>, <code>adminAssignPosition</code>, <code>adminHandoverPosition</code>, <code>adminEndAssignment</code>, <code>adminListGroups</code>, <code>adminCreateGroup</code>, <code>adminListGroupMembers</code>, <code>adminAddGroupMember</code>, <code>adminRemoveGroupMember</code></td>
 <td><code>/api/org/...</code></td>
 </tr>
 <tr>
@@ -1223,7 +1223,8 @@ browser: <code>fetch</code> and <code>crypto.subtle</code> from Node 20 or later
 <li><code>createAppClient</code> gives <code>can(userBearer, request)</code>, <code>canService(request)</code>, <code>batchCan</code> and
   <code>batchCanService</code>, <code>grant(companyId, tuples)</code>, <code>revoke(companyId, tuples)</code>,
   <code>anchorTuple(objectType, objectId, companyId)</code>, <code>memberBySubject(companyId, subject)</code>, the org
-  reads <code>meCompanies(userBearer)</code>, <code>memberDirectory</code>, <code>positionHolder</code> and <code>groupMembers</code>, and
+  reads <code>meCompanies(userBearer)</code>, <code>memberDirectory</code>, <code>positionDirectory</code>, <code>groupDirectory</code>,
+  <code>positionHolder</code> and <code>groupMembers</code>, and
   <code>registerApp(superadminBearer, manifest)</code>, plus
   <code>api</code>, a plain client on the gateway origin for any other route. It attaches no token: pass
   <code>headers: { Authorization: "Bearer " + (await credentials.getAccessToken()) }</code> yourself.
@@ -1236,7 +1237,8 @@ samples are compiled and run by this package's test suite.</p>
 for those languages, with the same surface as the Node <code>server</code> entry: the service token, user
 token verification, <code>can</code> and <code>batch_can</code> (for the user, or for the service account), tuple
 grant and revoke with the anchor helper, member lookup by subject, the org reads (companies the
-user may see, member directory, position holder on a date, group members) and app registration.
+user may see, member, position and group directories, position holder on a date, group members)
+and app registration.
 The <a href="../integrate/">Integrate page</a> shows every call in all three languages.</p>
 <h2 id="wire-types">Wire types<a class="headerlink" href="#wire-types" title="Permanent link">&para;</a></h2>
 <p>The package exports the request and response shapes as TypeScript types, hand-typed from the Go

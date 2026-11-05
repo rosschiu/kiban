@@ -670,6 +670,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#releasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Releasing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reporting-security-issues" class="md-nav__link">
     <span class="md-ellipsis">
       Reporting security issues
@@ -761,6 +770,15 @@
   <a href="#conventions-that-matter" class="md-nav__link">
     <span class="md-ellipsis">
       Conventions that matter
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#releasing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Releasing
     </span>
   </a>
   
@@ -877,6 +895,14 @@ from tests that assert real behaviour; assertion-free padding is rejected in rev
   is right, explain it in the issue first.</li>
 <li><strong>Vocabulary.</strong> Use the terms in the <a href="../glossary/">glossary</a> in code, comments and API fields.</li>
 </ul>
+<h2 id="releasing">Releasing<a class="headerlink" href="#releasing" title="Permanent link">&para;</a></h2>
+<p>Feature pull requests merge into <code>release/&lt;version&gt;</code>. One pull request merges that branch into
+<code>main</code> carrying the version bump: <code>VERSION</code>, the two SDK package versions and the changelog
+section. Merging it is the release. The <code>tag on merge</code> workflow tags <code>v&lt;VERSION&gt;</code> and starts
+the release workflow, which runs the gate at the tag, pushes the images, publishes both SDKs by
+trusted publishing and creates the GitHub Release; the documentation workflow publishes the
+versioned site for the same tag. A tag pushed by hand still works the same way, and nothing is
+released without a tag.</p>
 <h2 id="reporting-security-issues">Reporting security issues<a class="headerlink" href="#reporting-security-issues" title="Permanent link">&para;</a></h2>
 <p>Security vulnerabilities never go through public issues. Use GitHub's private vulnerability
 reporting on the repository, as described in

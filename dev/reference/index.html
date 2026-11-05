@@ -834,7 +834,17 @@ status codes their handlers emit (see limitations).</p>
 <tr>
 <td><code>/api/org/companies/{id}/members</code></td>
 <td><code>GET ?q=&amp;page=&amp;pageSize=</code></td>
-<td>Active members of the company, or a superadmin</td>
+<td>Active members of the company that are not guests, or a superadmin</td>
+</tr>
+<tr>
+<td><code>/api/org/companies/{id}/positions</code></td>
+<td><code>GET ?page=&amp;pageSize=</code></td>
+<td>Active members of the company that are not guests, or a superadmin: id, code, title</td>
+</tr>
+<tr>
+<td><code>/api/org/companies/{id}/groups</code></td>
+<td><code>GET ?page=&amp;pageSize=</code></td>
+<td>Active members of the company that are not guests, or a superadmin: id, code, name of active groups</td>
 </tr>
 <tr>
 <td><code>/api/org/companies/{id}/members/by-subject/{subject}</code></td>
@@ -844,12 +854,12 @@ status codes their handlers emit (see limitations).</p>
 <tr>
 <td><code>/api/org/companies/{id}/positions/{positionId}/holder</code></td>
 <td><code>GET ?date=YYYY-MM-DD</code></td>
-<td>Active members of the company, or a superadmin</td>
+<td>Active members of the company that are not guests, or a superadmin</td>
 </tr>
 <tr>
 <td><code>/api/org/companies/{id}/groups/{groupId}/members</code></td>
 <td><code>GET</code></td>
-<td>Active members of the company, or a superadmin</td>
+<td>Active members of the company that are not guests, or a superadmin</td>
 </tr>
 <tr>
 <td><code>/api/org/admin/units*</code></td>
@@ -858,7 +868,7 @@ status codes their handlers emit (see limitations).</p>
 </tr>
 <tr>
 <td><code>/api/org/admin/*</code> (members, positions, assignments, groups)</td>
-<td><code>GET</code>/<code>POST members</code>, <code>PUT members/{id}</code>, <code>POST</code>/<code>DELETE members/{id}/link-user</code>; <code>GET</code>/<code>POST companies/{id}/positions</code>, <code>PUT positions/{id}</code>, <code>POST positions/{id}/assignments</code>, <code>POST assignments/{id}/end</code>; <code>GET</code>/<code>POST companies/{id}/groups</code>, <code>GET</code>/<code>POST groups/{id}/members</code>, <code>DELETE groups/{id}/members/{memberId}</code></td>
+<td><code>GET</code>/<code>POST members</code> (<code>isGuest</code>), <code>PUT members/{id}</code> (<code>isGuest</code>), <code>POST</code>/<code>DELETE members/{id}/link-user</code>; <code>GET</code>/<code>POST companies/{id}/positions</code>, <code>PUT positions/{id}</code>, <code>POST positions/{id}/assignments</code>, <code>POST positions/{id}/handover</code>, <code>POST assignments/{id}/end</code>; <code>GET</code>/<code>POST companies/{id}/groups</code>, <code>GET</code>/<code>POST groups/{id}/members</code>, <code>DELETE groups/{id}/members/{memberId}</code></td>
 <td>Superadmin, or an administrator of that company</td>
 </tr>
 <tr>

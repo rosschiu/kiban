@@ -1351,7 +1351,7 @@ check for the anchor; see <a href="../limitations/">limitations</a>.</p>
 <span class="p">}</span>
 </code></pre></div>
 <p>Relations follow the base model's grammar (<code>this</code>, <code>computedUserset</code>, <code>tupleToUserset</code>,
-<code>union</code>); the
+<code>union</code>, <code>intersection</code>); the
 <a href="../building/#authorization-fragment-authzfragmentjson">Building</a> page documents it. A type the
 base model or another app already declares is refused.</p>
 <h3 id="3-register-and-enable-the-app">3. Register and enable the app<a class="headerlink" href="#3-register-and-enable-the-app" title="Permanent link">&para;</a></h3>
@@ -1660,33 +1660,48 @@ the app defining its own model, not acting in the company.</p>
 </div>
 </div>
 <h3 id="11-read-the-org">11. Read the org<a class="headerlink" href="#11-read-the-org" title="Permanent link">&para;</a></h3>
-<p>Four reads cover most approval and routing needs. The app's service account must be a member of
-the company for the last three (step 10).</p>
+<p>Six reads cover most approval, routing and sharing needs. The app's service account must be a
+member of the company for all but the first (step 10). The three directories are the source
+for a "share with" or "assign to" picker: people, positions and groups, each reduced to what a
+picker shows. A member marked <code>isGuest</code>, an external person the company shares objects with, is
+refused all of them with <code>403</code>; share with a guest by granting to their subject or to
+<code>member:&lt;id&gt;#mapped_user</code> as with anyone else, and let your own page show the guest what was
+shared.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="9:3"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><input id="__tabbed_9_3" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">Node</label><label for="__tabbed_9_2">Python</label><label for="__tabbed_9_3">Go</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">companies</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">meCompanies</span><span class="p">(</span><span class="nx">userBearer</span><span class="p">);</span><span class="w">                 </span><span class="c1">// what this user may see</span>
-<span class="kd">const</span><span class="w"> </span><span class="nx">page</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">memberDirectory</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="s2">"ali"</span><span class="p">);</span><span class="w">       </span><span class="c1">// active members, kind person|service</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">people</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">memberDirectory</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="s2">"ali"</span><span class="p">);</span><span class="w">       </span><span class="c1">// active members, kind person|service</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">positions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">positionDirectory</span><span class="p">(</span><span class="nx">companyId</span><span class="p">);</span><span class="w">            </span><span class="c1">// id, code, title</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">groups</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">groupDirectory</span><span class="p">(</span><span class="nx">companyId</span><span class="p">);</span><span class="w">               </span><span class="c1">// id, code, name (active)</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">holder</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">positionHolder</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">positionId</span><span class="p">,</span><span class="w"> </span><span class="s2">"2026-10-01"</span><span class="p">);</span>
 <span class="kd">const</span><span class="w"> </span><span class="nx">members</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">groupMembers</span><span class="p">(</span><span class="nx">companyId</span><span class="p">,</span><span class="w"> </span><span class="nx">groupId</span><span class="p">);</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="n">companies</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">me_companies</span><span class="p">(</span><span class="n">user_bearer</span><span class="p">)</span>
-<span class="n">page</span>      <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">member_directory</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="s2">"ali"</span><span class="p">)</span>
+<span class="n">people</span>    <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">member_directory</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="s2">"ali"</span><span class="p">)</span>
+<span class="n">positions</span> <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">position_directory</span><span class="p">(</span><span class="n">company_id</span><span class="p">)</span>
+<span class="n">groups</span>    <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">group_directory</span><span class="p">(</span><span class="n">company_id</span><span class="p">)</span>
 <span class="n">holder</span>    <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">position_holder</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">position_id</span><span class="p">,</span> <span class="s2">"2026-10-01"</span><span class="p">)</span>   <span class="c1"># KibanApiError 404: nobody that day</span>
 <span class="n">members</span>   <span class="o">=</span> <span class="n">kiban</span><span class="o">.</span><span class="n">group_members</span><span class="p">(</span><span class="n">company_id</span><span class="p">,</span> <span class="n">group_id</span><span class="p">)</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="nx">companies</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MeCompanies</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">userBearer</span><span class="p">)</span>
-<span class="nx">page</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">      </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MemberDirectory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="s">"ali"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">)</span>
+<span class="nx">people</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">    </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">MemberDirectory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="s">"ali"</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">)</span>
+<span class="nx">positions</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">PositionDirectory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">)</span>
+<span class="nx">groups</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">    </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">GroupDirectory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">)</span>
 <span class="nx">holder</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">    </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">PositionHolder</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="nx">positionID</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">())</span>
 <span class="nx">members</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w">   </span><span class="o">:=</span><span class="w"> </span><span class="nx">kiban</span><span class="p">.</span><span class="nx">GroupMembers</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">companyID</span><span class="p">,</span><span class="w"> </span><span class="nx">groupID</span><span class="p">)</span>
 </code></pre></div>
 </div>
 </div>
 </div>
+<p>To share with a person picked from the member directory, grant to the member, not to a
+subject: <code>subjectType: "member"</code>, <code>subjectId: &lt;member id&gt;</code>, <code>subjectRelation: "mapped_user"</code>.
+Kiban keeps the member-to-user link itself, so the share follows the person's current login
+and ends with the membership, and no subject lookup is needed.</p>
 <p>For a page with many permission-driven controls, ask once: <code>batchCan</code> / <code>batch_can</code> / <code>BatchCan</code>
 take up to 100 object-relation pairs with the user's bearer and answer one decision each.</p>
 <h2 id="where-the-users-token-lives">Where the user's token lives<a class="headerlink" href="#where-the-users-token-lives" title="Permanent link">&para;</a></h2>
@@ -1856,7 +1871,8 @@ the error code:</p>
 <span class="w">      </span><span class="c1">// the module is off for this deployment</span>
 <span class="w">      </span><span class="k">break</span><span class="p">;</span>
 <span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">PositionHeld</span><span class="o">:</span>
-<span class="w">      </span><span class="c1">// someone holds the position: err.details.assignmentId is the tenure to end first</span>
+<span class="w">      </span><span class="c1">// someone holds the position: call adminHandoverPosition with err.details.assignmentId</span>
+<span class="w">      </span><span class="c1">// as expectedAssignmentId, which ends it and assigns in one step</span>
 <span class="w">      </span><span class="k">break</span><span class="p">;</span>
 <span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ValidationError</span><span class="o">:</span><span class="w"> </span><span class="c1">// org and the platform routes</span>
 <span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ApiErrorCode</span><span class="p">.</span><span class="nx">ValidationFailed</span><span class="o">:</span><span class="w"> </span><span class="c1">// the authorization service</span>
@@ -1979,7 +1995,7 @@ members; <code>PUT /api/org/admin/members/{id}</code> updates one; <code>DELETE 
 <td>Superadmin, or an administrator of that company</td>
 </tr>
 <tr>
-<td><code>/api/org/admin/companies/{id}/positions</code>, <code>.../groups</code>, <code>/api/org/admin/positions/{id}</code>, <code>/api/org/admin/positions/{id}/assignments</code>, <code>/api/org/admin/assignments/{id}/end</code>, <code>/api/org/admin/groups/{id}/members</code></td>
+<td><code>/api/org/admin/companies/{id}/positions</code>, <code>.../groups</code>, <code>/api/org/admin/positions/{id}</code>, <code>/api/org/admin/positions/{id}/assignments</code>, <code>/api/org/admin/positions/{id}/handover</code>, <code>/api/org/admin/assignments/{id}/end</code>, <code>/api/org/admin/groups/{id}/members</code></td>
 <td>Position and group administration</td>
 <td>Superadmin, or an administrator of that company</td>
 </tr>

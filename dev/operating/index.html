@@ -1001,6 +1001,17 @@ its admin password and that client secret as environment variables. The superadm
 <li><code>KIBAN_SERVICE_CLIENTS</code>: read by <code>bootstrap</code>; comma-separated ids of confidential Keycloak
   clients with a service account and the <code>kiban-api</code> audience, for backends that need their own
   token. See <a href="../integrate/#getting-a-token-for-a-service">Getting a token for a service</a>.</li>
+<li><code>KEYCLOAK_DB_NAME</code>: read by <code>identity</code>. When set (the Compose files and the k8s base set
+  <code>keycloak</code>), every decision reads the user's enabled flag with one <code>SELECT</code> from Keycloak's
+  own <code>user_entity</code> table, as the read-only role <code>kiban_kcread</code> that <code>postgres-init</code> creates at
+  initdb with a default <code>SELECT</code> privilege on the tables Keycloak creates. No copy, no sync, no
+  lag: a disable is visible the instant Keycloak commits it. The role's password is
+  <code>KIBAN_IDENTITY_DB_PASSWORD</code>. Unset it when Keycloak uses another database server; identity
+  then asks the admin REST API, which costs about 30 ms per decision, behind a cache of
+  <code>KIBAN_USER_STATE_CACHE_SECONDS</code> (default <code>5</code>), so a disable is seen within that many
+  seconds. Identity logs which source it uses at start-up, and falls back to the API with a
+  warning when the probe fails. This is a deliberate coupling to one column of Keycloak's
+  schema, asserted at start-up; see <a href="../limitations/">limitations</a>.</li>
 <li><code>KIBAN_ACCESS_TOKEN_LIFESPAN</code>: read by <code>bootstrap</code>; the realm's access-token lifetime in
   seconds, default <code>300</code>, written to Keycloak on every run. A disabled user's token verifies
   this long on routes that do not ask for a decision (<a href="../limitations/">limitations</a>); shorten
@@ -1109,6 +1120,17 @@ migration.</p>
 <p>A stack created before the database roles change (the <code>kiban</code> owner role, <code>KIBAN_DB_PASSWORD</code>,
 <code>KC_DB_PASSWORD</code>) cannot be upgraded in place: recreate it (<code>make dev-clean &amp;&amp; make dev</code>) or dump
 and restore into a fresh cluster.</p>
+<p>A cluster created before 0.2.0 has no <code>kiban_kcread</code> role, so identity logs a warning and keeps
+using the admin REST API. To switch it to the direct read without recreating the cluster, run
+once as the Postgres superuser, with identity's password:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">ROLE</span><span class="w"> </span><span class="n">kiban_kcread</span><span class="w"> </span><span class="n">LOGIN</span><span class="w"> </span><span class="n">NOSUPERUSER</span><span class="w"> </span><span class="k">NOCREATEDB</span><span class="w"> </span><span class="n">NOCREATEROLE</span><span class="w"> </span><span class="n">NOINHERIT</span><span class="w"> </span><span class="n">PASSWORD</span><span class="w"> </span><span class="s1">'&lt;KIBAN_IDENTITY_DB_PASSWORD&gt;'</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">CONNECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">keycloak</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_kcread</span><span class="p">;</span>
+<span class="err">\</span><span class="k">c</span><span class="w"> </span><span class="n">keycloak</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">USAGE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_kcread</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">ALL</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_kcread</span><span class="p">;</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">PRIVILEGES</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">ROLE</span><span class="w"> </span><span class="n">keycloak</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="k">GRANT</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">TABLES</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">kiban_kcread</span><span class="p">;</span>
+</code></pre></div>
+<p>then restart identity.</p>
 <h2 id="reading-the-audit-trail">Reading the audit trail<a class="headerlink" href="#reading-the-audit-trail" title="Permanent link">&para;</a></h2>
 <p>There is no API for the audit trail. Every service writes its events into its own append-only
 table in the <code>audit</code> schema, one row per mutation in the same transaction:

@@ -1305,9 +1305,13 @@ model, as <code>timesheet</code> and <code>helpdesk</code> do). Object type, the
 <td><code>{ "union": [ ...expressions ] }</code></td>
 <td>Any of the children; at least one</td>
 </tr>
+<tr>
+<td><code>{ "intersection": [ ...expressions ] }</code></td>
+<td>All of the children; at least two. "Sees the line if on the delivery side and on the deal" is <code>intersection[computedUserset delivery_side, computedUserset on_deal]</code></td>
+</tr>
 </tbody>
 </table>
-<p>Any other construct (<code>intersection</code>, <code>exclusion</code>, wildcards, conditions) is outside the subset
+<p>Any other construct (<code>exclusion</code>, wildcards, conditions) is outside the subset
 and refused; <a href="../modelling-folders/">Modelling folders</a> shows inheritance, breaking it and
 limited access without them. Every type you declare must define <code>"company_module": { "this": true }</code>, the anchor
 every object check binds through. A type may not redeclare a base type (<code>user</code>, <code>system</code>,

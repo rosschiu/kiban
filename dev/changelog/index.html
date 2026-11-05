@@ -616,6 +616,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#020-2026-11-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.2.0 — 2026-11-05
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#015-2026-10-22" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.5 — 2026-10-22
@@ -733,6 +742,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#020-2026-11-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      0.2.0 — 2026-11-05
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#015-2026-10-22" class="md-nav__link">
     <span class="md-ellipsis">
       0.1.5 — 2026-10-22
@@ -806,7 +824,21 @@
 
 <h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
 <p>One line per change. Versions follow <a href="https://semver.org/">Semantic Versioning</a>; the current version is in <a href="https://github.com/rosschiu/kiban/blob/main/VERSION"><code>VERSION</code></a>.</p>
-<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.1.5...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="unreleased"><a href="https://github.com/rosschiu/kiban/compare/v0.2.0...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h2 id="020-2026-11-05"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.2.0">0.2.0</a> — 2026-11-05<a class="headerlink" href="#020-2026-11-05" title="Permanent link">&para;</a></h2>
+<p>Six additions for an application that runs beside Kiban. Any active member reads the company's
+position and group directories as well as the member one; a position changes hands in one call;
+a member can be a guest, present for decisions but shown nobody else; app fragments may say
+"and"; decisions read the user's enabled flag straight from Keycloak's database; and merging
+the release PR now tags and ships the release.</p>
+<ul>
+<li>Member-level directories of positions and groups: <code>GET /api/org/companies/{id}/positions</code> and <code>.../groups</code> list id, code and title or name for any active member and an app's service account that is a member, in all three SDKs; the integrate page says to share with a person by granting to <code>member:&lt;id&gt;#mapped_user</code></li>
+<li>Decisions read the user's enabled flag from Keycloak's database with one local <code>SELECT</code> (read-only role <code>kiban_kcread</code>, <code>KEYCLOAK_DB_NAME</code>), instead of calling the admin REST API on every check; without that database the API answer is cached for <code>KIBAN_USER_STATE_CACHE_SECONDS</code></li>
+<li>App fragments may use <code>intersection</code> ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness</li>
+<li><code>POST /api/org/admin/positions/{id}/handover</code> ends the current assignment and assigns the new member in one transaction, idempotent when the member already holds it, with <code>expectedAssignmentId</code> against a concurrent administrator; 0.1.x needed two calls and left the position empty in between</li>
+<li>Merging the release PR tags the release: a push to main that changes <code>VERSION</code> creates <code>v&lt;VERSION&gt;</code> and starts the release workflow; 0.1.x needed a hand-pushed tag</li>
+<li>Guest members: <code>isGuest</code> on a member, set at creation or by a company administrator; a guest is an active member for every decision but is refused the member, position and group directories and a group's member list, so an external person shared with sees nobody else</li>
+</ul>
 <h2 id="015-2026-10-22"><a href="https://github.com/rosschiu/kiban/releases/tag/v0.1.5">0.1.5</a> — 2026-10-22<a class="headerlink" href="#015-2026-10-22" title="Permanent link">&para;</a></h2>
 <p>Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or

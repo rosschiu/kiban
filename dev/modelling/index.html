@@ -476,9 +476,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#and-moves-to-the-writer" class="md-nav__link">
+  <a href="#and-is-an-intersection" class="md-nav__link">
     <span class="md-ellipsis">
-      "And" moves to the writer
+      "And" is an intersection
     </span>
   </a>
   
@@ -706,9 +706,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#and-moves-to-the-writer" class="md-nav__link">
+  <a href="#and-is-an-intersection" class="md-nav__link">
     <span class="md-ellipsis">
-      "And" moves to the writer
+      "And" is an intersection
     </span>
   </a>
   
@@ -786,10 +786,19 @@ applies to every deal of a kind, put the rows on one object the deals inherit fr
 <p>The only thing the Director cannot do on that page is invent a new verb, say "export". That is
 a new relation, so it is a re-registration, and that is right: a new verb has to be enforced in
 your code before it means anything.</p>
-<h2 id="and-moves-to-the-writer">"And" moves to the writer<a class="headerlink" href="#and-moves-to-the-writer" title="Permanent link">&para;</a></h2>
-<p>The model has <code>union</code> and no <code>intersection</code> (<a href="https://github.com/rosschiu/kiban/issues/107">#107</a>
-tracks adding it). "Delivery sees a line only if the line is on the delivery side and they are
-on the deal" is two facts joined by "and". Your app knows both facts, so it writes one tuple
+<h2 id="and-is-an-intersection">"And" is an intersection<a class="headerlink" href="#and-is-an-intersection" title="Permanent link">&para;</a></h2>
+<p>"Delivery sees a line only if the line is on the delivery side and they are on the deal" is two
+facts joined by "and", and the model says it directly:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"line"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">"company_module"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"deal"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"delivery_side"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"this"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"on_deal"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tupleToUserset"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tupleset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deal"</span><span class="p">,</span><span class="w"> </span><span class="nt">"computedUserset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"member"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"viewer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"intersection"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"computedUserset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"delivery_side"</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"computedUserset"</span><span class="p">:</span><span class="w"> </span><span class="s2">"on_deal"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>A check holds only when every child holds. Before 0.2.0 the model had no intersection, and the
+pattern below still works on any version: your app knows both facts, so it writes one tuple
 that already means both:</p>
 <div class="highlight"><pre><span></span><code>deal:D # delivery_viewer @ user:&lt;alice&gt;        when Alice joins deal D on the delivery side
 line:L # deal @ deal:D                          on a delivery-side line
