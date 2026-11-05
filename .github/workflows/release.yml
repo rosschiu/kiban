@@ -46,13 +46,20 @@ on:
     tags:
       - "v*"
   # Manual: publish the SDKs of an EXISTING tag (first publish to a registry, or a re-publish
-  # after a registry-side fix). Images and the GitHub Release are not touched.
+  # after a registry-side fix). Images and the GitHub Release are not touched unless `full` is
+  # set, which is what tag-on-merge.yml does: a tag it pushes with GITHUB_TOKEN cannot start
+  # this workflow by itself, so it dispatches the full run.
   workflow_dispatch:
     inputs:
       tag:
         description: "Existing tag whose SDKs to publish (e.g. v0.1.0)"
         required: true
         type: string
+      full:
+        description: "Also build the images and create the GitHub Release, as a tag push does"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -119,7 +126,7 @@ jobs:
   images:
     name: images (build + push to GHCR)
     needs: gate
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || inputs.full == true
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -331,7 +338,7 @@ jobs:
   release:
     name: GitHub Release
     needs: [images, sdk, sdk-python]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || inputs.full == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

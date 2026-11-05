@@ -59,6 +59,14 @@ changes are commits too.
 Use the pull request template's checklist: gates green, tests behavioural, generated docs
 regenerated, licence headers present.
 
+## Releasing
+
+Feature PRs merge into `release/<version>`; one PR merges that branch into `main` carrying the
+version bump (`VERSION`, the two SDK package versions, the changelog section). Merging it is the
+release: the `tag on merge` workflow tags `v<VERSION>` and starts the release workflow, which
+runs the gate at the tag, pushes the images, publishes both SDKs by trusted publishing and
+creates the GitHub Release. A tag pushed by hand still works the same way.
+
 ## Licensing of contributions
 
 Every first-party file in this repository is Apache-2.0, and so is your contribution; see
