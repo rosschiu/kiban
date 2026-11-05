@@ -1,0 +1,48 @@
+# Tags a release when the release PR merges: a push to main that changes VERSION creates the
+# tag `v<VERSION>` if it does not exist yet, then starts release.yml for it. The tag is pushed
+# with the built-in GITHUB_TOKEN, and GitHub never starts a workflow from an event that token
+# created, so the release run is dispatched explicitly, with `full: true` so images and the
+# GitHub Release are produced exactly as a hand-pushed tag would produce them.
+#
+# A push to main that leaves VERSION unchanged does nothing. A tag that already exists (a
+# hand-pushed one, or a re-run) does nothing either: release.yml is the only place that
+# publishes, and it is idempotent per tag.
+name: tag on merge
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: tag-on-merge
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: create the tag and start the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v$(tr -d '[:space:]' < VERSION)"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists; nothing to do"
+            exit 0
+          fi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a "$tag" -m "$tag" "$GITHUB_SHA"
+          git push origin "$tag"
+          gh workflow run release.yml --ref "$tag" -f tag="$tag" -f full=true
+          echo "tagged $tag and started release.yml"

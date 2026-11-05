@@ -14,7 +14,8 @@ func TestExprAccessors(t *testing.T) {
 			"this_leaf": {"this": true},
 			"computed_leaf": {"computedUserset": "this_leaf"},
 			"ttu_leaf": {"tupleToUserset": {"tupleset": "this_leaf", "computedUserset": "this_leaf"}},
-			"union_leaf": {"union": [{"this": true}, {"computedUserset": "this_leaf"}]}
+			"union_leaf": {"union": [{"this": true}, {"computedUserset": "this_leaf"}]},
+			"intersection_leaf": {"intersection": [{"this": true}, {"computedUserset": "this_leaf"}]}
 		}
 	}`))
 	if err != nil {
@@ -24,6 +25,18 @@ func TestExprAccessors(t *testing.T) {
 	computedExpr := model["thing"]["computed_leaf"]
 	ttuExpr := model["thing"]["ttu_leaf"]
 	unionExpr := model["thing"]["union_leaf"]
+	intersectionExpr := model["thing"]["intersection_leaf"]
+
+	t.Run("IntersectionChildren", func(t *testing.T) {
+		if got := intersectionExpr.IntersectionChildren(); len(got) != 2 || !got[0].IsThis() || got[1].ComputedUsersetRel() != "this_leaf" {
+			t.Errorf("intersection leaf: IntersectionChildren() = %+v, want [this, computedUserset this_leaf]", got)
+		}
+		for name, e := range map[string]Expr{"this": thisExpr, "union": unionExpr} {
+			if e.IntersectionChildren() != nil {
+				t.Errorf("%s leaf: IntersectionChildren() != nil", name)
+			}
+		}
+	})
 
 	t.Run("IsThis", func(t *testing.T) {
 		if !thisExpr.IsThis() {

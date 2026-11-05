@@ -313,6 +313,27 @@ func TestFoundationRoutes_MemberDirectory_InjectsBearerKcSub_IgnoresClientSuppli
 	}
 }
 
+func TestFoundationRoutes_PositionAndGroupDirectory_ForwardToOrgWithBearerKcSub(t *testing.T) {
+	f := newFoundationTestFixture(t, nil)
+	bearer := f.bearerFor("alice")
+	for _, tc := range []struct{ in, out string }{
+		{"/api/org/companies/co-1/positions?kcSub=eve&page=2", "/internal/org/companies/co-1/positions/directory"},
+		{"/api/org/companies/co-1/groups?kcSub=eve", "/internal/org/companies/co-1/groups/directory"},
+	} {
+		rec := doFoundationRequest(t, f.mux, http.MethodGet, tc.in, bearer, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want 200; body=%s", tc.in, rec.Code, rec.Body.String())
+		}
+		call := f.backend.lastCall()
+		if call.path != tc.out || call.query.Get("kcSub") != "alice" {
+			t.Fatalf("%s: forwarded %s?kcSub=%s, want %s with the bearer's subject", tc.in, call.path, call.query.Get("kcSub"), tc.out)
+		}
+	}
+	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/groups", "", ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("no bearer: status = %d, want 401", rec.Code)
+	}
+}
+
 func TestFoundationRoutes_MemberDirectory_RequiresBearer(t *testing.T) {
 	f := newFoundationTestFixture(t, nil)
 	rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-1/members", "", "")
@@ -454,8 +475,8 @@ func TestFoundationRoutes_CompanyReads(t *testing.T) {
 			t.Errorf("member GET %s = %d; body=%s", path, rec.Code, rec.Body.String())
 		}
 	}
-	if call := f.backend.lastCall(); call.path != "/internal/org/groups/grp-1/members" {
-		t.Errorf("forwarded path = %q", call.path)
+	if call := f.backend.lastCall(); call.path != "/internal/org/groups/grp-1/members" || call.query.Get("kcSub") != "dave" {
+		t.Errorf("forwarded %s?kcSub=%s, want the group members path with the bearer's subject", call.path, call.query.Get("kcSub"))
 	}
 	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-2/groups/grp-1/members", bearer, ""); rec.Code != http.StatusForbidden {
 		t.Errorf("non-member company = %d, want 403", rec.Code)

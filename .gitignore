@@ -39,3 +39,11 @@ sdk/python/*.egg-info/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# binaries from `go build ./cmd/<name>` run at the repo root
+/authz
+/bootstrap
+/gateway
+/identity
+/org
+/registry

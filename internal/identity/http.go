@@ -122,7 +122,7 @@ func (svc *Service) handleResolve(w http.ResponseWriter, r *http.Request) {
 
 func (svc *Service) handleUserState(w http.ResponseWriter, r *http.Request) {
 	kcSub := r.PathValue("kcSub")
-	state, err := svc.store.ResolveUserState(r.Context(), svc.admin, kcSub)
+	state, err := svc.store.ResolveUserState(r.Context(), svc.userStateSource(), kcSub)
 	if err != nil {
 		if errors.Is(err, ErrUserNotFound) {
 			errenv.WriteError(w, http.StatusNotFound, errenv.APIError{

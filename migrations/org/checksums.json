@@ -10,6 +10,7 @@
     "0008_grant_registry_authz_read_company.sql": "74adca2f27ed581b2b2fd88bef194d0c45cf6239249ba354fadb7955bd3d50f9",
     "0009_half_open_assignment_windows.sql": "736a862f685d3d73c1586ddc52513ea802baf4b30943e481eb4805c110e2f0ed",
     "0010_group_tables.sql": "09c5555e7ba723eaad7e61067e8a17ab3fdc831091f90be36cdfcd4a5feb1ac1",
-    "0011_audit_reject_truncate.sql": "85ac8cf3610179a0beaacb06adf9428273053bdf3fa699cbcfdd1e3458a82992"
+    "0011_audit_reject_truncate.sql": "85ac8cf3610179a0beaacb06adf9428273053bdf3fa699cbcfdd1e3458a82992",
+    "0012_member_guest.sql": "e436c55a1cf8ebda088e5270108303bdd7119f3874c9ddecd79b6d48fce0a7c7"
   }
 }

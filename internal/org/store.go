@@ -612,6 +612,10 @@ type Member struct {
 	Email       string
 	UserID      *uuid.UUID
 	IsActive    bool
+	// IsGuest: an external person the company shares with, refused the member-level directory
+	// reads (members, positions, groups, a group's members). Decisions treat a guest like any
+	// other active member.
+	IsGuest bool
 
 	// Linked-user display fields (empty when UserID is nil) — never fetched per-row.
 	UserKcSub             string
@@ -624,16 +628,16 @@ type Member struct {
 func memberFromRow(r OrgMember) Member {
 	return Member{
 		ID: uuidFromPg(r.ID), CompanyID: uuidFromPg(r.CompanyID), Code: r.Code,
-		DisplayName: r.DisplayName, Email: pgconv.DerefStr(r.Email), UserID: pgconv.UUIDPtrFromPg(r.UserID), IsActive: r.IsActive,
+		DisplayName: r.DisplayName, Email: pgconv.DerefStr(r.Email), UserID: pgconv.UUIDPtrFromPg(r.UserID), IsActive: r.IsActive, IsGuest: r.IsGuest,
 	}
 }
 
-func memberFromJoinRow(id, companyID, userID pgtype.UUID, code, displayName string, email *string, isActive bool,
+func memberFromJoinRow(id, companyID, userID pgtype.UUID, code, displayName string, email *string, isActive, isGuest bool,
 	userKcSub, userEmail, userPreferredUsername, userLifecycle, userKind *string,
 ) Member {
 	return Member{
 		ID: uuidFromPg(id), CompanyID: uuidFromPg(companyID), Code: code, DisplayName: displayName,
-		Email: pgconv.DerefStr(email), UserID: pgconv.UUIDPtrFromPg(userID), IsActive: isActive,
+		Email: pgconv.DerefStr(email), UserID: pgconv.UUIDPtrFromPg(userID), IsActive: isActive, IsGuest: isGuest,
 		UserKcSub: pgconv.DerefStr(userKcSub), UserEmail: pgconv.DerefStr(userEmail),
 		UserPreferredUsername: pgconv.DerefStr(userPreferredUsername), UserLifecycle: pgconv.DerefStr(userLifecycle),
 		UserKind: pgconv.DerefStr(userKind),
@@ -666,7 +670,7 @@ func (s *Store) auditMemberMutation(ctx context.Context, tx pgx.Tx, actor, actio
 }
 
 // CreateMember creates a member, auditing the full field set in the same transaction.
-func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.UUID, code, displayName, email string, isActive bool) (Member, error) {
+func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.UUID, code, displayName, email string, isActive, isGuest bool) (Member, error) {
 	code = normalizeCode(code)
 	displayName = strings.TrimSpace(displayName)
 	if err := validateCode("code", code); err != nil {
@@ -684,7 +688,7 @@ func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.U
 
 	q := New(s.pool).WithTx(tx)
 	row, err := q.CreateMember(ctx, CreateMemberParams{
-		CompanyID: pgFromUUID(companyID), Code: code, DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive,
+		CompanyID: pgFromUUID(companyID), Code: code, DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive, IsGuest: isGuest,
 	})
 	if err != nil {
 		return Member{}, classifyPgError(err)
@@ -740,7 +744,7 @@ func (s *Store) GetMember(ctx context.Context, id uuid.UUID) (Member, error) {
 		}
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
-	return memberFromJoinRow(row.ID, row.CompanyID, row.UserID, row.Code, row.DisplayName, row.Email, row.IsActive,
+	return memberFromJoinRow(row.ID, row.CompanyID, row.UserID, row.Code, row.DisplayName, row.Email, row.IsActive, row.IsGuest,
 		row.UserKcSub, row.UserEmail, row.UserPreferredUsername, row.UserLifecycle, row.UserKind), nil
 }
 
@@ -748,7 +752,7 @@ func (s *Store) GetMember(ctx context.Context, id uuid.UUID) (Member, error) {
 // joined with identity.user_read_v — filtered/paginated in SQL, never
 // in-memory.
 func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]Member, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountMembers(ctx, pgFromUUID(companyID))
@@ -756,14 +760,14 @@ func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, page
 		return nil, 0, fmt.Errorf("org: count members: %w", err)
 	}
 	rows, err := q.ListMembers(ctx, ListMembersParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize),
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list members: %w", err)
 	}
 	out := make([]Member, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, memberFromJoinRow(r.ID, r.CompanyID, r.UserID, r.Code, r.DisplayName, r.Email, r.IsActive,
+		out = append(out, memberFromJoinRow(r.ID, r.CompanyID, r.UserID, r.Code, r.DisplayName, r.Email, r.IsActive, r.IsGuest,
 			r.UserKcSub, r.UserEmail, r.UserPreferredUsername, r.UserLifecycle, r.UserKind))
 	}
 	return out, int(total), nil
@@ -793,9 +797,16 @@ func clampPage(page, pageSize int) (int, int) {
 	return page, pageSize
 }
 
+// pageWindow is clampPage as a LIMIT and OFFSET (maxPage*maxPageSize = 1e6 fits int32).
+func pageWindow(page, pageSize int) (limit, offset int32) {
+	page, pageSize = clampPage(page, pageSize)
+	return int32(pageSize), int32((page - 1) * pageSize)
+}
+
 // UpdateMember updates display_name/email/is_active, auditing the full before/after field set
 // in the same transaction. email is the only PII field (field-policy-eligible).
-func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, displayName, email string, isActive bool) (Member, error) {
+// UpdateMember changes the display fields and the active flag; isGuest nil keeps the current value.
+func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, displayName, email string, isActive bool, isGuest *bool) (Member, error) {
 	displayName = strings.TrimSpace(displayName)
 	if err := validateNameLen("displayName", displayName, 1, 120); err != nil {
 		return Member{}, err
@@ -817,7 +828,7 @@ func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, di
 	}
 	before := memberFromRow(beforeRow)
 
-	row, err := q.UpdateMember(ctx, UpdateMemberParams{ID: pgFromUUID(id), DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive})
+	row, err := q.UpdateMember(ctx, UpdateMemberParams{ID: pgFromUUID(id), DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive, IsGuest: isGuest})
 	if err != nil {
 		return Member{}, classifyPgError(err)
 	}
@@ -943,7 +954,7 @@ func (s *Store) UnlinkUser(ctx context.Context, actor string, memberID uuid.UUID
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
 	before := memberFromJoinRow(beforeRow.ID, beforeRow.CompanyID, beforeRow.UserID, beforeRow.Code, beforeRow.DisplayName,
-		beforeRow.Email, beforeRow.IsActive, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle, beforeRow.UserKind)
+		beforeRow.Email, beforeRow.IsActive, beforeRow.IsGuest, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle, beforeRow.UserKind)
 
 	row, err := q.UnlinkMemberUser(ctx, pgFromUUID(memberID))
 	if err != nil {
@@ -1174,14 +1185,14 @@ func (s *Store) GetPosition(ctx context.Context, id uuid.UUID) (Position, error)
 
 // ListPositions returns companyID's positions, paginated.
 func (s *Store) ListPositions(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]Position, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountPositions(ctx, pgFromUUID(companyID))
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: count positions: %w", err)
 	}
-	rows, err := q.ListPositions(ctx, ListPositionsParams{CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize)})
+	rows, err := q.ListPositions(ctx, ListPositionsParams{CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list positions: %w", err)
 	}
@@ -1204,7 +1215,7 @@ type PositionWithHolder struct {
 // ListPositionsWithHolder is ListPositions plus each row's current assignment — the admin
 // surface. Paginated identically to ListPositions.
 func (s *Store) ListPositionsWithHolder(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]PositionWithHolder, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountPositions(ctx, pgFromUUID(companyID))
@@ -1216,7 +1227,7 @@ func (s *Store) ListPositionsWithHolder(ctx context.Context, companyID uuid.UUID
 		return nil, 0, err
 	}
 	rows, err := q.ListPositionsWithHolder(ctx, ListPositionsWithHolderParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize), Today: pgDate(todayDate),
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset, Today: pgDate(todayDate),
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list positions with holder: %w", err)
@@ -1384,15 +1395,27 @@ func (s *Store) CompanyState(ctx context.Context, id uuid.UUID) (exists bool, is
 // ListMembers/GetMemberWithUser already use. No row (unknown kcSub, or a member in a different
 // company) reports isMember=false — never a fabricated membership.
 func (s *Store) MemberByCompanyAndKcSub(ctx context.Context, companyID uuid.UUID, kcSub string) (isMember bool, memberID uuid.UUID, isActive bool, err error) {
+	fact, err := s.MemberFactByKcSub(ctx, companyID, kcSub)
+	return fact.IsMember, fact.MemberID, fact.IsActive, err
+}
+
+// MemberFact is what org knows about kcSub inside one company.
+type MemberFact struct {
+	IsMember, IsActive, IsGuest bool
+	MemberID                    uuid.UUID
+}
+
+// MemberFactByKcSub is MemberByCompanyAndKcSub with the guest flag.
+func (s *Store) MemberFactByKcSub(ctx context.Context, companyID uuid.UUID, kcSub string) (MemberFact, error) {
 	q := New(s.pool)
 	row, err := q.GetMemberByCompanyAndKcSub(ctx, GetMemberByCompanyAndKcSubParams{CompanyID: pgFromUUID(companyID), KcSub: kcSub})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, uuid.UUID{}, false, nil
+			return MemberFact{}, nil
 		}
-		return false, uuid.UUID{}, false, fmt.Errorf("org: member by kcsub: %w", err)
+		return MemberFact{}, fmt.Errorf("org: member by kcsub: %w", err)
 	}
-	return true, uuidFromPg(row.ID), row.IsActive, nil
+	return MemberFact{IsMember: true, IsActive: row.IsActive, IsGuest: row.IsGuest, MemberID: uuidFromPg(row.ID)}, nil
 }
 
 // CompanySummary is one company row in ListActiveCompaniesForKcSub's result — the fields the
@@ -1437,7 +1460,7 @@ type MemberDirectoryEntry struct {
 // ILIKE with its wildcards escaped — never string-concatenated into SQL). page/pageSize follow
 // the same 1/25, clamp 1..100 convention as ListMembers.
 func (s *Store) MemberDirectory(ctx context.Context, companyID uuid.UUID, q string, page, pageSize int) ([]MemberDirectoryEntry, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	query := New(s.pool)
 
 	var qParam *string
@@ -1451,7 +1474,7 @@ func (s *Store) MemberDirectory(ctx context.Context, companyID uuid.UUID, q stri
 		return nil, 0, fmt.Errorf("org: count member directory: %w", err)
 	}
 	rows, err := query.ListMemberDirectory(ctx, ListMemberDirectoryParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize), Q: qParam,
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset, Q: qParam,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list member directory: %w", err)
@@ -1528,6 +1551,19 @@ func (s *Store) AssignNow(ctx context.Context, actor string, positionID, memberI
 	case !errors.Is(err, pgx.ErrNoRows):
 		return Assignment{}, fmt.Errorf("org: current holder: %w", err)
 	}
+	assignment, err := s.createAssignmentTx(ctx, tx, q, actor, positionID, memberID, validFrom, nil)
+	if err != nil {
+		return Assignment{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
+	}
+	return assignment, nil
+}
+
+// createAssignmentTx inserts the open assignment, grants the holder tuple and audits, inside
+// the caller's transaction. extra is merged into the audit payload (a handover names its pair).
+func (s *Store) createAssignmentTx(ctx context.Context, tx pgx.Tx, q *Queries, actor string, positionID, memberID uuid.UUID, validFrom time.Time, extra map[string]any) (Assignment, error) {
 	asgRow, err := q.CreateAssignment(ctx, CreateAssignmentParams{
 		PositionID: pgFromUUID(positionID), MemberID: pgFromUUID(memberID), ValidFrom: pgDate(validFrom), ValidTo: pgtype.Date{},
 	})
@@ -1543,16 +1579,16 @@ func (s *Store) AssignNow(ctx context.Context, actor string, positionID, memberI
 		return Assignment{}, fmt.Errorf("org: grant position holder tuple: %w", err)
 	}
 
+	payload := map[string]any{
+		"positionId": positionID.String(), "memberId": memberID.String(), "validFrom": validFrom.Format("2006-01-02"),
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
 	if err := s.audit.Record(ctx, tx, audit.Event{
-		Actor: actor, Action: "org.assignment.create", Subject: "assignment:" + assignment.ID.String(),
-		Payload: map[string]any{
-			"positionId": positionID.String(), "memberId": memberID.String(), "validFrom": validFrom.Format("2006-01-02"),
-		},
+		Actor: actor, Action: "org.assignment.create", Subject: "assignment:" + assignment.ID.String(), Payload: payload,
 	}); err != nil {
 		return Assignment{}, fmt.Errorf("org: audit mutation: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
 	}
 	return assignment, nil
 }
@@ -1590,6 +1626,19 @@ func (s *Store) EndAssignment(ctx context.Context, actor string, id uuid.UUID) (
 		return Assignment{}, &ValidationError{Field: "validTo", Message: "cannot end an assignment before it starts"}
 	}
 
+	assignment, err := s.endAssignmentTx(ctx, tx, q, actor, id, validTo, nil)
+	if err != nil {
+		return Assignment{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
+	}
+	return assignment, nil
+}
+
+// endAssignmentTx closes the assignment as of validTo, revokes the holder tuple when no other
+// open assignment for the pair still confers it, and audits, inside the caller's transaction.
+func (s *Store) endAssignmentTx(ctx context.Context, tx pgx.Tx, q *Queries, actor string, id uuid.UUID, validTo time.Time, extra map[string]any) (Assignment, error) {
 	row, err := q.EndAssignment(ctx, EndAssignmentParams{ID: pgFromUUID(id), ValidTo: pgDate(validTo)})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1616,17 +1665,17 @@ func (s *Store) EndAssignment(ctx context.Context, actor string, id uuid.UUID) (
 		}
 	}
 
+	payload := map[string]any{
+		"positionId": assignment.PositionID.String(), "memberId": assignment.MemberID.String(),
+		"validFrom": assignment.ValidFrom.Format("2006-01-02"), "validTo": validTo.Format("2006-01-02"),
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
 	if err := s.audit.Record(ctx, tx, audit.Event{
-		Actor: actor, Action: "org.assignment.end", Subject: "assignment:" + id.String(),
-		Payload: map[string]any{
-			"positionId": assignment.PositionID.String(), "memberId": assignment.MemberID.String(),
-			"validFrom": assignment.ValidFrom.Format("2006-01-02"), "validTo": validTo.Format("2006-01-02"),
-		},
+		Actor: actor, Action: "org.assignment.end", Subject: "assignment:" + id.String(), Payload: payload,
 	}); err != nil {
 		return Assignment{}, fmt.Errorf("org: audit mutation: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return Assignment{}, fmt.Errorf("org: commit tx: %w", err)
 	}
 	return assignment, nil
 }

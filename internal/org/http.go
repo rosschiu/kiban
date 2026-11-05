@@ -48,6 +48,11 @@ func (svc *Service) Routes() http.Handler {
 	// lifecycle) and self-scoped-or-admin gated, where handleListMembers returns the FULL
 	// admin-console shape. Gateway route: GET /api/org/companies/{companyId}/members.
 	mux.HandleFunc("GET /internal/org/companies/{id}/members", svc.handleMemberDirectory)
+	// The same picker for positions and groups: a reduced, active-only view any active member
+	// (an app's service account included) may read, so a share-with or assign-to control needs
+	// no administrator. Guarded like the member directory.
+	mux.HandleFunc("GET /internal/org/companies/{id}/positions/directory", svc.handlePositionDirectory)
+	mux.HandleFunc("GET /internal/org/companies/{id}/groups/directory", svc.handleGroupDirectory)
 
 	// The sample shell's minimal position-admin surface — list-with-holder (the shape
 	// handleListPositions doesn't have) and create-from-path (companyId taken from the path only,
@@ -94,6 +99,7 @@ func (svc *Service) Routes() http.Handler {
 	// assign-NOW (server-set valid_from = today; no caller-supplied dates) — Store.AssignNow
 	// writes the assignment, its audit record, and the position-holder tuple grant.
 	mux.HandleFunc("POST /internal/org/positions/{id}/assignments", svc.handleAssignNow)
+	mux.HandleFunc("POST /internal/org/positions/{id}/handover", svc.handleHandover)
 
 	mux.HandleFunc("GET /internal/org/assignments/{id}", svc.handleGetAssignment)
 	mux.HandleFunc("POST /internal/org/assignments/{id}/end", svc.handleEndAssignment)
@@ -243,8 +249,11 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 // VALIDATION_ERROR naming the field, so no OFFSET is ever computed from it. Missing, non-numeric
 // or sub-minimum values fall through to clampPage's defaults, as before.
 func pageParams(w http.ResponseWriter, r *http.Request) (page, pageSize int, ok bool) {
-	page, _ = strconv.Atoi(r.URL.Query().Get("page"))
-	pageSize, _ = strconv.Atoi(r.URL.Query().Get("pageSize"))
+	// Parsed as 32-bit: a value beyond int32 saturates, is over the limit below, and the LIMIT and
+	// OFFSET computed from these can never overflow their int32 parameters.
+	p, _ := strconv.ParseInt(r.URL.Query().Get("page"), 10, 32)
+	ps, _ := strconv.ParseInt(r.URL.Query().Get("pageSize"), 10, 32)
+	page, pageSize = int(p), int(ps)
 	field := ""
 	switch {
 	case page > maxPage:
@@ -487,12 +496,12 @@ func (svc *Service) requireMemberOrAdmin(w http.ResponseWriter, r *http.Request,
 		return "", false
 	}
 
-	isMember, _, isActive, err := svc.store.MemberByCompanyAndKcSub(r.Context(), companyID, kcSub)
+	fact, err := svc.store.MemberFactByKcSub(r.Context(), companyID, kcSub)
 	if err != nil {
 		httpx.WriteInternalError(w, err)
 		return "", false
 	}
-	if isMember && isActive {
+	if fact.IsMember && fact.IsActive && !fact.IsGuest {
 		return kcSub, true
 	}
 
@@ -501,9 +510,11 @@ func (svc *Service) requireMemberOrAdmin(w http.ResponseWriter, r *http.Request,
 		return kcSub, true
 	}
 
-	errenv.WriteError(w, http.StatusForbidden, errenv.APIError{
-		Code: errenv.CodeForbidden, Message: "not an active member of this company",
-	})
+	message := "not an active member of this company"
+	if fact.IsMember && fact.IsActive && fact.IsGuest {
+		message = "a guest member cannot read the company's directories"
+	}
+	errenv.WriteError(w, http.StatusForbidden, errenv.APIError{Code: errenv.CodeForbidden, Message: message})
 	return "", false
 }
 
@@ -545,6 +556,67 @@ func (svc *Service) handleMemberDirectory(w http.ResponseWriter, r *http.Request
 	errenv.WriteData(w, http.StatusOK, errenv.Page[map[string]any]{Items: views, Total: total, Page: page, PageSize: pageSize, TotalPages: totalPages})
 }
 
+// handlePositionDirectory answers `GET /internal/org/companies/{id}/positions/directory?kcSub=&page=&pageSize=`:
+// id, code and title of the company's positions, nothing else, for the member-level picker.
+func (svc *Service) handlePositionDirectory(w http.ResponseWriter, r *http.Request) {
+	companyID, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, ok := svc.requireMemberOrAdmin(w, r, companyID); !ok {
+		return
+	}
+	page, pageSize, ok := pageParams(w, r)
+	if !ok {
+		return
+	}
+	positions, total, err := svc.store.ListPositions(r.Context(), companyID, page, pageSize)
+	if err != nil {
+		httpx.WriteInternalError(w, err)
+		return
+	}
+	views := make([]map[string]any, 0, len(positions))
+	for _, p := range positions {
+		views = append(views, map[string]any{"id": p.ID.String(), "code": p.Code, "title": p.Title})
+	}
+	writeDirectoryPage(w, views, total, page, pageSize)
+}
+
+// handleGroupDirectory answers `GET /internal/org/companies/{id}/groups/directory?kcSub=&page=&pageSize=`:
+// id, code and name of the company's ACTIVE groups, nothing else.
+func (svc *Service) handleGroupDirectory(w http.ResponseWriter, r *http.Request) {
+	companyID, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	if _, ok := svc.requireMemberOrAdmin(w, r, companyID); !ok {
+		return
+	}
+	page, pageSize, ok := pageParams(w, r)
+	if !ok {
+		return
+	}
+	groups, total, err := svc.store.ListActiveGroups(r.Context(), companyID, page, pageSize)
+	if err != nil {
+		httpx.WriteInternalError(w, err)
+		return
+	}
+	views := make([]map[string]any, 0, len(groups))
+	for _, g := range groups {
+		views = append(views, map[string]any{"id": g.ID.String(), "code": g.Code, "name": g.Name})
+	}
+	writeDirectoryPage(w, views, total, page, pageSize)
+}
+
+func writeDirectoryPage(w http.ResponseWriter, views []map[string]any, total, page, pageSize int) {
+	page, pageSize = clampPage(page, pageSize)
+	totalPages := (total + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	errenv.WriteData(w, http.StatusOK, errenv.Page[map[string]any]{Items: views, Total: total, Page: page, PageSize: pageSize, TotalPages: totalPages})
+}
+
 // ---- members ------------------------------------------------------------------------------
 
 type memberRequest struct {
@@ -553,6 +625,7 @@ type memberRequest struct {
 	DisplayName string `json:"displayName"`
 	Email       string `json:"email"`
 	IsActive    *bool  `json:"isActive"`
+	IsGuest     *bool  `json:"isGuest"`
 }
 
 func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
@@ -573,7 +646,7 @@ func (svc *Service) handleCreateMember(w http.ResponseWriter, r *http.Request) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
-	member, err := svc.store.CreateMember(r.Context(), actorFor(authCtx), companyID, req.Code, req.DisplayName, req.Email, isActive)
+	member, err := svc.store.CreateMember(r.Context(), actorFor(authCtx), companyID, req.Code, req.DisplayName, req.Email, isActive, req.IsGuest != nil && *req.IsGuest)
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -649,7 +722,7 @@ func (svc *Service) handleUpdateMember(w http.ResponseWriter, r *http.Request) {
 	if req.IsActive != nil {
 		isActive = *req.IsActive
 	}
-	member, err := svc.store.UpdateMember(r.Context(), actorFor(authCtx), id, req.DisplayName, req.Email, isActive)
+	member, err := svc.store.UpdateMember(r.Context(), actorFor(authCtx), id, req.DisplayName, req.Email, isActive, req.IsGuest)
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -730,6 +803,7 @@ func memberView(m Member) map[string]any {
 		"email":       m.Email,
 		"userId":      userID,
 		"isActive":    m.IsActive,
+		"isGuest":     m.IsGuest,
 		"kind":        memberKind(m),
 	}
 	if m.UserID != nil {
@@ -1021,6 +1095,16 @@ func (svc *Service) handleHolderOnDate(w http.ResponseWriter, r *http.Request) {
 		errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid date query param (want YYYY-MM-DD)", Details: map[string]string{"field": "date"}})
 		return
 	}
+	if r.URL.Query().Get("kcSub") != "" { // the gateway's member-level route names the caller
+		position, err := svc.store.GetPosition(r.Context(), id)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if _, ok := svc.requireMemberOrAdmin(w, r, position.CompanyID); !ok {
+			return
+		}
+	}
 	assignment, err := svc.store.AssignmentOnDate(r.Context(), id, date)
 	if err != nil {
 		writeStoreError(w, err)
@@ -1164,6 +1248,11 @@ type assignNowRequest struct {
 	MemberID string `json:"memberId"`
 }
 
+type handoverRequest struct {
+	MemberID             string `json:"memberId"`
+	ExpectedAssignmentID string `json:"expectedAssignmentId"`
+}
+
 // handleAssignNow answers `POST /internal/org/positions/{id}/assignments` — assign-NOW: server
 // sets valid_from = today, grants the position-holder tuple, and audits org.assignment.create,
 // all in Store.AssignNow's own transaction.
@@ -1196,6 +1285,55 @@ func (svc *Service) handleAssignNow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	errenv.WriteData(w, http.StatusCreated, assignmentView(assignment))
+}
+
+// handleHandover answers `POST /internal/org/positions/{id}/handover {memberId, expectedAssignmentId?}`:
+// the current assignment ends and the member's begins in one transaction, so no check in
+// between finds the position empty. 200 with `{ended, assignment}`; `ended` is null when the
+// member already held it. 422 on an empty position, 409 POSITION_HELD when
+// expectedAssignmentId is no longer the current one.
+func (svc *Service) handleHandover(w http.ResponseWriter, r *http.Request) {
+	positionID, ok := parsePathUUID(w, r, "id")
+	if !ok {
+		return
+	}
+	position, err := svc.store.GetPosition(r.Context(), positionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	authCtx := AuthContext{RawBearer: r.Header.Get("Authorization")}
+	if !svc.authorizeInCompany(w, r, authCtx, "org.assignment.create", "position:"+positionID.String(), position.CompanyID) {
+		return
+	}
+	var req handoverRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	memberID, err := uuid.Parse(req.MemberID)
+	if err != nil {
+		errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid memberId", Details: map[string]string{"field": "memberId"}})
+		return
+	}
+	var expected *uuid.UUID
+	if req.ExpectedAssignmentID != "" {
+		id, err := uuid.Parse(req.ExpectedAssignmentID)
+		if err != nil {
+			errenv.WriteError(w, http.StatusBadRequest, errenv.APIError{Code: errenv.CodeBadRequest, Message: "invalid expectedAssignmentId", Details: map[string]string{"field": "expectedAssignmentId"}})
+			return
+		}
+		expected = &id
+	}
+	ended, created, err := svc.store.Handover(r.Context(), actorFor(authCtx), positionID, memberID, expected)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	var endedView any
+	if ended != nil {
+		endedView = assignmentView(*ended)
+	}
+	errenv.WriteData(w, http.StatusOK, map[string]any{"ended": endedView, "assignment": assignmentView(created)})
 }
 
 // ---- admin group surface --------------------------------------------------------------------
@@ -1288,6 +1426,18 @@ func (svc *Service) handleListGroupMembers(w http.ResponseWriter, r *http.Reques
 	groupID, ok := parsePathUUID(w, r, "id")
 	if !ok {
 		return
+	}
+	// The gateway's member-level route names the caller (kcSub); the admin route does not and
+	// is guarded at the gateway. A named caller must be an active, non-guest member.
+	if r.URL.Query().Get("kcSub") != "" {
+		group, err := svc.store.GetGroup(r.Context(), groupID)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if _, ok := svc.requireMemberOrAdmin(w, r, group.CompanyID); !ok {
+			return
+		}
 	}
 	members, err := svc.store.ListGroupMembers(r.Context(), groupID)
 	if err != nil {

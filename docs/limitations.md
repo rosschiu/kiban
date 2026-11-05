@@ -12,8 +12,8 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **Only decisions are revocation-aware.** A route that verifies the bearer without asking for
   a decision, such as `GET /api/org/me/companies`, serves a disabled user until the token expires
   (`KIBAN_ACCESS_TOKEN_LIFESPAN`, 300 seconds by default). Decisions deny on the next check.
-- **No field-level or row-level policy on member data.** Every active member of a company can
-  read the directory, including email addresses.
+- **No field-level or row-level policy on member data.** Every active member of a company that
+  is not a guest can read the directory, including email addresses; a guest reads none of it.
 - **Keycloak's own container holds two secrets as environment variables**: its database
   password and its bootstrap admin password. Keycloak reads neither from a file. Kiban's
   services read the superadmin's initial password, the identity client secret and the Keycloak
@@ -28,6 +28,13 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 
 ## Identity
 
+- **Decisions read one column of Keycloak's internal schema.** With `KEYCLOAK_DB_NAME` set,
+  identity reads `user_entity.enabled` from Keycloak's database and asserts that table and
+  column at start-up; a Keycloak release that renames them makes identity fall back to the
+  admin REST API with a warning, not fail. The read is tested against the Keycloak release
+  Kiban embeds (26.6, pinned by digest in `infra/keycloak-build/Dockerfile`), not against
+  other releases. Other identity providers are not supported as a state source yet; Keycloak
+  is the embedded one.
 - **A service credential is created at bootstrap, not at runtime.** `KIBAN_SERVICE_CLIENTS`
   names the confidential clients; adding one means a restart of the `bootstrap` one-shot. The
   secret is read from the Keycloak admin console; bootstrap neither prints nor rotates it.
@@ -81,6 +88,9 @@ nothing here is promised for a date. The [roadmap](roadmap.md) lists what is pla
 - **A module is compiled into the platform.** The four sample modules are built by the platform's
   own Dockerfile and need a role migration, a Compose service and a rebuild; an app, by contrast,
   registers at runtime. A module in another language cannot be a module; it is an app.
+- **No exclusion, wildcards or conditions in a fragment.** `union` and `intersection` are
+  supported; "everyone except Carol" is modelled through groups and direct grants
+  ([Modelling practices](modelling.md)).
 - **Dependency version ranges are validated, not enforced at runtime.** The registry loads a
   manifest's dependencies and the gateway refuses a module whose dependency is not installed and
   enabled (`MODULE_DEPENDENCY_MISSING`); the `versionRange` is checked by the validator only.

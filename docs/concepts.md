@@ -16,7 +16,10 @@ Three records describe where a person sits:
 - An **org unit** is a node in a typed tree (company, division, team, territory, whatever your
   taxonomy declares). A company is always the top of its tree, and only companies sit at the top.
 - A **member** is a person's record inside one company. A member may be linked to a login (a
-  user account) or exist without one, for people who never sign in.
+  user account) or exist without one, for people who never sign in. A member marked **guest**
+  is an external person the company shares objects with: decisions treat a guest like any
+  other member, but a guest cannot read the company's directories of members, positions and
+  groups, nor a group's member list.
 - A **position** is a slot on an org unit ("Head of Sales, Region West"). An **assignment** says
   which member holds a position and for which dates. The **holder** is whoever holds it today.
 
@@ -47,6 +50,9 @@ Three kinds of administrator exist:
 A user is a person or a service: an app's backend signs in as its service account, a Keycloak
 user that authenticates with a client secret. Authorization treats both alike, membership
 included; the member directory carries the kind so people and services can be told apart.
+Any active member reads the company's three directories, members, positions and groups, each
+reduced to what a share-with or assign-to picker shows; the structure behind them is
+administration.
 
 Multi-factor policy (authenticator app or passkey) can be required globally or per user; a
 per-user override can only raise the requirement.
@@ -64,7 +70,7 @@ is created or deactivated, so "is an active member" is answered by the same grap
 else.
 
 Every request a module handles becomes a **decision**, eight ordered steps: the subject exists;
-the login is enabled; the user lifecycle is active; for a global-scope question, the required
+the login is enabled (read from Keycloak's own store, see [Operating](operating.md#configuration)); the user lifecycle is active; for a global-scope question, the required
 platform role is held; for a company-scope question, the company is active, the subject is a
 member, not blocked, and holds any required company role; the module is enabled (for the
 whole deployment); the object is bound to that company and the relation holds through the tuple

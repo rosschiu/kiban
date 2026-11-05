@@ -226,8 +226,9 @@ model, as `timesheet` and `helpdesk` do). Object type, then relation name, then 
 | `{ "computedUserset": "<relation>" }` | Whoever holds `<relation>` on the same object. Must name a relation of the same type |
 | `{ "tupleToUserset": { "tupleset": "<relation>", "computedUserset": "<relation>" } }` | Follow the tuples on `tupleset` (a relation of this type) to their subject objects and check `computedUserset` there. `computedUserset` must be defined on at least one type of the effective model (base plus your fragment) |
 | `{ "union": [ ...expressions ] }` | Any of the children; at least one |
+| `{ "intersection": [ ...expressions ] }` | All of the children; at least two. "Sees the line if on the delivery side and on the deal" is `intersection[computedUserset delivery_side, computedUserset on_deal]` |
 
-Any other construct (`intersection`, `exclusion`, wildcards, conditions) is outside the subset
+Any other construct (`exclusion`, wildcards, conditions) is outside the subset
 and refused; [Modelling folders](modelling-folders.md) shows inheritance, breaking it and
 limited access without them. Every type you declare must define `"company_module": { "this": true }`, the anchor
 every object check binds through. A type may not redeclare a base type (`user`, `system`,

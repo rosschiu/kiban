@@ -90,6 +90,7 @@ type fgaUserset struct {
 	ComputedUserset *fgaObjectRelation  `json:"computedUserset,omitempty"`
 	TupleToUserset  *fgaTupleToUserset  `json:"tupleToUserset,omitempty"`
 	Union           *fgaUsersetChildren `json:"union,omitempty"`
+	Intersection    *fgaUsersetChildren `json:"intersection,omitempty"`
 }
 
 type fgaObjectRelation struct {
@@ -111,7 +112,7 @@ type fgaModel struct {
 	TypeDefinitions []fgaTypeDef `json:"type_definitions"`
 }
 
-// BuildOpenFGAModel translates engine.Model (this/computedUserset/tupleToUserset/union — the
+// BuildOpenFGAModel translates engine.Model (this/computedUserset/tupleToUserset/union/intersection — the
 // exact supported subset, already validated by engine.LoadModel) into an OpenFGA JSON
 // authorization model, using dslPath (internal/authz/harness/model.fga) to recover each `this`
 // leg's directly-assignable subject types. extraUsersetTypes lets a caller widen a relation's
@@ -183,6 +184,12 @@ func translateExpr(e engine.Expr) fgaUserset {
 			children = append(children, translateExpr(c))
 		}
 		return fgaUserset{Union: &fgaUsersetChildren{Child: children}}
+	case e.IntersectionChildren() != nil:
+		children := make([]fgaUserset, 0, len(e.IntersectionChildren()))
+		for _, c := range e.IntersectionChildren() {
+			children = append(children, translateExpr(c))
+		}
+		return fgaUserset{Intersection: &fgaUsersetChildren{Child: children}}
 	default:
 		return fgaUserset{This: &struct{}{}}
 	}

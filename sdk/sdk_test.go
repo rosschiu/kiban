@@ -110,6 +110,16 @@ func fakeGateway(t *testing.T, iss *kittest.Issuer) (*httptest.Server, *atomic.I
 		paths = append(paths, r.URL.RequestURI())
 		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"items": []map[string]any{{"id": "m-1", "displayName": "Alice", "email": "", "hasLinkedUser": true, "kind": "service"}}, "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
 	})
+	mux.HandleFunc("GET /api/org/companies/{companyId}/positions", func(w http.ResponseWriter, r *http.Request) {
+		record(r)
+		paths = append(paths, r.URL.RequestURI())
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"items": []map[string]any{{"id": "p-1", "code": "CFO", "title": "CFO"}}, "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
+	})
+	mux.HandleFunc("GET /api/org/companies/{companyId}/groups", func(w http.ResponseWriter, r *http.Request) {
+		record(r)
+		paths = append(paths, r.URL.RequestURI())
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"items": []map[string]any{{"id": "g-1", "code": "SALES", "name": "Sales"}}, "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
+	})
 	mux.HandleFunc("GET /api/org/companies/{companyId}/positions/{id}/holder", func(w http.ResponseWriter, r *http.Request) {
 		record(r)
 		paths = append(paths, r.URL.RequestURI())
@@ -220,6 +230,15 @@ func TestClient(t *testing.T) {
 	}
 	if last := (*bearers)[len(*bearers)-1]; last == userTok {
 		t.Fatalf("MemberDirectory must send the service token")
+	}
+	if pp, err := c.PositionDirectory(ctx, "co-1", 1, 25); err != nil || pp.Items[0].Code != "CFO" {
+		t.Fatalf("PositionDirectory = %+v, %v", pp, err)
+	}
+	if last := (*fakePaths)[len(*fakePaths)-1]; last != "/api/org/companies/co-1/positions?page=1&pageSize=25" {
+		t.Fatalf("PositionDirectory path = %q", last)
+	}
+	if gp, err := c.GroupDirectory(ctx, "co-1", 0, 0); err != nil || gp.Items[0].Name != "Sales" {
+		t.Fatalf("GroupDirectory = %+v, %v", gp, err)
 	}
 	holder, err := c.PositionHolder(ctx, "co-1", "p-1", time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC))
 	if err != nil || holder.MemberID != "m-1" || holder.PositionID != "p-1" {

@@ -41,14 +41,14 @@ func TestCompanyMember_TupleLifecycle(t *testing.T) {
 		t.Fatalf("after active create: tuple count = %d, want 1", got)
 	}
 
-	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", false); err != nil {
+	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", false, nil); err != nil {
 		t.Fatalf("deactivate: %v", err)
 	}
 	if got := companyMemberTupleCount(t, company.ID, member.ID); got != 0 {
 		t.Fatalf("after deactivate: tuple count = %d, want 0", got)
 	}
 
-	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", true); err != nil {
+	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", true, nil); err != nil {
 		t.Fatalf("reactivate: %v", err)
 	}
 	if got := companyMemberTupleCount(t, company.ID, member.ID); got != 1 {
@@ -56,14 +56,14 @@ func TestCompanyMember_TupleLifecycle(t *testing.T) {
 	}
 
 	// A no-flip update (still active) must not duplicate or drop the fact.
-	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, "Renamed", "", true); err != nil {
+	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, "Renamed", "", true, nil); err != nil {
 		t.Fatalf("rename: %v", err)
 	}
 	if got := companyMemberTupleCount(t, company.ID, member.ID); got != 1 {
 		t.Fatalf("after rename: tuple count = %d, want 1", got)
 	}
 
-	inactive, err := store.CreateMember(ctx, "test-actor", company.ID, "CM1-INACT", "Inactive", "", false)
+	inactive, err := store.CreateMember(ctx, "test-actor", company.ID, "CM1-INACT", "Inactive", "", false, false)
 	if err != nil {
 		t.Fatalf("create inactive member: %v", err)
 	}
@@ -128,13 +128,13 @@ func TestCompanyMember_EngineAnswersCompanyModuleMember(t *testing.T) {
 		t.Fatal("active + linked member of company A: want false on company B's module")
 	}
 
-	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", false); err != nil {
+	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", false, nil); err != nil {
 		t.Fatalf("deactivate: %v", err)
 	}
 	if isMember(moduleA) {
 		t.Fatal("deactivated member: want false")
 	}
-	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", true); err != nil {
+	if _, err := store.UpdateMember(ctx, "test-actor", member.ID, member.DisplayName, "", true, nil); err != nil {
 		t.Fatalf("reactivate: %v", err)
 	}
 	if !isMember(moduleA) {

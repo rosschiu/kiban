@@ -50,11 +50,23 @@ The only thing the Director cannot do on that page is invent a new verb, say "ex
 a new relation, so it is a re-registration, and that is right: a new verb has to be enforced in
 your code before it means anything.
 
-## "And" moves to the writer
+## "And" is an intersection
 
-The model has `union` and no `intersection` ([#107](https://github.com/rosschiu/kiban/issues/107)
-tracks adding it). "Delivery sees a line only if the line is on the delivery side and they are
-on the deal" is two facts joined by "and". Your app knows both facts, so it writes one tuple
+"Delivery sees a line only if the line is on the delivery side and they are on the deal" is two
+facts joined by "and", and the model says it directly:
+
+```json
+"line": {
+  "company_module": { "this": true },
+  "deal": { "this": true },
+  "delivery_side": { "this": true },
+  "on_deal": { "tupleToUserset": { "tupleset": "deal", "computedUserset": "member" } },
+  "viewer": { "intersection": [ { "computedUserset": "delivery_side" }, { "computedUserset": "on_deal" } ] }
+}
+```
+
+A check holds only when every child holds. Before 0.2.0 the model had no intersection, and the
+pattern below still works on any version: your app knows both facts, so it writes one tuple
 that already means both:
 
 ```

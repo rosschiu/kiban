@@ -27,6 +27,9 @@ services:
       # service connects as (keycloak owns the keycloak DB; kiban owns the app DB).
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
       KIBAN_DB_PASSWORD: ${KIBAN_DB_PASSWORD}
+      # Password of kiban_kcread, identity's read-only role on Keycloak's user table (same
+      # secret as identity's own role; one service, one secret).
+      KIBAN_IDENTITY_DB_PASSWORD: ${KIBAN_IDENTITY_DB_PASSWORD}
     volumes:
       # postgres:18+ images store data under a pg_ctlcluster-style layout; mount the volume at
       # /var/lib/postgresql (not .../data) so the image manages the versioned subdirectory itself.
@@ -265,6 +268,9 @@ services:
       KIBAN_IDENTITY_DB_PORT: "5432"
       KIBAN_IDENTITY_DB_NAME: ${POSTGRES_DB}
       KIBAN_IDENTITY_DB_PASSWORD: ${KIBAN_IDENTITY_DB_PASSWORD}
+      # Decisions read the user's enabled flag from Keycloak's database on this server
+      # (role kiban_kcread); unset it to use the admin REST API behind a short cache.
+      KEYCLOAK_DB_NAME: keycloak
       KEYCLOAK_BASE_URL: http://keycloak:8080
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
       # ISSUER_URL deliberately does NOT match JWKS_URL's host.

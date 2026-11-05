@@ -101,6 +101,8 @@ describe("createAppClient", () => {
       if (url.includes("/holder?date=")) return json(200, { data: { id: "a-1", positionId: "p-1", memberId: "m-1", validFrom: "2026-01-01", validTo: null } });
       if (url.endsWith("/groups/g-1/members")) return json(200, { data: [{ groupId: "g-1", memberId: "m-1", memberDisplayName: "Alice" }] });
       if (url.includes("/members?")) return json(200, { data: { items: [{ id: "m-1", displayName: "Alice", email: "", hasLinkedUser: true, kind: "person" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } });
+      if (url.endsWith("/co-1/positions")) return json(200, { data: { items: [{ id: "p-1", code: "CFO", title: "CFO" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } });
+      if (url.endsWith("/co-1/groups")) return json(200, { data: { items: [{ id: "g-1", code: "SALES", name: "Sales" }], total: 1, page: 1, pageSize: 25, totalPages: 1 } });
       return json(200, { data: { status: "ok" } });
     });
     const credentials = { getAccessToken: async () => "svc-token" };
@@ -135,6 +137,9 @@ describe("createAppClient", () => {
     const members = await app.groupMembers("co-1", "g-1");
     expect(members[0]?.memberDisplayName).toBe("Alice");
     expect(calls.slice(5).map((c) => c.auth)).toEqual(["Bearer user-token", "Bearer user-token", "Bearer svc-token", "Bearer svc-token", "Bearer svc-token"]);
+    expect((await app.positionDirectory("co-1")).items[0]?.code).toBe("CFO");
+    expect((await app.groupDirectory("co-1")).items[0]?.name).toBe("Sales");
+    expect(calls.slice(10).map((c) => c.auth)).toEqual(["Bearer svc-token", "Bearer svc-token"]);
   });
 
   it("api sends the service bearer on any other route, unless the caller sets one", async () => {

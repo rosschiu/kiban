@@ -4,6 +4,20 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-05
+Six additions for an application that runs beside Kiban. Any active member reads the company's
+position and group directories as well as the member one; a position changes hands in one call;
+a member can be a guest, present for decisions but shown nobody else; app fragments may say
+"and"; decisions read the user's enabled flag straight from Keycloak's database; and merging
+the release PR now tags and ships the release.
+
+- Member-level directories of positions and groups: `GET /api/org/companies/{id}/positions` and `.../groups` list id, code and title or name for any active member and an app's service account that is a member, in all three SDKs; the integrate page says to share with a person by granting to `member:<id>#mapped_user`
+- Decisions read the user's enabled flag from Keycloak's database with one local `SELECT` (read-only role `kiban_kcread`, `KEYCLOAK_DB_NAME`), instead of calling the admin REST API on every check; without that database the API answer is cached for `KIBAN_USER_STATE_CACHE_SECONDS`
+- App fragments may use `intersection` ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness
+- `POST /api/org/admin/positions/{id}/handover` ends the current assignment and assigns the new member in one transaction, idempotent when the member already holds it, with `expectedAssignmentId` against a concurrent administrator; 0.1.x needed two calls and left the position empty in between
+- Merging the release PR tags the release: a push to main that changes `VERSION` creates `v<VERSION>` and starts the release workflow; 0.1.x needed a hand-pushed tag
+- Guest members: `isGuest` on a member, set at creation or by a company administrator; a guest is an active member for every decision but is refused the member, position and group directories and a group's member list, so an external person shared with sees nobody else
+
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role
 matrix as tuples, "and" moved to the writer), folders without exclusion, and module inside or
@@ -118,7 +132,8 @@ serves its own API; the sample modules are examples, off by default.
 - Coverage ratchet, OpenAPI response validation, licence and secret scans in `make check`
 - Documentation site: quickstart, integrate, concepts, building, SDK guide, operating, security, limitations
 
-[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/rosschiu/kiban/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rosschiu/kiban/releases/tag/v0.2.0
 [0.1.5]: https://github.com/rosschiu/kiban/releases/tag/v0.1.5
 [0.1.4]: https://github.com/rosschiu/kiban/releases/tag/v0.1.4
 [0.1.3]: https://github.com/rosschiu/kiban/releases/tag/v0.1.3

@@ -236,6 +236,19 @@ class KibanClient:
         path = f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/members?{urllib.parse.urlencode(params)}"
         return self._api("GET", path, self.service_token())
 
+    def position_directory(self, company_id: str, page: int = 1, page_size: int = 25) -> dict[str, Any]:
+        """One page of ``company_id``'s positions (``items`` of ``id``, ``code``, ``title``), as
+        the app's service account, which must be a member of the company: the share-with or
+        assign-to picker beside ``member_directory``."""
+        params = urllib.parse.urlencode({"page": str(page), "pageSize": str(page_size)})
+        return self._api("GET", f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/positions?{params}", self.service_token())
+
+    def group_directory(self, company_id: str, page: int = 1, page_size: int = 25) -> dict[str, Any]:
+        """One page of ``company_id``'s active groups (``items`` of ``id``, ``code``, ``name``),
+        as the app's service account."""
+        params = urllib.parse.urlencode({"page": str(page), "pageSize": str(page_size)})
+        return self._api("GET", f"/api/org/companies/{urllib.parse.quote(company_id, safe='')}/groups?{params}", self.service_token())
+
     def position_holder(self, company_id: str, position_id: str, date: Optional[str] = None) -> dict[str, Any]:
         """Who holds ``position_id`` in ``company_id`` on ``date`` (``YYYY-MM-DD``, default
         today): the assignment (``memberId``, ``validFrom``, ``validTo``). A 404

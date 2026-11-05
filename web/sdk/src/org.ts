@@ -11,13 +11,16 @@
 // caller themselves.
 import type { ApiClient } from "./client.js";
 import type {
+  GroupDirectoryEntry,
   MemberDirectoryEntry,
   OrgAssignment,
   OrgGroup,
   OrgGroupMember,
+  OrgHandover,
   OrgGroupWithMemberCount,
   OrgMeCompany,
   OrgPosition,
+  PositionDirectoryEntry,
   OrgPositionWithHolder,
   Page
 } from "./types.js";
@@ -33,6 +36,11 @@ export interface OrgClient {
    * member picker (share-with/assign-to). q is an optional case-insensitive substring filter
    * over displayName/email. */
   memberDirectory(companyId: string, q?: string, page?: number, pageSize?: number): Promise<Page<MemberDirectoryEntry>>;
+  /** GET /api/org/companies/{companyId}/positions — the company's positions (id, code, title) for
+   * any active member; the share-with or assign-to picker beside `memberDirectory`. */
+  positionDirectory(companyId: string, page?: number, pageSize?: number): Promise<Page<PositionDirectoryEntry>>;
+  /** GET /api/org/companies/{companyId}/groups — the company's active groups (id, code, name). */
+  groupDirectory(companyId: string, page?: number, pageSize?: number): Promise<Page<GroupDirectoryEntry>>;
 
   // ---- The sample shell's minimal position-based-access admin surface (`/api/org/admin/...`,
   // internal/gateway/admin_position_routes.go) — every call requires the caller to hold
@@ -52,6 +60,11 @@ export interface OrgClient {
    * 409 POSITION_HELD, with the current assignmentId and memberId in details, while someone
    * holds the position: end that assignment first. */
   adminAssignPosition(positionId: string, memberId: string): Promise<OrgAssignment>;
+  /** POST /api/org/admin/positions/{id}/handover {memberId, expectedAssignmentId?} — end the
+   * current assignment and assign memberId in one transaction; idempotent when memberId already
+   * holds it. 409 POSITION_HELD when expectedAssignmentId is no longer current; 422 when the
+   * position is empty (assign instead). */
+  adminHandoverPosition(positionId: string, input: { memberId: string; expectedAssignmentId?: string }): Promise<OrgHandover>;
   /** POST /api/org/admin/assignments/{id}/end — end-NOW, no body (server-dated).
    * 409 ASSIGNMENT_ALREADY_ENDED when the assignment's window is already closed. */
   adminEndAssignment(assignmentId: string): Promise<OrgAssignment>;
@@ -86,6 +99,10 @@ export function createOrgClient(client: ApiClient): OrgClient {
 
     memberDirectory: (companyId, q, page, pageSize) =>
       client.request(`/api/org/companies/${encodeURIComponent(companyId)}/members`, { query: { q, page, pageSize } }),
+    positionDirectory: (companyId, page, pageSize) =>
+      client.request(`/api/org/companies/${encodeURIComponent(companyId)}/positions`, { query: { page, pageSize } }),
+    groupDirectory: (companyId, page, pageSize) =>
+      client.request(`/api/org/companies/${encodeURIComponent(companyId)}/groups`, { query: { page, pageSize } }),
 
     adminListPositions: (companyId, page, pageSize) =>
       client.request(`/api/org/admin/companies/${encodeURIComponent(companyId)}/positions`, {
@@ -105,6 +122,11 @@ export function createOrgClient(client: ApiClient): OrgClient {
       client.request(`/api/org/admin/positions/${encodeURIComponent(positionId)}/assignments`, {
         method: "POST",
         body: { memberId }
+      }),
+    adminHandoverPosition: (positionId, input) =>
+      client.request(`/api/org/admin/positions/${encodeURIComponent(positionId)}/handover`, {
+        method: "POST",
+        body: input
       }),
     adminEndAssignment: (assignmentId) =>
       client.request(`/api/org/admin/assignments/${encodeURIComponent(assignmentId)}/end`, { method: "POST" }),

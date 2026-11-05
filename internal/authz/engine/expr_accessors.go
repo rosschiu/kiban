@@ -34,3 +34,11 @@ func (e Expr) UnionChildren() []Expr {
 	}
 	return e.union
 }
+
+// IntersectionChildren returns the `intersection` children, or nil if e is not one.
+func (e Expr) IntersectionChildren() []Expr {
+	if e.kind != kindIntersection {
+		return nil
+	}
+	return e.intersection
+}

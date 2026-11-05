@@ -53,6 +53,17 @@ Key settings:
 - `KIBAN_SERVICE_CLIENTS`: read by `bootstrap`; comma-separated ids of confidential Keycloak
   clients with a service account and the `kiban-api` audience, for backends that need their own
   token. See [Getting a token for a service](integrate.md#getting-a-token-for-a-service).
+- `KEYCLOAK_DB_NAME`: read by `identity`. When set (the Compose files and the k8s base set
+  `keycloak`), every decision reads the user's enabled flag with one `SELECT` from Keycloak's
+  own `user_entity` table, as the read-only role `kiban_kcread` that `postgres-init` creates at
+  initdb with a default `SELECT` privilege on the tables Keycloak creates. No copy, no sync, no
+  lag: a disable is visible the instant Keycloak commits it. The role's password is
+  `KIBAN_IDENTITY_DB_PASSWORD`. Unset it when Keycloak uses another database server; identity
+  then asks the admin REST API, which costs about 30 ms per decision, behind a cache of
+  `KIBAN_USER_STATE_CACHE_SECONDS` (default `5`), so a disable is seen within that many
+  seconds. Identity logs which source it uses at start-up, and falls back to the API with a
+  warning when the probe fails. This is a deliberate coupling to one column of Keycloak's
+  schema, asserted at start-up; see [limitations](limitations.md).
 - `KIBAN_ACCESS_TOKEN_LIFESPAN`: read by `bootstrap`; the realm's access-token lifetime in
   seconds, default `300`, written to Keycloak on every run. A disabled user's token verifies
   this long on routes that do not ask for a decision ([limitations](limitations.md)); shorten
@@ -180,6 +191,21 @@ migration.
 A stack created before the database roles change (the `kiban` owner role, `KIBAN_DB_PASSWORD`,
 `KC_DB_PASSWORD`) cannot be upgraded in place: recreate it (`make dev-clean && make dev`) or dump
 and restore into a fresh cluster.
+
+A cluster created before 0.2.0 has no `kiban_kcread` role, so identity logs a warning and keeps
+using the admin REST API. To switch it to the direct read without recreating the cluster, run
+once as the Postgres superuser, with identity's password:
+
+```sql
+CREATE ROLE kiban_kcread LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '<KIBAN_IDENTITY_DB_PASSWORD>';
+GRANT CONNECT ON DATABASE keycloak TO kiban_kcread;
+\c keycloak
+GRANT USAGE ON SCHEMA public TO kiban_kcread;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO kiban_kcread;
+ALTER DEFAULT PRIVILEGES FOR ROLE keycloak IN SCHEMA public GRANT SELECT ON TABLES TO kiban_kcread;
+```
+
+then restart identity.
 
 ## Reading the audit trail
 

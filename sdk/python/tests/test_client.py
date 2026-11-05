@@ -64,6 +64,12 @@ class Handler(BaseHTTPRequestHandler):
             State.bearers.append(self.headers.get("Authorization"))
             State.paths.append(self.path)
             return self._json(200, {"data": {"items": [{"id": "m-1", "displayName": "Alice", "email": "", "hasLinkedUser": True, "kind": "service"}], "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
+        if self.path.startswith("/api/org/companies/co-1/positions?"):
+            State.paths.append(self.path)
+            return self._json(200, {"data": {"items": [{"id": "p-1", "code": "CFO", "title": "CFO"}], "total": 1, "page": 1, "pageSize": 25, "totalPages": 1}})
+        if self.path.startswith("/api/org/companies/co-1/groups?"):
+            State.paths.append(self.path)
+            return self._json(200, {"data": {"items": [{"id": "g-1", "code": "SALES", "name": "Sales"}], "total": 1, "page": 2, "pageSize": 25, "totalPages": 1}})
         if "/positions/p-1/holder?date=" in self.path:
             State.paths.append(self.path)
             return self._json(200, {"data": {"id": "a-1", "positionId": "p-1", "memberId": "m-1", "validFrom": "2026-01-01", "validTo": None}})
@@ -158,6 +164,10 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(page["items"][0]["kind"], "service")
         self.assertIn("q=ali", State.paths[-1])
         self.assertTrue(State.bearers[-1].startswith("Bearer ey"))
+        self.assertEqual(c.position_directory("co-1")["items"][0]["code"], "CFO")
+        self.assertTrue(State.paths[-1].endswith("/co-1/positions?page=1&pageSize=25"))
+        self.assertEqual(c.group_directory("co-1", page=2)["items"][0]["name"], "Sales")
+        self.assertTrue(State.paths[-1].endswith("/co-1/groups?page=2&pageSize=25"))
         holder = c.position_holder("co-1", "p-1", "2026-09-28")
         self.assertEqual(holder["memberId"], "m-1")
         self.assertTrue(State.paths[-1].endswith("/holder?date=2026-09-28"))

@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package identity
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+)
+
+type scriptedSource struct {
+	calls  int
+	answer string
+	err    error
+}
+
+func (s *scriptedSource) UserEnabled(context.Context, string) (string, error) {
+	s.calls++
+	return s.answer, s.err
+}
+
+func TestCachedUserState_RemembersDefiniteAnswersForTTL(t *testing.T) {
+	inner := &scriptedSource{answer: KCStateTrue}
+	now := time.Unix(1_000, 0)
+	c := NewCachedUserState(inner, 5*time.Second)
+	c.now = func() time.Time { return now }
+
+	for i := 0; i < 3; i++ {
+		if st, _ := c.UserEnabled(context.Background(), "u1"); st != KCStateTrue {
+			t.Fatalf("call %d: %s", i, st)
+		}
+	}
+	if inner.calls != 1 {
+		t.Fatalf("inner calls within ttl = %d, want 1", inner.calls)
+	}
+	// Another user is its own entry.
+	c.UserEnabled(context.Background(), "u2") //nolint:errcheck
+	if inner.calls != 2 {
+		t.Fatalf("inner calls after a second user = %d, want 2", inner.calls)
+	}
+	// After ttl the answer is fetched again, so a disable is seen within ttl.
+	now = now.Add(6 * time.Second)
+	inner.answer = KCStateFalse
+	if st, _ := c.UserEnabled(context.Background(), "u1"); st != KCStateFalse || inner.calls != 3 {
+		t.Fatalf("after ttl: state=%s calls=%d, want false and 3", st, inner.calls)
+	}
+}
+
+func TestCachedUserState_NeverCachesUnknown(t *testing.T) {
+	inner := &scriptedSource{answer: KCStateUnknown, err: errors.New("keycloak down")}
+	c := NewCachedUserState(inner, time.Minute)
+	for i := 0; i < 2; i++ {
+		if st, err := c.UserEnabled(context.Background(), "u1"); st != KCStateUnknown || err == nil {
+			t.Fatalf("call %d: %s %v", i, st, err)
+		}
+	}
+	if inner.calls != 2 {
+		t.Fatalf("unknown must be asked again every time, calls = %d", inner.calls)
+	}
+	zero := NewCachedUserState(&scriptedSource{answer: KCStateTrue}, 0)
+	zero.UserEnabled(context.Background(), "u1") //nolint:errcheck
+	zero.UserEnabled(context.Background(), "u1") //nolint:errcheck
+	if zero.inner.(*scriptedSource).calls != 2 {
+		t.Fatal("ttl 0 must disable caching")
+	}
+}
+
+// TestHTTP_UserState_ReadsFromTheConfiguredSource: once SetUserStateSource is called, the state
+// endpoint reports what that source says, not what the admin API would.
+func TestHTTP_UserState_ReadsFromTheConfiguredSource(t *testing.T) {
+	f := newHTTPTestFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]bool{"enabled": true}) // the admin API says enabled
+	})
+	f.svc.SetUserStateSource(&scriptedSource{answer: KCStateFalse}) // the configured source says disabled
+
+	resolveReq := httptest.NewRequest(http.MethodPost, "/internal/identity/resolve", nil)
+	resolveReq.Header.Set("Authorization", "Bearer "+f.bearer(t, "kc-sub-source", "src@example.com", "source"))
+	resolveRec := httptest.NewRecorder()
+	f.svc.Routes().ServeHTTP(resolveRec, resolveReq)
+	if resolveRec.Code != http.StatusOK {
+		t.Fatalf("setup resolve failed: %d %s", resolveRec.Code, resolveRec.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodGet, "/internal/identity/users/kc-sub-source/state", nil)
+	rec := httptest.NewRecorder()
+	f.svc.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", rec.Code, rec.Body.String())
+	}
+	if data := decodeEnvelope(t, rec)["data"].(map[string]any); data["kcEnabled"] != "false" {
+		t.Fatalf("kcEnabled = %v, want false from the configured source", data["kcEnabled"])
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -79,6 +80,11 @@ func run(ctx context.Context, logger *slog.Logger) error {
 		// Dedicated service-account client (never master-realm credentials at runtime) —
 		// secret arrives via the *_FILE convention (config.Load).
 		{Name: "KEYCLOAK_IDENTITY_CLIENT_SECRET", Required: true},
+		// User state for decisions: read Keycloak's own user table when its database is on the
+		// same Postgres server (KEYCLOAK_DB_NAME set, role kiban_kcread from postgres-init),
+		// else the admin REST API behind a short cache. docs/operating.md, docs/security.md.
+		{Name: "KEYCLOAK_DB_NAME", Default: ""},
+		{Name: "KIBAN_USER_STATE_CACHE_SECONDS", Default: "5"},
 
 		// authz's own base URL, for the real (engine-backed) AdminAuthorizer. Absent ⇒
 		// denyAllAuthorizer stays wired (the explicit fail-closed fallback) — never a silent
@@ -137,6 +143,7 @@ func run(ctx context.Context, logger *slog.Logger) error {
 	}
 
 	svc := identity.NewService(store, adminClient, verifier, adminAuthorizer, auditWriter)
+	svc.SetUserStateSource(userStateSource(ctx, logger, values, adminClient))
 
 	// This service's own GET /metrics, on the same listener (see cmd/registry/main.go's own
 	// comment for the full rationale — same pattern every service uses).
@@ -197,4 +204,33 @@ func refreshJWKSPeriodically(ctx context.Context, logger *slog.Logger, verifier 
 			}
 		}
 	}
+}
+
+// userStateSource picks where decisions read Keycloak's enabled flag from. The direct read of
+// Keycloak's database is preferred; when it is not configured, or the probe fails (no grant yet
+// on an upgraded cluster, Keycloak elsewhere), the admin REST API behind a short cache keeps
+// today's behaviour and the log says which one is in use and why.
+func userStateSource(ctx context.Context, logger *slog.Logger, values map[string]string, admin *identity.AdminClient) identity.UserStateSource {
+	ttl, err := strconv.Atoi(values["KIBAN_USER_STATE_CACHE_SECONDS"])
+	if err != nil || ttl < 0 {
+		ttl = 5
+	}
+	fallback := identity.NewCachedUserState(admin, time.Duration(ttl)*time.Second)
+	if values["KEYCLOAK_DB_NAME"] == "" {
+		logger.Info("identity: user state from the Keycloak admin API", "cacheSeconds", ttl)
+		return fallback
+	}
+	dsn := fmt.Sprintf("postgres://kiban_kcread:%s@%s:%s/%s?sslmode=disable",
+		values["KIBAN_IDENTITY_DB_PASSWORD"], values["KIBAN_IDENTITY_DB_HOST"], values["KIBAN_IDENTITY_DB_PORT"], values["KEYCLOAK_DB_NAME"])
+	pool, err := pgxpool.New(ctx, dsn)
+	if err == nil {
+		var reader *identity.KCDBReader
+		if reader, err = identity.NewKCDBReader(ctx, pool, values["KEYCLOAK_REALM"]); err == nil {
+			logger.Info("identity: user state read from the Keycloak database", "database", values["KEYCLOAK_DB_NAME"])
+			return reader
+		}
+		pool.Close()
+	}
+	logger.Warn("identity: user state falls back to the Keycloak admin API; see the Operating page for the kiban_kcread grant", "error", err, "cacheSeconds", ttl)
+	return fallback
 }

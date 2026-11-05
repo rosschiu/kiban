@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/rosschiu/kiban/internal/audit"
 	authzstore "github.com/rosschiu/kiban/internal/authz/store"
@@ -137,8 +138,37 @@ func (s *Store) GetGroup(ctx context.Context, id uuid.UUID) (Group, error) {
 
 // ListGroupsWithMemberCount returns companyID's groups, paginated, each with its current member
 // count.
+// ListActiveGroups is the directory read: the company's active groups, by code.
+func (s *Store) ListActiveGroups(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]Group, int, error) {
+	limit, offset := pageWindow(page, pageSize)
+	rows, err := s.pool.Query(ctx, `SELECT id, company_id, code, name, source, external_ref, is_active, created_at, updated_at
+		FROM org.group WHERE company_id = $1 AND is_active ORDER BY code LIMIT $2 OFFSET $3`, pgFromUUID(companyID), limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("org: list active groups: %w", err)
+	}
+	defer rows.Close()
+	var out []Group
+	for rows.Next() {
+		var g Group
+		var id, cid pgtype.UUID
+		if err := rows.Scan(&id, &cid, &g.Code, &g.Name, &g.Source, &g.ExternalRef, &g.IsActive, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			return nil, 0, fmt.Errorf("org: list active groups: %w", err)
+		}
+		g.ID, g.CompanyID = uuidFromPg(id), uuidFromPg(cid)
+		out = append(out, g)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("org: list active groups: %w", err)
+	}
+	var total int
+	if err := s.pool.QueryRow(ctx, `SELECT count(*) FROM org.group WHERE company_id = $1 AND is_active`, pgFromUUID(companyID)).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("org: count active groups: %w", err)
+	}
+	return out, total, nil
+}
+
 func (s *Store) ListGroupsWithMemberCount(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]GroupWithMemberCount, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountGroups(ctx, pgFromUUID(companyID))
@@ -146,7 +176,7 @@ func (s *Store) ListGroupsWithMemberCount(ctx context.Context, companyID uuid.UU
 		return nil, 0, fmt.Errorf("org: count groups: %w", err)
 	}
 	rows, err := q.ListGroupsWithMemberCount(ctx, ListGroupsWithMemberCountParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize),
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list groups with member count: %w", err)
