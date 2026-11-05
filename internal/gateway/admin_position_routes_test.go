@@ -56,6 +56,7 @@ var adminPositionRoutes = []struct {
 	{"create", http.MethodPost, "/api/org/admin/companies/co-1/positions", `{"code":"cfo","title":"CFO"}`},
 	{"update", http.MethodPut, "/api/org/admin/positions/pos-1", `{"title":"CFO (interim)"}`},
 	{"assign", http.MethodPost, "/api/org/admin/positions/pos-1/assignments", `{"memberId":"mem-1"}`},
+	{"handover", http.MethodPost, "/api/org/admin/positions/pos-1/handover", `{"memberId":"mem-1"}`},
 	{"end", http.MethodPost, "/api/org/admin/assignments/asg-1/end", ``},
 }
 
@@ -148,6 +149,7 @@ func TestAdminPositionRoutes_Allowed_ForwardsToOrgWithPathPreserved(t *testing.T
 		{"create", http.MethodPost, "/api/org/admin/companies/co-1/positions", `{"code":"cfo","title":"CFO"}`, "/internal/org/companies/co-1/positions", "/internal/org/companies/co-1/positions"},
 		{"update", http.MethodPut, "/api/org/admin/positions/pos-1", `{"title":"CFO (interim)"}`, "/internal/org/admin/positions/pos-1", "/internal/org/admin/positions/pos-1"},
 		{"assign", http.MethodPost, "/api/org/admin/positions/pos-1/assignments", `{"memberId":"mem-1"}`, "/internal/org/positions/pos-1/assignments", "/internal/org/positions/pos-1/assignments"},
+		{"handover", http.MethodPost, "/api/org/admin/positions/pos-1/handover", `{"memberId":"mem-1"}`, "/internal/org/positions/pos-1/handover", "/internal/org/positions/pos-1/handover"},
 		{"end", http.MethodPost, "/api/org/admin/assignments/asg-1/end", ``, "/internal/org/assignments/asg-1/end", "/internal/org/assignments/asg-1/end"},
 	}
 	for _, tc := range tests {

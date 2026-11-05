@@ -249,3 +249,39 @@ func TestHTTP_AssignNow_HeldAnswers409PositionHeld(t *testing.T) {
 		t.Fatalf("details = %v, want assignment %s member %s", details, current.ID, first.ID)
 	}
 }
+
+func TestHTTP_Handover_EndsAndAssigns(t *testing.T) {
+	f := newAllowAllFixture(t, nil)
+	store := f.svc.store
+	company := mustCreateCompany(t, store, "ADM9")
+	dave := mustCreateMember(t, store, company.ID, "DAVE9")
+	erin := mustCreateMember(t, store, company.ID, "ERIN9")
+	position := mustCreatePosition(t, store, company.ID, company.ID, "CFO")
+
+	rec := doJSON(t, f, "POST", "/internal/org/positions/"+position.ID.String()+"/handover", `{"memberId":"`+dave.ID.String()+`"}`)
+	if rec.Code != 422 {
+		t.Fatalf("empty position: status = %d, want 422, body=%s", rec.Code, rec.Body.String())
+	}
+	first, err := store.AssignNow(context.Background(), "actor", position.ID, dave.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec = doJSON(t, f, "POST", "/internal/org/positions/"+position.ID.String()+"/handover", `{"memberId":"`+erin.ID.String()+`","expectedAssignmentId":"`+erin.ID.String()+`"}`)
+	if rec.Code != 409 {
+		t.Fatalf("stale expectation: status = %d, want 409, body=%s", rec.Code, rec.Body.String())
+	}
+	rec = doJSON(t, f, "POST", "/internal/org/positions/"+position.ID.String()+"/handover", `{"memberId":"`+erin.ID.String()+`","expectedAssignmentId":"`+first.ID.String()+`"}`)
+	if rec.Code != 200 {
+		t.Fatalf("handover: status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	data := mustEnvelopeData(t, rec)
+	ended, _ := data["ended"].(map[string]any)
+	assignment, _ := data["assignment"].(map[string]any)
+	if ended["id"] != first.ID.String() || assignment["memberId"] != erin.ID.String() {
+		t.Fatalf("handover body = %v", data)
+	}
+	rec = doJSON(t, f, "POST", "/internal/org/positions/"+position.ID.String()+"/handover", `{"memberId":"`+erin.ID.String()+`"}`)
+	if rec.Code != 200 || mustEnvelopeData(t, rec)["ended"] != nil {
+		t.Fatalf("repeat: status = %d body=%s, want 200 with ended null", rec.Code, rec.Body.String())
+	}
+}

@@ -109,7 +109,7 @@ Each client is a function of the API client and returns an object of typed metho
 |---|---|---|
 | `createCapabilitiesClient(api)` | `list()`, `get(moduleKey)` | `GET /api/platform/capabilities[/{module}]` |
 | `createEffectiveAccessClient(api)` | `can(request)`, `batchCan(request)`, `summary(companyId?)` | `POST /api/auth/effective-access/can`, `/batch-can`, `GET .../summary` |
-| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, `positionDirectory(companyId, page?, pageSize?)`, `groupDirectory(companyId, page?, pageSize?)`, and the admin methods (a superadmin, or an administrator of that company) `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
+| `createOrgClient(api)` | `meCompanies()`, `memberDirectory(companyId, q?, page?, pageSize?)`, `positionDirectory(companyId, page?, pageSize?)`, `groupDirectory(companyId, page?, pageSize?)`, and the admin methods (a superadmin, or an administrator of that company) `adminListPositions`, `adminCreatePosition`, `adminAssignPosition`, `adminHandoverPosition`, `adminEndAssignment`, `adminListGroups`, `adminCreateGroup`, `adminListGroupMembers`, `adminAddGroupMember`, `adminRemoveGroupMember` | `/api/org/...` |
 | `createSuperadminClient(api)` | `catalog()`, `enableModule(key)`, `disableModule(key)`, `grantPlatformRole(subjectId, role)`, `revokePlatformRole(subjectId, role)` | `/api/platform/catalog`, `/api/platform/admin/...` |
 | `createDemoModeClient(api)` | `get()` | `GET /api/platform/demo-mode` |
 

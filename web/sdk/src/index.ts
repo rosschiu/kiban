@@ -61,6 +61,7 @@ export type {
   OrgCompanyState,
   OrgGroup,
   OrgGroupMember,
+  OrgHandover,
   OrgGroupWithMemberCount,
   OrgMeCompany,
   OrgMember,
