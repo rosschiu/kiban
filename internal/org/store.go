@@ -752,7 +752,7 @@ func (s *Store) GetMember(ctx context.Context, id uuid.UUID) (Member, error) {
 // joined with identity.user_read_v — filtered/paginated in SQL, never
 // in-memory.
 func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]Member, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountMembers(ctx, pgFromUUID(companyID))
@@ -760,7 +760,7 @@ func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, page
 		return nil, 0, fmt.Errorf("org: count members: %w", err)
 	}
 	rows, err := q.ListMembers(ctx, ListMembersParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize),
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list members: %w", err)
@@ -795,6 +795,16 @@ func clampPage(page, pageSize int) (int, int) {
 		pageSize = maxPageSize
 	}
 	return page, pageSize
+}
+
+// pageWindow is clampPage as a LIMIT and OFFSET. The bound is checked again beside the int32
+// conversion so a static analyser sees it there (maxPage*maxPageSize = 1e6 fits).
+func pageWindow(page, pageSize int) (limit, offset int32) {
+	page, pageSize = clampPage(page, pageSize)
+	if page > maxPage || pageSize > maxPageSize {
+		page, pageSize = maxPage, maxPageSize
+	}
+	return int32(pageSize), int32((page - 1) * pageSize)
 }
 
 // UpdateMember updates display_name/email/is_active, auditing the full before/after field set
@@ -1179,14 +1189,14 @@ func (s *Store) GetPosition(ctx context.Context, id uuid.UUID) (Position, error)
 
 // ListPositions returns companyID's positions, paginated.
 func (s *Store) ListPositions(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]Position, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountPositions(ctx, pgFromUUID(companyID))
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: count positions: %w", err)
 	}
-	rows, err := q.ListPositions(ctx, ListPositionsParams{CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize)})
+	rows, err := q.ListPositions(ctx, ListPositionsParams{CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list positions: %w", err)
 	}
@@ -1209,7 +1219,7 @@ type PositionWithHolder struct {
 // ListPositionsWithHolder is ListPositions plus each row's current assignment — the admin
 // surface. Paginated identically to ListPositions.
 func (s *Store) ListPositionsWithHolder(ctx context.Context, companyID uuid.UUID, page, pageSize int) ([]PositionWithHolder, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	q := New(s.pool)
 
 	total, err := q.CountPositions(ctx, pgFromUUID(companyID))
@@ -1221,7 +1231,7 @@ func (s *Store) ListPositionsWithHolder(ctx context.Context, companyID uuid.UUID
 		return nil, 0, err
 	}
 	rows, err := q.ListPositionsWithHolder(ctx, ListPositionsWithHolderParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize), Today: pgDate(todayDate),
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset, Today: pgDate(todayDate),
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list positions with holder: %w", err)
@@ -1454,7 +1464,7 @@ type MemberDirectoryEntry struct {
 // ILIKE with its wildcards escaped — never string-concatenated into SQL). page/pageSize follow
 // the same 1/25, clamp 1..100 convention as ListMembers.
 func (s *Store) MemberDirectory(ctx context.Context, companyID uuid.UUID, q string, page, pageSize int) ([]MemberDirectoryEntry, int, error) {
-	page, pageSize = clampPage(page, pageSize)
+	limit, offset := pageWindow(page, pageSize)
 	query := New(s.pool)
 
 	var qParam *string
@@ -1468,7 +1478,7 @@ func (s *Store) MemberDirectory(ctx context.Context, companyID uuid.UUID, q stri
 		return nil, 0, fmt.Errorf("org: count member directory: %w", err)
 	}
 	rows, err := query.ListMemberDirectory(ctx, ListMemberDirectoryParams{
-		CompanyID: pgFromUUID(companyID), Limit: int32(pageSize), Offset: int32((page - 1) * pageSize), Q: qParam,
+		CompanyID: pgFromUUID(companyID), Limit: limit, Offset: offset, Q: qParam,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("org: list member directory: %w", err)
