@@ -35,7 +35,7 @@ func TestMember_CRUD(t *testing.T) {
 		t.Fatalf("unexpected member: %+v", got)
 	}
 
-	updated, err := store.UpdateMember(ctx, "tester", member.ID, "New Name", "new@example.com", false)
+	updated, err := store.UpdateMember(ctx, "tester", member.ID, "New Name", "new@example.com", false, nil)
 	if err != nil {
 		t.Fatalf("update member: %v", err)
 	}
@@ -133,12 +133,12 @@ func TestMember_PIIAudit_FullFieldSet(t *testing.T) {
 	ctx := context.Background()
 
 	company := mustCreateCompany(t, store, "MEM4")
-	member, err := store.CreateMember(ctx, "actor-1", company.ID, "M400", "Original Name", "orig@example.com", true)
+	member, err := store.CreateMember(ctx, "actor-1", company.ID, "M400", "Original Name", "orig@example.com", true, false)
 	if err != nil {
 		t.Fatalf("create member: %v", err)
 	}
 
-	if _, err := store.UpdateMember(ctx, "actor-2", member.ID, "Changed Name", "changed@example.com", false); err != nil {
+	if _, err := store.UpdateMember(ctx, "actor-2", member.ID, "Changed Name", "changed@example.com", false, nil); err != nil {
 		t.Fatalf("update member: %v", err)
 	}
 
@@ -195,7 +195,7 @@ func TestMember_AuditAtomicWithMutation(t *testing.T) {
 	// audit-atomic too, so the bad-writer store now (correctly) fails at this step as well —
 	// the member mutation below is the one this test puts under the microscope.
 	company := mustCreateCompany(t, newTestStore(t), "MEM5")
-	_, err = store.CreateMember(ctx, "actor", company.ID, "M500", "Name", "e@example.com", true)
+	_, err = store.CreateMember(ctx, "actor", company.ID, "M500", "Name", "e@example.com", true, false)
 	if err == nil {
 		t.Fatal("expected CreateMember to fail when the audit write fails")
 	}

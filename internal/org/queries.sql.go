@@ -201,9 +201,9 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (OrgGr
 }
 
 const createMember = `-- name: CreateMember :one
-INSERT INTO org.member (company_id, code, display_name, email, is_active)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, company_id, code, display_name, email, user_id, is_active
+INSERT INTO org.member (company_id, code, display_name, email, is_active, is_guest)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, company_id, code, display_name, email, user_id, is_active, is_guest
 `
 
 type CreateMemberParams struct {
@@ -212,6 +212,7 @@ type CreateMemberParams struct {
 	DisplayName string      `json:"display_name"`
 	Email       *string     `json:"email"`
 	IsActive    bool        `json:"is_active"`
+	IsGuest     bool        `json:"is_guest"`
 }
 
 func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (OrgMember, error) {
@@ -221,6 +222,7 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Org
 		arg.DisplayName,
 		arg.Email,
 		arg.IsActive,
+		arg.IsGuest,
 	)
 	var i OrgMember
 	err := row.Scan(
@@ -231,6 +233,7 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Org
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 	)
 	return i, err
 }
@@ -478,7 +481,7 @@ func (q *Queries) GetIdentityUserByKcSub(ctx context.Context, kcSub string) (Ide
 }
 
 const getMember = `-- name: GetMember :one
-SELECT id, company_id, code, display_name, email, user_id, is_active FROM org.member WHERE id = $1
+SELECT id, company_id, code, display_name, email, user_id, is_active, is_guest FROM org.member WHERE id = $1
 `
 
 func (q *Queries) GetMember(ctx context.Context, id pgtype.UUID) (OrgMember, error) {
@@ -492,12 +495,13 @@ func (q *Queries) GetMember(ctx context.Context, id pgtype.UUID) (OrgMember, err
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 	)
 	return i, err
 }
 
 const getMemberByCompanyAndKcSub = `-- name: GetMemberByCompanyAndKcSub :one
-SELECT m.id, m.is_active
+SELECT m.id, m.is_active, m.is_guest
 FROM org.member m
 JOIN identity.user_read_v u ON u.id = m.user_id
 WHERE m.company_id = $1 AND u.kc_sub = $2
@@ -511,6 +515,7 @@ type GetMemberByCompanyAndKcSubParams struct {
 type GetMemberByCompanyAndKcSubRow struct {
 	ID       pgtype.UUID `json:"id"`
 	IsActive bool        `json:"is_active"`
+	IsGuest  bool        `json:"is_guest"`
 }
 
 // Membership fact for authz's decision.MembershipSource. Resolves the member linked to
@@ -519,12 +524,12 @@ type GetMemberByCompanyAndKcSubRow struct {
 func (q *Queries) GetMemberByCompanyAndKcSub(ctx context.Context, arg GetMemberByCompanyAndKcSubParams) (GetMemberByCompanyAndKcSubRow, error) {
 	row := q.db.QueryRow(ctx, getMemberByCompanyAndKcSub, arg.CompanyID, arg.KcSub)
 	var i GetMemberByCompanyAndKcSubRow
-	err := row.Scan(&i.ID, &i.IsActive)
+	err := row.Scan(&i.ID, &i.IsActive, &i.IsGuest)
 	return i, err
 }
 
 const getMemberWithUser = `-- name: GetMemberWithUser :one
-SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
+SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active, m.is_guest,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
        u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
        u.kind AS user_kind
@@ -541,6 +546,7 @@ type GetMemberWithUserRow struct {
 	Email                 *string     `json:"email"`
 	UserID                pgtype.UUID `json:"user_id"`
 	IsActive              bool        `json:"is_active"`
+	IsGuest               bool        `json:"is_guest"`
 	UserKcSub             *string     `json:"user_kc_sub"`
 	UserEmail             *string     `json:"user_email"`
 	UserPreferredUsername *string     `json:"user_preferred_username"`
@@ -559,6 +565,7 @@ func (q *Queries) GetMemberWithUser(ctx context.Context, id pgtype.UUID) (GetMem
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 		&i.UserKcSub,
 		&i.UserEmail,
 		&i.UserPreferredUsername,
@@ -617,7 +624,7 @@ func (q *Queries) GetPosition(ctx context.Context, id pgtype.UUID) (OrgPosition,
 }
 
 const linkMemberUser = `-- name: LinkMemberUser :one
-UPDATE org.member SET user_id = $2 WHERE id = $1 RETURNING id, company_id, code, display_name, email, user_id, is_active
+UPDATE org.member SET user_id = $2 WHERE id = $1 RETURNING id, company_id, code, display_name, email, user_id, is_active, is_guest
 `
 
 type LinkMemberUserParams struct {
@@ -636,6 +643,7 @@ func (q *Queries) LinkMemberUser(ctx context.Context, arg LinkMemberUserParams) 
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 	)
 	return i, err
 }
@@ -864,7 +872,7 @@ func (q *Queries) ListMemberDirectory(ctx context.Context, arg ListMemberDirecto
 }
 
 const listMembers = `-- name: ListMembers :many
-SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active,
+SELECT m.id, m.company_id, m.code, m.display_name, m.email, m.user_id, m.is_active, m.is_guest,
        u.kc_sub AS user_kc_sub, u.email AS user_email,
        u.preferred_username AS user_preferred_username, u.lifecycle AS user_lifecycle,
        u.kind AS user_kind
@@ -889,6 +897,7 @@ type ListMembersRow struct {
 	Email                 *string     `json:"email"`
 	UserID                pgtype.UUID `json:"user_id"`
 	IsActive              bool        `json:"is_active"`
+	IsGuest               bool        `json:"is_guest"`
 	UserKcSub             *string     `json:"user_kc_sub"`
 	UserEmail             *string     `json:"user_email"`
 	UserPreferredUsername *string     `json:"user_preferred_username"`
@@ -915,6 +924,7 @@ func (q *Queries) ListMembers(ctx context.Context, arg ListMembersParams) ([]Lis
 			&i.Email,
 			&i.UserID,
 			&i.IsActive,
+			&i.IsGuest,
 			&i.UserKcSub,
 			&i.UserEmail,
 			&i.UserPreferredUsername,
@@ -1115,7 +1125,7 @@ func (q *Queries) SubtreeOrgUnits(ctx context.Context, id pgtype.UUID) ([]Subtre
 }
 
 const unlinkMemberUser = `-- name: UnlinkMemberUser :one
-UPDATE org.member SET user_id = NULL WHERE id = $1 RETURNING id, company_id, code, display_name, email, user_id, is_active
+UPDATE org.member SET user_id = NULL WHERE id = $1 RETURNING id, company_id, code, display_name, email, user_id, is_active, is_guest
 `
 
 func (q *Queries) UnlinkMemberUser(ctx context.Context, id pgtype.UUID) (OrgMember, error) {
@@ -1129,15 +1139,16 @@ func (q *Queries) UnlinkMemberUser(ctx context.Context, id pgtype.UUID) (OrgMemb
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 	)
 	return i, err
 }
 
 const updateMember = `-- name: UpdateMember :one
 UPDATE org.member
-SET display_name = $2, email = $3, is_active = $4
+SET display_name = $2, email = $3, is_active = $4, is_guest = COALESCE($5, is_guest)
 WHERE id = $1
-RETURNING id, company_id, code, display_name, email, user_id, is_active
+RETURNING id, company_id, code, display_name, email, user_id, is_active, is_guest
 `
 
 type UpdateMemberParams struct {
@@ -1145,14 +1156,17 @@ type UpdateMemberParams struct {
 	DisplayName string      `json:"display_name"`
 	Email       *string     `json:"email"`
 	IsActive    bool        `json:"is_active"`
+	IsGuest     *bool       `json:"is_guest"`
 }
 
+// is_guest is optional: NULL keeps the current value.
 func (q *Queries) UpdateMember(ctx context.Context, arg UpdateMemberParams) (OrgMember, error) {
 	row := q.db.QueryRow(ctx, updateMember,
 		arg.ID,
 		arg.DisplayName,
 		arg.Email,
 		arg.IsActive,
+		arg.IsGuest,
 	)
 	var i OrgMember
 	err := row.Scan(
@@ -1163,6 +1177,7 @@ func (q *Queries) UpdateMember(ctx context.Context, arg UpdateMemberParams) (Org
 		&i.Email,
 		&i.UserID,
 		&i.IsActive,
+		&i.IsGuest,
 	)
 	return i, err
 }

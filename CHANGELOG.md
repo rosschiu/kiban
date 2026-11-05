@@ -9,6 +9,7 @@ One line per change. Versions follow [Semantic Versioning](https://semver.org/);
 - App fragments may use `intersection` ("and"): a relation that holds only when every child holds, evaluated identically to OpenFGA in the differential harness
 - `POST /api/org/admin/positions/{id}/handover` ends the current assignment and assigns the new member in one transaction, idempotent when the member already holds it, with `expectedAssignmentId` against a concurrent administrator; 0.1.x needed two calls and left the position empty in between
 - Merging the release PR tags the release: a push to main that changes `VERSION` creates `v<VERSION>` and starts the release workflow; 0.1.x needed a hand-pushed tag
+- Guest members: `isGuest` on a member, set at creation or by a company administrator; a guest is an active member for every decision but is refused the member, position and group directories and a group's member list, so an external person shared with sees nobody else
 
 ## [0.1.5] — 2026-10-22
 Small fixes and three documentation pages from the first audits: modelling practices (a role

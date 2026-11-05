@@ -100,7 +100,7 @@ func TestClassifyPgError_CheckViolationFromTrigger(t *testing.T) {
 	company := mustCreateCompany(t, store, "CPV1")
 	notACompany := mustCreateUnit(t, store, "territory", company.ID, "CPV1-TERR")
 
-	_, err := store.CreateMember(ctx, "actor", notACompany.ID, "CPVM1", "Name", "", true)
+	_, err := store.CreateMember(ctx, "actor", notACompany.ID, "CPVM1", "Name", "", true, false)
 	var vErr *ValidationError
 	if !errors.As(err, &vErr) {
 		t.Fatalf("expected *ValidationError from the company-typed trigger, got %v", err)
@@ -120,10 +120,10 @@ func TestStore_BeginTxErrors(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if _, err := store.CreateMember(ctx, "actor", company.ID, "BTX1-M2", "Name", "", true); err == nil {
+	if _, err := store.CreateMember(ctx, "actor", company.ID, "BTX1-M2", "Name", "", true, false); err == nil {
 		t.Error("CreateMember: expected an error from a canceled context")
 	}
-	if _, err := store.UpdateMember(ctx, "actor", member.ID, "Name", "", true); err == nil {
+	if _, err := store.UpdateMember(ctx, "actor", member.ID, "Name", "", true, nil); err == nil {
 		t.Error("UpdateMember: expected an error from a canceled context")
 	}
 	if _, err := store.LinkUser(ctx, "actor", &fakeIdentityChecker{exists: map[string]bool{"x": true}}, member.ID, "x"); err == nil {

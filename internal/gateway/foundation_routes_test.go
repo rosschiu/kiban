@@ -475,8 +475,8 @@ func TestFoundationRoutes_CompanyReads(t *testing.T) {
 			t.Errorf("member GET %s = %d; body=%s", path, rec.Code, rec.Body.String())
 		}
 	}
-	if call := f.backend.lastCall(); call.path != "/internal/org/groups/grp-1/members" {
-		t.Errorf("forwarded path = %q", call.path)
+	if call := f.backend.lastCall(); call.path != "/internal/org/groups/grp-1/members" || call.query.Get("kcSub") != "dave" {
+		t.Errorf("forwarded %s?kcSub=%s, want the group members path with the bearer's subject", call.path, call.query.Get("kcSub"))
 	}
 	if rec := doFoundationRequest(t, f.mux, http.MethodGet, "/api/org/companies/co-2/groups/grp-1/members", bearer, ""); rec.Code != http.StatusForbidden {
 		t.Errorf("non-member company = %d, want 403", rec.Code)

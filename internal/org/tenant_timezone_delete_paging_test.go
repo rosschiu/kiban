@@ -185,7 +185,7 @@ func TestStore_MemberDirectory_QIsLiteral(t *testing.T) {
 	ctx := context.Background()
 	company := mustCreateCompany(t, store, "QLIT")
 	for _, m := range []struct{ code, name string }{{"ALICE", "Alice"}, {"BOB", "Bob"}, {"PCT", "50% off_deal\\x"}} {
-		if _, err := store.CreateMember(ctx, "test-actor", company.ID, m.code, m.name, "", true); err != nil {
+		if _, err := store.CreateMember(ctx, "test-actor", company.ID, m.code, m.name, "", true, false); err != nil {
 			t.Fatalf("create %s: %v", m.code, err)
 		}
 	}

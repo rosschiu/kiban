@@ -22,7 +22,7 @@ func TestStore_MemberDirectory_ActiveOnlyReducedView(t *testing.T) {
 	f := newHTTPTestFixture(t)
 	company := mustCreateCompany(t, f.svc.store, "MDIRCO1")
 	active := mustCreateMember(t, f.svc.store, company.ID, "MDA1")
-	inactive, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA2", "Inactive Member", "", false)
+	inactive, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA2", "Inactive Member", "", false, false)
 	if err != nil {
 		t.Fatalf("create inactive member: %v", err)
 	}
@@ -48,11 +48,11 @@ func TestStore_MemberDirectory_ActiveOnlyReducedView(t *testing.T) {
 func TestStore_MemberDirectory_QFilter(t *testing.T) {
 	f := newHTTPTestFixture(t)
 	company := mustCreateCompany(t, f.svc.store, "MDIRCO2")
-	alice, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA3", "Alice Anderson", "alice@example.com", true)
+	alice, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA3", "Alice Anderson", "alice@example.com", true, false)
 	if err != nil {
 		t.Fatalf("create alice: %v", err)
 	}
-	_, err = f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA4", "Bob Brown", "bob@example.com", true)
+	_, err = f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA4", "Bob Brown", "bob@example.com", true, false)
 	if err != nil {
 		t.Fatalf("create bob: %v", err)
 	}
@@ -224,10 +224,10 @@ func TestHandleMemberDirectory_QParam_Forwarded(t *testing.T) {
 	f := newHTTPMemberDirectoryFixture(t)
 	f.allow = true // simplest allowed path for this test's focus (the q filter, not the gate)
 	company := mustCreateCompany(t, f.svc.store, "MDIRCO7")
-	if _, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA7", "Findme Person", "", true); err != nil {
+	if _, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA7", "Findme Person", "", true, false); err != nil {
 		t.Fatalf("create member: %v", err)
 	}
-	if _, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA8", "Someone Else", "", true); err != nil {
+	if _, err := f.svc.store.CreateMember(context.Background(), "test-actor", company.ID, "MDA8", "Someone Else", "", true, false); err != nil {
 		t.Fatalf("create member: %v", err)
 	}
 
@@ -353,5 +353,66 @@ func TestHandlePositionAndGroupDirectory_ActiveMember_ReducedView(t *testing.T) 
 		if rec.Code != http.StatusForbidden {
 			t.Fatalf("%s: stranger status = %d, want 403", tc.path, rec.Code)
 		}
+	}
+}
+
+// TestGuestMember_RefusedTheDirectories: a guest is an active member (the company member tuple
+// exists) but every member-level read refuses them; clearing the flag restores the reads.
+func TestGuestMember_RefusedTheDirectories(t *testing.T) {
+	f := newHTTPMemberDirectoryFixture(t)
+	f.allow = false
+	admin := adminPool(t)
+	ctx := context.Background()
+	company := mustCreateCompany(t, f.svc.store, "GUESTCO")
+	guest, err := f.svc.store.CreateMember(ctx, "test-actor", company.ID, "GUS", "Gus", "", true, true)
+	if err != nil {
+		t.Fatalf("create guest: %v", err)
+	}
+	if !guest.IsGuest {
+		t.Fatal("guest flag not stored")
+	}
+	mustCreateIdentityUser(t, admin, "guest-gus")
+	checker := &fakeIdentityChecker{exists: map[string]bool{"guest-gus": true}}
+	if _, err := f.svc.store.LinkUser(ctx, "test-actor", checker, guest.ID, "guest-gus"); err != nil {
+		t.Fatalf("link user: %v", err)
+	}
+	var tuples int
+	if err := admin.QueryRow(ctx, `SELECT count(*) FROM authz.tuple WHERE object_type='company' AND object_id=$1 AND relation='member' AND subject_id=$2`, company.ID.String(), guest.ID.String()).Scan(&tuples); err != nil || tuples != 1 {
+		t.Fatalf("guest's member tuple = %d, %v; want 1 (a guest is a member for decisions)", tuples, err)
+	}
+	group, err := f.svc.store.CreateGroup(ctx, "test-actor", company.ID, "SALES", "Sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	position := mustCreatePosition(t, f.svc.store, company.ID, company.ID, "CFO")
+	paths := []string{
+		"/internal/org/companies/" + company.ID.String() + "/members?kcSub=guest-gus",
+		"/internal/org/companies/" + company.ID.String() + "/positions/directory?kcSub=guest-gus",
+		"/internal/org/companies/" + company.ID.String() + "/groups/directory?kcSub=guest-gus",
+		"/internal/org/groups/" + group.ID.String() + "/members?kcSub=guest-gus",
+		"/internal/org/positions/" + position.ID.String() + "/holder?date=2026-10-23&kcSub=guest-gus",
+	}
+	expect := func(want int, why string) {
+		t.Helper()
+		for _, p := range paths {
+			rec := httptest.NewRecorder()
+			f.svc.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+			if rec.Code != want {
+				t.Fatalf("%s: status = %d, want %d (%s), body=%s", p, rec.Code, want, why, rec.Body.String())
+			}
+		}
+	}
+	expect(http.StatusForbidden, "guest")
+	no := false
+	if _, err := f.svc.store.UpdateMember(ctx, "test-actor", guest.ID, "Gus", "", true, &no); err != nil {
+		t.Fatalf("clear guest: %v", err)
+	}
+	// The holder read answers 404 for an empty position once the guard passes; the rest 200.
+	paths = paths[:4]
+	expect(http.StatusOK, "no longer a guest")
+	// A nil isGuest on update keeps the value.
+	m, err := f.svc.store.UpdateMember(ctx, "test-actor", guest.ID, "Gus Renamed", "", true, nil)
+	if err != nil || m.IsGuest {
+		t.Fatalf("update without isGuest = %+v, %v; want still not a guest", m, err)
 	}
 }

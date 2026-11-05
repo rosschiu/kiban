@@ -76,12 +76,21 @@ func newMemberDirectoryProxy(target *url.URL) http.Handler {
 // newDirectoryProxy forwards a company directory read (members, positions or groups) to org
 // with the bearer's own subject as kcSub; org's handler enforces active membership or superadmin.
 func newDirectoryProxy(target *url.URL, suffix string) http.Handler {
+	return newSubjectProxy(target, func(r *http.Request) string {
+		return "/internal/org/companies/" + r.PathValue("companyId") + suffix
+	})
+}
+
+// newSubjectProxy forwards to org with the bearer's own subject as kcSub, replacing any
+// client-supplied value, so org can apply its member-level rules (active, not a guest) to the
+// caller.
+func newSubjectProxy(target *url.URL, rewritePath func(*http.Request) string) http.Handler {
 	return &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.Out.URL.Scheme = target.Scheme
 			pr.Out.URL.Host = target.Host
 			pr.Out.Host = target.Host
-			pr.Out.URL.Path = "/internal/org/companies/" + pr.In.PathValue("companyId") + suffix
+			pr.Out.URL.Path = rewritePath(pr.In)
 			pr.Out.URL.RawPath = ""
 
 			authCtx, _ := AuthFromContext(pr.In.Context())
@@ -127,10 +136,11 @@ func mountFoundationRoutes(mux routeMux, verifier *TokenVerifier, prov *Provisio
 
 	// A position's holder on a date and a group's members: readable by any active member of
 	// the company (an app's service account included, once it is a member) or the superadmin;
-	// the resource must belong to the company in the path (company_admin.go).
+	// the resource must belong to the company in the path (company_admin.go). The caller's
+	// subject travels as kcSub so org refuses a guest member.
 	companyRead := func(action, kind string, rewrite func(*http.Request) string) http.Handler {
 		return limitBody(defaultBodyLimit, RequireAuth(verifier, prov)(RequireSuperadminOrCompanyMember(adminClient, action, companyFromPath("companyId"))(
-			requireResourceInCompany(orgTarget, kind, "id")(newFixedProxy(orgTarget, rewrite)))))
+			requireResourceInCompany(orgTarget, kind, "id")(newSubjectProxy(orgTarget, rewrite)))))
 	}
 	mux.Handle("GET /api/org/companies/{companyId}/positions/{id}/holder", companyRead("org.positions.holder", "positions",
 		func(r *http.Request) string { return "/internal/org/positions/" + r.PathValue("id") + "/holder" }))

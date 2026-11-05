@@ -438,7 +438,10 @@ the app defining its own model, not acting in the company.
 Six reads cover most approval, routing and sharing needs. The app's service account must be a
 member of the company for all but the first (step 10). The three directories are the source
 for a "share with" or "assign to" picker: people, positions and groups, each reduced to what a
-picker shows.
+picker shows. A member marked `isGuest`, an external person the company shares objects with, is
+refused all of them with `403`; share with a guest by granting to their subject or to
+`member:<id>#mapped_user` as with anyone else, and let your own page show the guest what was
+shared.
 
 === "Node"
 

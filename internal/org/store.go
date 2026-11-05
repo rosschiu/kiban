@@ -612,6 +612,10 @@ type Member struct {
 	Email       string
 	UserID      *uuid.UUID
 	IsActive    bool
+	// IsGuest: an external person the company shares with, refused the member-level directory
+	// reads (members, positions, groups, a group's members). Decisions treat a guest like any
+	// other active member.
+	IsGuest bool
 
 	// Linked-user display fields (empty when UserID is nil) — never fetched per-row.
 	UserKcSub             string
@@ -624,16 +628,16 @@ type Member struct {
 func memberFromRow(r OrgMember) Member {
 	return Member{
 		ID: uuidFromPg(r.ID), CompanyID: uuidFromPg(r.CompanyID), Code: r.Code,
-		DisplayName: r.DisplayName, Email: pgconv.DerefStr(r.Email), UserID: pgconv.UUIDPtrFromPg(r.UserID), IsActive: r.IsActive,
+		DisplayName: r.DisplayName, Email: pgconv.DerefStr(r.Email), UserID: pgconv.UUIDPtrFromPg(r.UserID), IsActive: r.IsActive, IsGuest: r.IsGuest,
 	}
 }
 
-func memberFromJoinRow(id, companyID, userID pgtype.UUID, code, displayName string, email *string, isActive bool,
+func memberFromJoinRow(id, companyID, userID pgtype.UUID, code, displayName string, email *string, isActive, isGuest bool,
 	userKcSub, userEmail, userPreferredUsername, userLifecycle, userKind *string,
 ) Member {
 	return Member{
 		ID: uuidFromPg(id), CompanyID: uuidFromPg(companyID), Code: code, DisplayName: displayName,
-		Email: pgconv.DerefStr(email), UserID: pgconv.UUIDPtrFromPg(userID), IsActive: isActive,
+		Email: pgconv.DerefStr(email), UserID: pgconv.UUIDPtrFromPg(userID), IsActive: isActive, IsGuest: isGuest,
 		UserKcSub: pgconv.DerefStr(userKcSub), UserEmail: pgconv.DerefStr(userEmail),
 		UserPreferredUsername: pgconv.DerefStr(userPreferredUsername), UserLifecycle: pgconv.DerefStr(userLifecycle),
 		UserKind: pgconv.DerefStr(userKind),
@@ -666,7 +670,7 @@ func (s *Store) auditMemberMutation(ctx context.Context, tx pgx.Tx, actor, actio
 }
 
 // CreateMember creates a member, auditing the full field set in the same transaction.
-func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.UUID, code, displayName, email string, isActive bool) (Member, error) {
+func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.UUID, code, displayName, email string, isActive, isGuest bool) (Member, error) {
 	code = normalizeCode(code)
 	displayName = strings.TrimSpace(displayName)
 	if err := validateCode("code", code); err != nil {
@@ -684,7 +688,7 @@ func (s *Store) CreateMember(ctx context.Context, actor string, companyID uuid.U
 
 	q := New(s.pool).WithTx(tx)
 	row, err := q.CreateMember(ctx, CreateMemberParams{
-		CompanyID: pgFromUUID(companyID), Code: code, DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive,
+		CompanyID: pgFromUUID(companyID), Code: code, DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive, IsGuest: isGuest,
 	})
 	if err != nil {
 		return Member{}, classifyPgError(err)
@@ -740,7 +744,7 @@ func (s *Store) GetMember(ctx context.Context, id uuid.UUID) (Member, error) {
 		}
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
-	return memberFromJoinRow(row.ID, row.CompanyID, row.UserID, row.Code, row.DisplayName, row.Email, row.IsActive,
+	return memberFromJoinRow(row.ID, row.CompanyID, row.UserID, row.Code, row.DisplayName, row.Email, row.IsActive, row.IsGuest,
 		row.UserKcSub, row.UserEmail, row.UserPreferredUsername, row.UserLifecycle, row.UserKind), nil
 }
 
@@ -763,7 +767,7 @@ func (s *Store) ListMembers(ctx context.Context, companyID uuid.UUID, page, page
 	}
 	out := make([]Member, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, memberFromJoinRow(r.ID, r.CompanyID, r.UserID, r.Code, r.DisplayName, r.Email, r.IsActive,
+		out = append(out, memberFromJoinRow(r.ID, r.CompanyID, r.UserID, r.Code, r.DisplayName, r.Email, r.IsActive, r.IsGuest,
 			r.UserKcSub, r.UserEmail, r.UserPreferredUsername, r.UserLifecycle, r.UserKind))
 	}
 	return out, int(total), nil
@@ -795,7 +799,8 @@ func clampPage(page, pageSize int) (int, int) {
 
 // UpdateMember updates display_name/email/is_active, auditing the full before/after field set
 // in the same transaction. email is the only PII field (field-policy-eligible).
-func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, displayName, email string, isActive bool) (Member, error) {
+// UpdateMember changes the display fields and the active flag; isGuest nil keeps the current value.
+func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, displayName, email string, isActive bool, isGuest *bool) (Member, error) {
 	displayName = strings.TrimSpace(displayName)
 	if err := validateNameLen("displayName", displayName, 1, 120); err != nil {
 		return Member{}, err
@@ -817,7 +822,7 @@ func (s *Store) UpdateMember(ctx context.Context, actor string, id uuid.UUID, di
 	}
 	before := memberFromRow(beforeRow)
 
-	row, err := q.UpdateMember(ctx, UpdateMemberParams{ID: pgFromUUID(id), DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive})
+	row, err := q.UpdateMember(ctx, UpdateMemberParams{ID: pgFromUUID(id), DisplayName: displayName, Email: pgconv.StrOrNil(email), IsActive: isActive, IsGuest: isGuest})
 	if err != nil {
 		return Member{}, classifyPgError(err)
 	}
@@ -943,7 +948,7 @@ func (s *Store) UnlinkUser(ctx context.Context, actor string, memberID uuid.UUID
 		return Member{}, fmt.Errorf("org: get member: %w", err)
 	}
 	before := memberFromJoinRow(beforeRow.ID, beforeRow.CompanyID, beforeRow.UserID, beforeRow.Code, beforeRow.DisplayName,
-		beforeRow.Email, beforeRow.IsActive, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle, beforeRow.UserKind)
+		beforeRow.Email, beforeRow.IsActive, beforeRow.IsGuest, beforeRow.UserKcSub, beforeRow.UserEmail, beforeRow.UserPreferredUsername, beforeRow.UserLifecycle, beforeRow.UserKind)
 
 	row, err := q.UnlinkMemberUser(ctx, pgFromUUID(memberID))
 	if err != nil {
@@ -1384,15 +1389,27 @@ func (s *Store) CompanyState(ctx context.Context, id uuid.UUID) (exists bool, is
 // ListMembers/GetMemberWithUser already use. No row (unknown kcSub, or a member in a different
 // company) reports isMember=false — never a fabricated membership.
 func (s *Store) MemberByCompanyAndKcSub(ctx context.Context, companyID uuid.UUID, kcSub string) (isMember bool, memberID uuid.UUID, isActive bool, err error) {
+	fact, err := s.MemberFactByKcSub(ctx, companyID, kcSub)
+	return fact.IsMember, fact.MemberID, fact.IsActive, err
+}
+
+// MemberFact is what org knows about kcSub inside one company.
+type MemberFact struct {
+	IsMember, IsActive, IsGuest bool
+	MemberID                    uuid.UUID
+}
+
+// MemberFactByKcSub is MemberByCompanyAndKcSub with the guest flag.
+func (s *Store) MemberFactByKcSub(ctx context.Context, companyID uuid.UUID, kcSub string) (MemberFact, error) {
 	q := New(s.pool)
 	row, err := q.GetMemberByCompanyAndKcSub(ctx, GetMemberByCompanyAndKcSubParams{CompanyID: pgFromUUID(companyID), KcSub: kcSub})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, uuid.UUID{}, false, nil
+			return MemberFact{}, nil
 		}
-		return false, uuid.UUID{}, false, fmt.Errorf("org: member by kcsub: %w", err)
+		return MemberFact{}, fmt.Errorf("org: member by kcsub: %w", err)
 	}
-	return true, uuidFromPg(row.ID), row.IsActive, nil
+	return MemberFact{IsMember: true, IsActive: row.IsActive, IsGuest: row.IsGuest, MemberID: uuidFromPg(row.ID)}, nil
 }
 
 // CompanySummary is one company row in ListActiveCompaniesForKcSub's result — the fields the

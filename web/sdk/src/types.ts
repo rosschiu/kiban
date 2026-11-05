@@ -268,6 +268,8 @@ export interface OrgMember {
   email: string;
   userId: string | null;
   isActive: boolean;
+  /** An external person the company shares with: refused the member-level directory reads. */
+  isGuest: boolean;
   user?: OrgMemberUser;
 }
 

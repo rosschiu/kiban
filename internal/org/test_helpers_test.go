@@ -35,7 +35,7 @@ func mustCreateUnit(t *testing.T, store *Store, typeKey string, parentID uuid.UU
 // mustCreateMember creates a member in companyID with a unique code.
 func mustCreateMember(t *testing.T, store *Store, companyID uuid.UUID, code string) Member {
 	t.Helper()
-	m, err := store.CreateMember(context.Background(), "test-actor", companyID, code, "Test Member "+code, "", true)
+	m, err := store.CreateMember(context.Background(), "test-actor", companyID, code, "Test Member "+code, "", true, false)
 	if err != nil {
 		t.Fatalf("create member %s: %v", code, err)
 	}

@@ -90,6 +90,7 @@ type OrgMember struct {
 	Email       *string     `json:"email"`
 	UserID      pgtype.UUID `json:"user_id"`
 	IsActive    bool        `json:"is_active"`
+	IsGuest     bool        `json:"is_guest"`
 }
 
 type OrgOrgUnit struct {
