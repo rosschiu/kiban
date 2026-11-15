@@ -246,6 +246,11 @@ func TestLive_AppBesideKiban(t *testing.T) {
 	if d, _ := app.Can(ctx, userBearer, sdk.CanRequest{FeatureKey: appKey + ".ticket.view", ModuleKey: appKey, CompanyID: companyID, Object: obj, Relation: "viewer"}); d.Allowed {
 		t.Fatal("after revoke the user's object check must be denied")
 	}
+	// The same revoke again names a tuple that is no longer stored: refused, not answered 200.
+	err = app.Revoke(ctx, companyID, sdk.Tuple{ObjectType: "livestory_ticket", ObjectID: "t-1", Relation: "viewer", SubjectType: "user", SubjectID: userSub})
+	if !asAPIError(err, &apiErr) || apiErr.Status != http.StatusUnprocessableEntity || apiErr.Code != "VALIDATION_FAILED" || !strings.Contains(apiErr.Message, "nothing to revoke") {
+		t.Fatalf("repeated revoke: err = %v, want 422 VALIDATION_FAILED nothing to revoke", err)
+	}
 	// Company isolation: a position of company B cannot be named as viewer of A's object, and a
 	// tuple that says so anyway grants nothing in A; A's own position does.
 	posA, posB := "story-pos-a-"+appKey, "story-pos-b-"+appKey

@@ -72,7 +72,10 @@ A periodic job walks your rows and re-issues the grants they imply, and revokes 
 ids your database no longer has. Because grants are idempotent, the job can run as often as you
 like and needs no state of its own: for each row, `grant(anchor + relations)`; for each anchor
 you know you created and whose row is gone, `revoke(anchor)`. Keep the set of ids you created
-somewhere, a column or a log, so the job knows what to revoke. The sweep is the whole
+somewhere, a column or a log, so the job knows what to revoke. A revoke is not idempotent:
+revoking a tuple that is not stored answers `422 VALIDATION_FAILED` with `nothing to revoke`,
+so a mistyped tuple is reported and not swallowed. In the sweep that answer means the anchor is
+already gone; record it and move on. The sweep is the whole
 consistency layer; it replaces nothing you would have needed for Kiban's own side.
 
 If you keep no copy of shares in your database and treat Kiban as the only truth for who may

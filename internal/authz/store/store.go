@@ -101,6 +101,33 @@ func Revoke(ctx context.Context, tx pgx.Tx, actor, correlationID string, tuples 
 	return writeTuples(ctx, tx, actor, correlationID, "revoke", tuples)
 }
 
+const tupleExistsSQL = `
+SELECT EXISTS (
+  SELECT 1 FROM authz.tuple
+  WHERE object_type = $1 AND object_id = $2 AND relation = $3
+    AND subject_type = $4 AND subject_id = $5 AND subject_relation = $6)`
+
+// FirstMissing returns the first of tuples that is not stored, or nil when every one is. The
+// grants route runs it inside the revoking transaction, before any delete: a revoke naming a
+// tuple that is not there is a caller's mistake to report, not a silent no-op. It asks about
+// stored rows only, never the model, so a tuple whose module was disabled or whose relation a
+// fragment dropped stays revocable.
+func FirstMissing(ctx context.Context, q Rower, tuples ...Tuple) (*Tuple, error) {
+	for i := range tuples {
+		t := tuples[i]
+		var exists bool
+		if err := q.QueryRow(ctx, tupleExistsSQL,
+			t.ObjectType, t.ObjectID, t.Relation, t.SubjectType, t.SubjectID, t.SubjectRelation,
+		).Scan(&exists); err != nil {
+			return nil, fmt.Errorf("authz/store: tuple exists: %w", err)
+		}
+		if !exists {
+			return &t, nil
+		}
+	}
+	return nil, nil
+}
+
 // AnchorConflictError is returned by Grant when a tuple would give an object a second company
 // anchor (authz.tuple's tuple_one_anchor_per_object index, migrations/authz/0012). Callers map
 // it to a client error; it is never an internal failure.
