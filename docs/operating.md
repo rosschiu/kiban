@@ -235,6 +235,8 @@ each series labeled `service`, plus `kiban_metrics_scrape_up{service}` per targe
 service did not answer; the response itself is always `200`). Each service except the gateway also keeps its own
 `/metrics` on its internal listener for a Prometheus inside the network. See
 [Metrics](metrics.md). Logs are JSON on stderr with a `correlationId` field per request.
+A request answered `500` is logged at error level with an `error` field holding the cause; the
+response body never carries it, so look the request up by the `x-correlation-id` the caller received.
 `kiban_build_info{version,commit}` tells you exactly what is running.
 
 ## Health

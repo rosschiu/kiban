@@ -5,6 +5,7 @@ package httpx
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -196,5 +197,74 @@ func TestRecover_ErrAbortHandlerRePanicsSilently(t *testing.T) {
 	}
 	if buf.Len() != 0 {
 		t.Fatalf("expected nothing logged, got %s", buf.String())
+	}
+}
+
+// TestWriteInternalError_CauseIsLoggedNotSent proves the 500 contract end to end through the
+// middleware chain the services run (Correlation, AccessLog, then an inner StatusRecorder as
+// the metrics middleware adds): the body is the code and a fixed message, and the cause is on
+// the request's own access-log line, at error level, under the correlation id the client
+// received.
+func TestWriteInternalError_CauseIsLoggedNotSent(t *testing.T) {
+	var buf bytes.Buffer
+	logger := testLogger(&buf)
+
+	handler := Correlation(AccessLog(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		inner := &StatusRecorder{ResponseWriter: w, Status: http.StatusOK}
+		WriteInternalError(inner, errors.New("pq: relation \"secret_table\" does not exist"))
+		if inner.Err == nil {
+			t.Error("the inner recorder did not receive the cause")
+		}
+	})))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/things", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	var body struct {
+		Error map[string]any `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("body not valid JSON: %v (%s)", err, rec.Body.String())
+	}
+	if len(body.Error) != 2 || body.Error["code"] != "INTERNAL_ERROR" || body.Error["message"] != "internal error" {
+		t.Fatalf("error = %v, want exactly code INTERNAL_ERROR and the fixed message", body.Error)
+	}
+	if strings.Contains(rec.Body.String(), "secret_table") {
+		t.Fatalf("500 body carries the error text: %s", rec.Body.String())
+	}
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatalf("access log line not valid JSON: %v (%s)", err, buf.String())
+	}
+	if line["level"] != "ERROR" {
+		t.Errorf("level = %v, want ERROR", line["level"])
+	}
+	if got, _ := line["error"].(string); !strings.Contains(got, "secret_table") {
+		t.Errorf("access log error = %q, want the cause", got)
+	}
+	if id := rec.Header().Get("x-correlation-id"); id == "" || line["correlationId"] != id {
+		t.Errorf("correlationId = %v, want the response header value %q", line["correlationId"], id)
+	}
+}
+
+// TestAccessLog_NoErrorFieldWithoutACause: an ordinary response keeps the info-level line with
+// no error field.
+func TestAccessLog_NoErrorFieldWithoutACause(t *testing.T) {
+	var buf bytes.Buffer
+	handler := Correlation(AccessLog(testLogger(&buf))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		WriteInternalError(w, nil)
+	})))
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/things", nil))
+
+	var line map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &line); err != nil {
+		t.Fatalf("access log line not valid JSON: %v (%s)", err, buf.String())
+	}
+	if _, ok := line["error"]; ok || line["level"] != "INFO" {
+		t.Errorf("line = %v, want INFO without an error field", line)
 	}
 }
