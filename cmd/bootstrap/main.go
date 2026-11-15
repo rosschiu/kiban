@@ -103,19 +103,21 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
+	// Validated before the superadmin password is loaded, and the password never joins
+	// `values`: no value that shares storage with that secret reaches an error or a log.
+	accessTokenLifespan, err := parseAccessTokenLifespan(values["KIBAN_ACCESS_TOKEN_LIFESPAN"])
+	if err != nil {
+		return err
+	}
+
 	// KIBAN_SUPERADMIN_PASSWORD supports the *_FILE convention like every other secret
 	// (secrets are never stored in env-visible places) — config.Load's *_FILE lookup
 	// keys off the field name, so this is loaded as its own small Spec.
-	superadminPassword, err := config.Load(config.Spec{{Name: "KIBAN_SUPERADMIN_PASSWORD", Default: ""}})
+	superadminValues, err := config.Load(config.Spec{{Name: "KIBAN_SUPERADMIN_PASSWORD", Default: ""}})
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
-	values["KIBAN_SUPERADMIN_PASSWORD"] = superadminPassword["KIBAN_SUPERADMIN_PASSWORD"]
-
-	accessTokenLifespan, err := strconv.Atoi(values["KIBAN_ACCESS_TOKEN_LIFESPAN"])
-	if err != nil || accessTokenLifespan <= 0 {
-		return fmt.Errorf("KIBAN_ACCESS_TOKEN_LIFESPAN must be a positive number of seconds, got %q", values["KIBAN_ACCESS_TOKEN_LIFESPAN"])
-	}
+	superadminPassword := superadminValues["KIBAN_SUPERADMIN_PASSWORD"]
 
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -196,7 +198,7 @@ func run(ctx context.Context, logger *slog.Logger, rotateSecrets bool) error {
 
 		SuperadminUsername: values["KIBAN_SUPERADMIN_USERNAME"],
 		SuperadminEmail:    values["KIBAN_SUPERADMIN_EMAIL"],
-		SuperadminPassword: values["KIBAN_SUPERADMIN_PASSWORD"],
+		SuperadminPassword: superadminPassword,
 
 		RegistryPool:        registryPool,
 		AuthzPool:           authzPool,
@@ -263,4 +265,13 @@ func splitCSV(v string) []string {
 		}
 	}
 	return out
+}
+
+// parseAccessTokenLifespan reads KIBAN_ACCESS_TOKEN_LIFESPAN: a positive number of seconds.
+func parseAccessTokenLifespan(raw string) (int, error) {
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds <= 0 {
+		return 0, fmt.Errorf("KIBAN_ACCESS_TOKEN_LIFESPAN must be a positive number of seconds, got %q", raw)
+	}
+	return seconds, nil
 }
