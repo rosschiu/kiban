@@ -559,6 +559,14 @@ func TestHandleCan(t *testing.T) {
 		if body["error"]["code"] != "INTERNAL_ERROR" {
 			t.Fatalf("error code = %q, want INTERNAL_ERROR", body["error"]["code"])
 		}
+		// The cause goes to the log, never to the caller: the body is the code and a fixed
+		// message.
+		if body["error"]["message"] != "internal error" {
+			t.Fatalf("error message = %q, want the fixed \"internal error\"", body["error"]["message"])
+		}
+		if strings.Contains(rec.Body.String(), errFixtureKnownEnabled.Error()) {
+			t.Fatalf("500 body carries the error text: %s", rec.Body.String())
+		}
 	})
 
 	t.Run("global scope without requiredPlatformRole is 400 VALIDATION_ERROR", func(t *testing.T) {

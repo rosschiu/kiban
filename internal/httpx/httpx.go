@@ -96,6 +96,14 @@ func Recover(logger *slog.Logger) func(http.Handler) http.Handler {
 type StatusRecorder struct {
 	http.ResponseWriter
 	Status int
+	// Err is the cause WriteInternalError recorded for this response, if any. It is never
+	// written to the client; AccessLog logs it on the request's own line.
+	Err error
+}
+
+// RecordError keeps the cause of a 500 for the access log (see WriteInternalError).
+func (s *StatusRecorder) RecordError(err error) {
+	s.Err = err
 }
 
 func (s *StatusRecorder) WriteHeader(status int) {
@@ -126,7 +134,8 @@ func (s *StatusRecorder) ReadFrom(r io.Reader) (int64, error) {
 }
 
 // AccessLog returns middleware that logs one line per request: method,
-// path, status, duration, and correlationId (when present).
+// path, status, duration, and correlationId (when present). A request answered through
+// WriteInternalError is logged at error level with its cause.
 func AccessLog(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -136,12 +145,18 @@ func AccessLog(logger *slog.Logger) func(http.Handler) http.Handler {
 			duration := time.Since(start)
 
 			l := obs.WithCorrelation(r.Context(), logger)
-			l.Info("access",
+			attrs := []any{
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Int("status", rec.Status),
 				slog.Duration("duration", duration),
-			)
+			}
+			if rec.Err != nil {
+				// The cause of a 500 (WriteInternalError): logged here, never sent.
+				l.Error("access", append(attrs, slog.String("error", rec.Err.Error()))...)
+				return
+			}
+			l.Info("access", attrs...)
 		})
 	}
 }
@@ -165,14 +180,33 @@ func Ready(db Pinger) http.HandlerFunc {
 	}
 }
 
-// WriteInternalError writes the 500 envelope. err isn't included in the body (never leak
-// internals to the client — mirrors Recover); it's swallowed here because the services have no
-// logger of their own (the AccessLog middleware around Routes() still records the
-// request/status for operational visibility).
+// WriteInternalError writes the 500 envelope: the stable code and a fixed message, nothing
+// else. err is never included in the body (never leak internals to the client — mirrors
+// Recover); it is handed to every StatusRecorder wrapped around w, so the AccessLog line of
+// this request carries the cause next to the correlation id the client received in the
+// x-correlation-id header.
 func WriteInternalError(w http.ResponseWriter, err error) {
-	_ = err
+	recordError(w, err)
 	errenv.WriteError(w, http.StatusInternalServerError, errenv.APIError{
 		Code:    errenv.CodeInternalError,
 		Message: "internal error",
 	})
+}
+
+// recordError walks w's Unwrap chain (the http.ResponseController convention) and records err
+// on every writer that accepts one.
+func recordError(w http.ResponseWriter, err error) {
+	if err == nil {
+		return
+	}
+	for w != nil {
+		if rec, ok := w.(interface{ RecordError(error) }); ok {
+			rec.RecordError(err)
+		}
+		u, ok := w.(interface{ Unwrap() http.ResponseWriter })
+		if !ok {
+			return
+		}
+		w = u.Unwrap()
+	}
 }

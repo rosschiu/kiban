@@ -18,6 +18,7 @@ import (
 	"github.com/rosschiu/kiban/internal/authz/fragment"
 	"github.com/rosschiu/kiban/internal/authz/store"
 	"github.com/rosschiu/kiban/internal/errenv"
+	"github.com/rosschiu/kiban/internal/httpx"
 )
 
 // Routes builds authz's HTTP handler. Every effective-access/grants endpoint requires a
@@ -742,5 +743,5 @@ func (svc *Service) handleReady(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeInternalError(w http.ResponseWriter, err error) {
-	errenv.WriteError(w, http.StatusInternalServerError, errenv.APIError{Code: errenv.CodeInternalError, Message: err.Error()})
+	httpx.WriteInternalError(w, err)
 }

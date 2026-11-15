@@ -787,6 +787,9 @@ members; `PUT /api/org/admin/members/{id}` updates one; `DELETE .../link-user` u
 - Every response is an envelope: `{ "data": ... }` on success, `{ "error": { "code",
   "message", "details"? } }` on failure. Send `x-correlation-id` if you want to find the request
   in the gateway's logs and the audit rows; the gateway generates one otherwise.
+- A `500` carries the code `INTERNAL_ERROR` and the fixed message `internal error`, never the
+  cause. Branch on the code, and keep the response's `x-correlation-id` header: the cause is in
+  Kiban's log under that id.
 
 ### Route families
 
