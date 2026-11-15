@@ -36,8 +36,12 @@ func (e *MissingError) Error() string {
 // <NAME>_FILE variant (if set) wins over the plain <NAME> env var: its
 // content is read from disk and used as the value. If neither is set, the
 // field's Default is used. A required field with no value from either
-// source (and no default) is an error; all missing names are collected and
-// reported together, not just the first.
+// source (and no default) is an error, and so is a required field whose
+// value resolves to the empty string (NAME= in the environment, or an empty
+// file): Compose passes an unset host variable through as an empty one, and a
+// forgotten secret must stop the service at start-up. An optional field keeps
+// "empty counts as set". All missing names are collected and reported
+// together, not just the first.
 func Load(spec Spec) (map[string]string, error) {
 	values := make(map[string]string, len(spec))
 	var missing []string
@@ -51,11 +55,20 @@ func Load(spec Spec) (map[string]string, error) {
 				// alike — never silently an empty value, never reported as "missing".
 				return nil, fmt.Errorf("config: %s is set but unreadable: %w", fileName, err)
 			}
-			values[f.Name] = strings.TrimSpace(string(content))
+			value := strings.TrimSpace(string(content))
+			if f.Required && value == "" {
+				missing = append(missing, f.Name)
+				continue
+			}
+			values[f.Name] = value
 			continue
 		}
 
 		if v, ok := os.LookupEnv(f.Name); ok {
+			if f.Required && v == "" {
+				missing = append(missing, f.Name)
+				continue
+			}
 			values[f.Name] = v
 			continue
 		}

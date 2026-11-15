@@ -31,6 +31,11 @@ is written by `bootstrap` onto the `kiban-bootstrap-secrets` volume, and the Key
 password reaches `bootstrap` as a Compose secret. The `keycloak` container itself still receives
 its admin password and that client secret as environment variables. The superadmin password is never printed to a log.
 
+A required variable that is unset, set to an empty value, or read from an empty `_FILE` stops
+the service at start-up with `config: missing required values:` and the name of every such
+variable. An optional variable set to an empty value stays empty and does not fall back to its
+default.
+
 Key settings:
 
 - `POSTGRES_USER` (default `postgres`) is the cluster superuser, used only at initialisation and
