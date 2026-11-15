@@ -375,13 +375,21 @@ func writeValidationFailed(w http.ResponseWriter, msg string) {
 }
 
 // handleGrants writes or removes tuples, bound to the request's company and gated on the
-// bearer: every tuple's object must belong to ONE enabled module M —
-// a type M's fragment declares, or `company_module:<companyId>/<M>` — never a base type; a
-// module object must carry its company_module anchor pointing at `<companyId>/<M>` (an anchor
-// tuple in the same grant request counts, which is how create writes owner + anchor at once);
-// the bearer must pass decision steps 1–6 for (M, companyId) (platform operators take the
-// named exception); and a company_module tuple additionally needs the bearer to hold
-// `company_module:<companyId>/<M>#admin`. Every refusal is fail-closed before any write.
+// bearer. Four rules, numbered in the order they run:
+//
+//  1. every tuple's object must belong to ONE enabled module M — a type M's fragment declares,
+//     or `company_module:<companyId>/<M>` — never a base type;
+//  2. the bearer must pass decision steps 1–6 for (M, companyId) (platform operators take the
+//     named exception);
+//  3. a module object must carry its company_module anchor pointing at `<companyId>/<M>` (an
+//     anchor tuple in the same grant request counts, which is how create writes owner + anchor
+//     at once);
+//  4. a company_module tuple additionally needs the bearer to hold
+//     `company_module:<companyId>/<M>#admin`.
+//
+// The order is part of the contract: rule 1 yields M, and rule 2 runs before rules 3 and 4
+// because their refusals name the company an object is anchored to, which only a bearer who
+// passed rule 2 may learn. Every refusal is fail-closed before any write.
 func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 	claims, ok := svc.bearerClaims(w, r)
 	if !ok {
@@ -510,7 +518,7 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 	// Owner rule (DEC, 2026-09-26) — the app that registered module M, identified by its
 	// backend token's verified `azp` matching M's service client id, owns M's object types the
 	// way an OpenFGA store owner does: it may write tuples on them in any company where M is
-	// enabled without being a member there. Rules 1, 2 and 4 still apply to it.
+	// enabled without being a member there. Rules 1, 3 and 4 still apply to it.
 	ownerCall, registeredApp := false, false
 	if claims.ClientID != "" && svc.AppOwners != nil {
 		owners, err := svc.AppOwners(r.Context())
@@ -538,7 +546,7 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Rule 3 — the bearer passes decision steps 1–6 for (M, companyId). Denied ⇒ 403 with the
+	// Rule 2 — the bearer passes decision steps 1–6 for (M, companyId). Denied ⇒ 403 with the
 	// decision's reason, audited like a /can denial; uncertain ⇒ 503. The owning app skips it.
 	d := decision.Decision{Allowed: true, Reason: decision.ReasonAllowed}
 	if !ownerCall {
@@ -567,7 +575,7 @@ func (svc *Service) handleGrants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rules 2 and 4 — module objects are anchored at <companyId>/<M>; company_module tuples
+	// Rules 3 and 4 — module objects are anchored at <companyId>/<M>; company_module tuples
 	// need the bearer to be the module's admin.
 	inRequestAnchor := map[string]bool{}
 	if req.Op == "grant" {
