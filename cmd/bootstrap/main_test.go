@@ -289,3 +289,50 @@ func TestRun_StepFailureSurfacesFromRunner(t *testing.T) {
 		t.Errorf("err = %v, want it to mention the failing step (preflight)", err)
 	}
 }
+
+// TestParseAccessTokenLifespan covers both refusals (not a number, not positive) and the
+// accepted value; the message is the one operators already see.
+func TestParseAccessTokenLifespan(t *testing.T) {
+	for _, tc := range []struct {
+		raw     string
+		want    int
+		wantErr bool
+	}{
+		{raw: "300", want: 300},
+		{raw: "1", want: 1},
+		{raw: "0", wantErr: true},
+		{raw: "-5", wantErr: true},
+		{raw: "five", wantErr: true},
+		{raw: "", wantErr: true},
+	} {
+		got, err := parseAccessTokenLifespan(tc.raw)
+		if tc.wantErr {
+			want := `KIBAN_ACCESS_TOKEN_LIFESPAN must be a positive number of seconds, got "` + tc.raw + `"`
+			if err == nil || err.Error() != want {
+				t.Errorf("parseAccessTokenLifespan(%q) err = %v, want %q", tc.raw, err, want)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("parseAccessTokenLifespan(%q) = %d, %v, want %d, nil", tc.raw, got, err, tc.want)
+		}
+	}
+}
+
+// TestRun_BadLifespanRefusedBeforeSuperadminPasswordIsRead proves the order: a bad lifespan
+// stops run() before the superadmin password is loaded. The password file named here is
+// unreadable, so reaching that load would fail with its own "unreadable" error instead.
+func TestRun_BadLifespanRefusedBeforeSuperadminPasswordIsRead(t *testing.T) {
+	setBootstrapEnv(t)
+	t.Setenv("KIBAN_ACCESS_TOKEN_LIFESPAN", "soon")
+	t.Setenv("KIBAN_SUPERADMIN_PASSWORD_FILE", filepath.Join(t.TempDir(), "absent"))
+
+	err := run(context.Background(), testLogger(), false)
+	if err == nil {
+		t.Fatal("run: want error for a bad access-token lifespan, got nil")
+	}
+	want := `KIBAN_ACCESS_TOKEN_LIFESPAN must be a positive number of seconds, got "soon"`
+	if err.Error() != want {
+		t.Errorf("err = %q, want %q", err, want)
+	}
+}
