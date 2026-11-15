@@ -367,12 +367,12 @@ func frontendOrigins(kibanDomain string, extra []string) (redirectURIs, webOrigi
 func baseFrontendOrigins(kibanDomain string) (redirectURIs, webOrigins []string) {
 	if kibanDomain == "" {
 		return []string{
-				"http://localhost:3000/*", "http://localhost:5173/*", "http://localhost/*",
-				"https://127.0.0.1:8443/*", "https://127.0.0.1:18543/*",
-			}, []string{
-				"http://localhost:3000", "http://localhost:5173", "http://localhost",
-				"https://127.0.0.1:8443", "https://127.0.0.1:18543",
-			}
+			"http://localhost:3000/*", "http://localhost:5173/*", "http://localhost/*",
+			"https://127.0.0.1:8443/*", "https://127.0.0.1:18543/*",
+		}, []string{
+			"http://localhost:3000", "http://localhost:5173", "http://localhost",
+			"https://127.0.0.1:8443", "https://127.0.0.1:18543",
+		}
 	}
 	origin := "https://" + kibanDomain
 	return []string{origin + "/*"}, []string{origin}
