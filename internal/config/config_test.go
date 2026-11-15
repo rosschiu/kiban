@@ -123,3 +123,83 @@ func TestLoad_UnreadableFileIsAnErrorForOptionalAndRequired(t *testing.T) {
 		}
 	}
 }
+
+// TestLoad_RequiredEmptyEnvIsMissing: NAME= (set, empty) on a required field is reported as
+// missing together with the unset ones — Compose passes an unset host variable through as an
+// empty one, and that must stop the service at start-up.
+func TestLoad_RequiredEmptyEnvIsMissing(t *testing.T) {
+	t.Setenv("EMPTY_REQ", "")
+	t.Setenv("PRESENT_REQ", "value")
+	_, err := Load(Spec{
+		{Name: "EMPTY_REQ", Required: true},
+		{Name: "UNSET_REQ", Required: true},
+		{Name: "PRESENT_REQ", Required: true},
+	})
+
+	var missingErr *MissingError
+	if !errors.As(err, &missingErr) {
+		t.Fatalf("expected *MissingError, got %v (%T)", err, err)
+	}
+	if got := strings.Join(missingErr.Names, ","); got != "EMPTY_REQ,UNSET_REQ" {
+		t.Errorf("missing names = %q, want %q", got, "EMPTY_REQ,UNSET_REQ")
+	}
+}
+
+// TestLoad_RequiredEmptyFileIsMissing: a required field whose <NAME>_FILE holds only
+// whitespace resolves to "" and is missing, not a start with an empty secret.
+func TestLoad_RequiredEmptyFileIsMissing(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "empty-secret")
+	if err := os.WriteFile(path, []byte("\n"), 0o600); err != nil {
+		t.Fatalf("write secret file: %v", err)
+	}
+	t.Setenv("EMPTY_FILE_REQ_FILE", path)
+
+	_, err := Load(Spec{{Name: "EMPTY_FILE_REQ", Required: true}})
+
+	var missingErr *MissingError
+	if !errors.As(err, &missingErr) {
+		t.Fatalf("expected *MissingError, got %v (%T)", err, err)
+	}
+	if len(missingErr.Names) != 1 || missingErr.Names[0] != "EMPTY_FILE_REQ" {
+		t.Errorf("missing names = %v, want [EMPTY_FILE_REQ]", missingErr.Names)
+	}
+}
+
+// TestLoad_OptionalEmptyCountsAsSet: an optional field keeps "empty counts as set" — NAME=
+// yields "" and skips the default, and an empty file does the same.
+func TestLoad_OptionalEmptyCountsAsSet(t *testing.T) {
+	t.Setenv("EMPTY_OPT", "")
+	path := filepath.Join(t.TempDir(), "empty-optional")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	t.Setenv("EMPTY_FILE_OPT_FILE", path)
+
+	got, err := Load(Spec{
+		{Name: "EMPTY_OPT", Default: "fallback"},
+		{Name: "EMPTY_FILE_OPT", Default: "fallback"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, name := range []string{"EMPTY_OPT", "EMPTY_FILE_OPT"} {
+		if v, ok := got[name]; !ok || v != "" {
+			t.Errorf("%s = %q (present=%v), want present and empty", name, v, ok)
+		}
+	}
+}
+
+// TestLoad_EmptyFileVariableIsIgnored: NAME_FILE= (set, empty) is not a file to read; the plain
+// variable is used as before.
+func TestLoad_EmptyFileVariableIsIgnored(t *testing.T) {
+	t.Setenv("PLAIN_REQ_FILE", "")
+	t.Setenv("PLAIN_REQ", "plain-value")
+
+	got, err := Load(Spec{{Name: "PLAIN_REQ", Required: true}})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got["PLAIN_REQ"] != "plain-value" {
+		t.Errorf("PLAIN_REQ = %q, want %q", got["PLAIN_REQ"], "plain-value")
+	}
+}
