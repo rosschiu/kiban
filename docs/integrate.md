@@ -355,7 +355,9 @@ them in and the sweep that reconciles a crash between them.
 
 `revoke` removes what `grant` wrote. When your app deletes an object, revoke its anchor:
 every other tuple on the object goes with it, in the same transaction, each recorded in the
-ledger. Anchoring the same id again starts from nothing. You should see `403 AUTHORIZATION_DENIED` if you name
+ledger. Anchoring the same id again starts from nothing. A revoke must name tuples that are
+stored: if any tuple in the request is not granted, the whole request is refused with
+`422 VALIDATION_FAILED` and the message `nothing to revoke`, and nothing is removed. You should see `403 AUTHORIZATION_DENIED` if you name
 another enabled app's or module's object type: outside its own types an app's backend needs
 the company's `admin` relation (`company:<id>#admin`), and a service account that is only a
 member of the company (step 10) is refused with reason `COMPANY_ROLE_REQUIRED`. A base type

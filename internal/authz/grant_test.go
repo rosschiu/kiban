@@ -269,3 +269,40 @@ func TestGrantBusinessWriteAtomic(t *testing.T) {
 		}
 	})
 }
+
+// TestFirstMissing: every stored tuple yields nil; the first tuple that is not stored is
+// returned, in request order, and a userset subject is matched on its relation too.
+func TestFirstMissing(t *testing.T) {
+	pool := authzPool(t)
+	ctx := context.Background()
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	direct := store.Tuple{ObjectType: "company", ObjectID: "fm-c1", Relation: "admin", SubjectType: "user", SubjectID: "fm-u1"}
+	userset := store.Tuple{ObjectType: "company", ObjectID: "fm-c1", Relation: "admin", SubjectType: "group", SubjectID: "fm-g1", SubjectRelation: "member"}
+	if err := store.Grant(ctx, tx, "fm-actor", "", direct, userset); err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+
+	if missing, err := store.FirstMissing(ctx, tx, direct, userset); err != nil || missing != nil {
+		t.Fatalf("FirstMissing(stored tuples) = %+v, %v; want nil, nil", missing, err)
+	}
+	if missing, err := store.FirstMissing(ctx, tx); err != nil || missing != nil {
+		t.Fatalf("FirstMissing() = %+v, %v; want nil, nil", missing, err)
+	}
+
+	typo := store.Tuple{ObjectType: "company", ObjectID: "fm-c1", Relation: "admin", SubjectType: "user", SubjectID: "fm-typo"}
+	wrongRelation := store.Tuple{ObjectType: "company", ObjectID: "fm-c1", Relation: "admin", SubjectType: "group", SubjectID: "fm-g1"}
+	missing, err := store.FirstMissing(ctx, tx, direct, typo, wrongRelation)
+	if err != nil || missing == nil || *missing != typo {
+		t.Fatalf("FirstMissing = %+v, %v; want the first tuple that is not stored (%+v)", missing, err, typo)
+	}
+	missing, err = store.FirstMissing(ctx, tx, wrongRelation)
+	if err != nil || missing == nil || *missing != wrongRelation {
+		t.Fatalf("FirstMissing = %+v, %v; want the userset without its relation (%+v)", missing, err, wrongRelation)
+	}
+}

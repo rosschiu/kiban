@@ -1027,6 +1027,45 @@ func TestHandleGrants(t *testing.T) {
 	t.Run("platform operator who is not a member passes steps 1-6 (the gateway proxy's actor)", func(t *testing.T) {
 		expect(t, post(t, superSub, map[string]any{"op": "grant", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-u3")}}), http.StatusOK, "")
 	})
+	t.Run("revoke of a tuple that is not granted: 422, nothing deleted, nothing ledgered", func(t *testing.T) {
+		revokeLedger := func() int {
+			var n int
+			if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM authz.grant_ledger WHERE object_id = 'hg-doc-new' AND op = 'revoke'`).Scan(&n); err != nil {
+				t.Fatalf("count ledger: %v", err)
+			}
+			return n
+		}
+		before, ledgerBefore := tupleCount(t, "hg-doc-new"), revokeLedger()
+
+		// A mistyped subject: the tuple names a user who holds nothing on the object.
+		rec := post(t, memberSub, map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-typo")}})
+		expect(t, rec, http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+		if !strings.Contains(rec.Body.String(), "nothing to revoke: hg_doc:hg-doc-new#viewer@user:hg-typo is not granted") {
+			t.Fatalf("body = %s, want it to name the tuple that is not granted", rec.Body.String())
+		}
+
+		// One stored tuple and one that is not: the request is refused whole.
+		expect(t, post(t, memberSub, map[string]any{"op": "revoke", "tuples": []map[string]string{
+			tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-u3"),
+			tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-typo"),
+		}}), http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+		if got := tupleCount(t, "hg-doc-new"); got != before {
+			t.Fatalf("tuple count after refused revokes = %d, want %d (nothing deleted)", got, before)
+		}
+		if got := revokeLedger(); got != ledgerBefore {
+			t.Fatalf("revoke ledger rows after refused revokes = %d, want %d", got, ledgerBefore)
+		}
+
+		// The stored tuple alone revokes once; the repeat has nothing left to revoke.
+		stored := map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-u3")}}
+		expect(t, post(t, memberSub, stored), http.StatusOK, "")
+		expect(t, post(t, memberSub, stored), http.StatusUnprocessableEntity, errenv.CodeValidationFailed)
+	})
+	t.Run("revoke of a tuple that is not granted by a bearer who may not write: 403, not 422", func(t *testing.T) {
+		// The stored-tuple check runs after every authorization rule, so it is no oracle for
+		// which tuples exist.
+		expect(t, post(t, outsideSub, map[string]any{"op": "revoke", "tuples": []map[string]string{tuple("hg_doc", "hg-doc-new", "viewer", "user", "hg-typo")}}), http.StatusForbidden, errenv.CodeAuthorizationDenied)
+	})
 }
 
 // TestHandleGrantsSubjectShape is the write-time subject-shape validation proof: a

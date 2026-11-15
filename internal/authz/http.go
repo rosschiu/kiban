@@ -660,6 +660,19 @@ func (svc *Service) writeGrants(w http.ResponseWriter, r *http.Request, sub, mod
 	if req.Op == "grant" {
 		opErr = store.Grant(r.Context(), tx, sub, req.CorrelationID, tuples...)
 	} else {
+		// A revoke must name stored tuples: one that matches nothing is refused whole, before
+		// any delete, so a mistyped tuple is reported instead of answered 200. The check reads
+		// stored rows, not the model, and runs only here, after every authorization rule, so
+		// it tells nothing to a bearer who may not write these tuples.
+		missing, err := store.FirstMissing(r.Context(), tx, tuples...)
+		if err != nil {
+			writeInternalError(w, err)
+			return
+		}
+		if missing != nil {
+			writeValidationFailed(w, "nothing to revoke: "+tupleString(*missing)+" is not granted")
+			return
+		}
 		opErr = store.Revoke(r.Context(), tx, sub, req.CorrelationID, tuples...)
 	}
 	if opErr != nil {
@@ -683,6 +696,15 @@ func (svc *Service) writeGrants(w http.ResponseWriter, r *http.Request, sub, mod
 		return
 	}
 	errenv.WriteData(w, http.StatusOK, map[string]any{"status": "ok", "count": len(tuples)})
+}
+
+// tupleString renders a tuple the way the documentation writes one: object#relation@subject.
+func tupleString(t store.Tuple) string {
+	subject := t.SubjectType + ":" + t.SubjectID
+	if t.SubjectRelation != "" {
+		subject += "#" + t.SubjectRelation
+	}
+	return t.ObjectType + ":" + t.ObjectID + "#" + t.Relation + "@" + subject
 }
 
 // isCompanyAdminAppointment reports whether every tuple of the request is
